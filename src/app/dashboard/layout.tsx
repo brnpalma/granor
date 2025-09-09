@@ -12,6 +12,10 @@ import {
   PanelLeft,
   Moon,
   Sun,
+  ChevronLeft,
+  ChevronRight,
+  MoreVertical,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,23 +68,25 @@ export default function DashboardLayout({
     </div>
   );
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
+    <div className="flex min-h-screen w-full flex-col bg-background">
       <aside className="fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r bg-background sm:flex">
         <div className="flex h-[60px] items-center border-b px-6 justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
             <CategoryIcon category="Economias" className="h-6 w-6 text-primary" />
             <span className="">Granor</span>
           </Link>
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
+        </div>
+        {sidebarContent}
+         <div className="mt-auto flex flex-col items-center gap-2 p-4">
+            <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-full">
               <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
               <span className="sr-only">Alternar tema</span>
             </Button>
-        </div>
-        {sidebarContent}
+          </div>
       </aside>
-      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-60">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+      <div className="flex flex-col sm:pl-60">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
           <Sheet>
             <SheetTrigger asChild>
               <Button size="icon" variant="outline" className="sm:hidden">
@@ -88,21 +94,9 @@ export default function DashboardLayout({
                 <span className="sr-only">Alternar Menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="sm:max-w-xs">
-              <SheetHeader className="flex-row items-center justify-between">
-                  <SheetTitle className="sr-only">Menu</SheetTitle>
-                 <Link
-                  href="/dashboard"
-                  className="flex items-center gap-2 text-lg font-semibold"
-                >
-                  <CategoryIcon category="Economias" className="h-6 w-6 text-primary" />
-                  <span className="">Granor</span>
-                </Link>
-                <Button variant="ghost" size="icon" onClick={toggleTheme}>
-                  <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                  <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                  <span className="sr-only">Alternar tema</span>
-                </Button>
+             <SheetContent side="left" className="sm:max-w-xs">
+              <SheetHeader>
+                <SheetTitle className="sr-only">Menu</SheetTitle>
               </SheetHeader>
               <nav className="grid gap-6 text-lg font-medium mt-4">
                 {navItems.map(item => (
@@ -118,10 +112,27 @@ export default function DashboardLayout({
               </nav>
             </SheetContent>
           </Sheet>
-           <div className="relative ml-auto flex-1 md:grow-0">
-           </div>
+          
+           <div className="flex w-full items-center justify-center gap-2">
+            <Button variant="ghost" size="icon">
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <span className="text-lg font-semibold">Julho</span>
+            <Button variant="ghost" size="icon">
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+
+          <Button variant="ghost" size="icon">
+            <MoreVertical className="h-5 w-5" />
+          </Button>
         </header>
         <main className="flex-1 p-4 sm:px-6 sm:py-0">{children}</main>
+        <div className="fixed bottom-4 right-4">
+            <Button className="rounded-full h-16 w-16 shadow-lg">
+                <Plus className="h-8 w-8" />
+            </Button>
+        </div>
       </div>
     </div>
   );
