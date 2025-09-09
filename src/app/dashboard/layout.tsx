@@ -77,7 +77,7 @@ export default function DashboardLayout({
           </Link>
         </div>
         {sidebarContent}
-         <div className="mt-auto flex flex-col items-center gap-2 p-4">
+         <div className="mt-auto flex flex-col items-center gap-2 p-4 border-t">
             <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-full">
               <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -113,7 +113,8 @@ export default function DashboardLayout({
                     <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-full justify-center">
                       <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                       <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                      <span className="ml-2">Alternar tema</span>
+                      <span className="ml-2 sm:hidden">Alternar tema</span>
+                      <span className="sr-only">Alternar tema</span>
                     </Button>
                   </div>
               </nav>
