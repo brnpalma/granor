@@ -125,91 +125,6 @@ export default function DashboardPage() {
             <Input placeholder="Pesquisar no Minhas Finanças" className="pl-10 bg-card border-card" />
         </div>
         
-        <div>
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-xl font-semibold">Orçamentos de despesas</h2>
-          <Button variant="ghost" size="icon"><MoreHorizontal className="h-5 w-5" /></Button>
-        </div>
-        <Card>
-          <CardContent className="p-4 space-y-4">
-            {expenseBudgets.map((budget, index) => {
-              const progress = budget.amount > 0 ? (budget.spent / budget.amount) * 100 : 100;
-              const Icon = budget.icon;
-              return (
-                <div key={index}>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${budget.color.replace('text-', 'bg-')}/20`}>
-                        <Icon className={`h-6 w-6 ${budget.color}`} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">{budget.name}</span>
-                        <span className="text-sm font-medium">{budget.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Progress value={progress} className="h-2" />
-                        <span className="text-xs text-muted-foreground">{Math.floor(progress)}%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-xl font-semibold">Despesas por categoria</h2>
-            <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5" /></Button>
-                <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5" /></Button>
-            </div>
-        </div>
-        <Card>
-            <CardContent className="p-4">
-                <div className="grid grid-cols-2 gap-4 items-center">
-                    <div className="h-48 relative">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie 
-                                    data={categoryExpenses.data} 
-                                    dataKey="value" 
-                                    nameKey="name" 
-                                    cx="50%" 
-                                    cy="50%" 
-                                    innerRadius="60%" 
-                                    outerRadius="80%"
-                                    paddingAngle={2}
-                                    stroke="none"
-                                >
-                                    {categoryExpenses.data.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                    ))}
-                                </Pie>
-                            </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                             <span className="text-2xl font-bold">
-                                {categoryExpenses.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </span>
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-2 text-sm">
-                        {categoryExpenses.data.map((entry, index) => (
-                             <div key={index} className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                                <span>{entry.name}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-      </div>
-
-
       <div>
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-xl font-semibold">Contas</h2>
@@ -301,8 +216,90 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-xl font-semibold">Orçamentos de despesas</h2>
+          <Button variant="ghost" size="icon"><MoreHorizontal className="h-5 w-5" /></Button>
+        </div>
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            {expenseBudgets.map((budget, index) => {
+              const progress = budget.amount > 0 ? (budget.spent / budget.amount) * 100 : 100;
+              const Icon = budget.icon;
+              return (
+                <div key={index}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${budget.color.replace('text-', 'bg-')}/20`}>
+                        <Icon className={`h-6 w-6 ${budget.color}`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">{budget.name}</span>
+                        <span className="text-sm font-medium">{budget.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Progress value={progress} className="h-2" />
+                        <span className="text-xs text-muted-foreground">{Math.floor(progress)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-xl font-semibold">Despesas por categoria</h2>
+            <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5" /></Button>
+                <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5" /></Button>
+            </div>
+        </div>
+        <Card>
+            <CardContent className="p-4">
+                <div className="grid grid-cols-2 gap-4 items-center">
+                    <div className="h-48 relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie 
+                                    data={categoryExpenses.data} 
+                                    dataKey="value" 
+                                    nameKey="name" 
+                                    cx="50%" 
+                                    cy="50%" 
+                                    innerRadius="60%" 
+                                    outerRadius="80%"
+                                    paddingAngle={2}
+                                    stroke="none"
+                                >
+                                    {categoryExpenses.data.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                             <span className="text-2xl font-bold">
+                                {categoryExpenses.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 text-sm">
+                        {categoryExpenses.data.map((entry, index) => (
+                             <div key={index} className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                                <span>{entry.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+      </div>
+
     </div>
   );
 }
-
-    
