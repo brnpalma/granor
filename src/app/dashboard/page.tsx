@@ -51,23 +51,23 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 pb-16">
-        <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
             <div onClick={() => setActiveTab('inicial')} className={`cursor-pointer p-2 rounded-lg ${activeTab === 'inicial' ? 'bg-muted' : ''}`}>
-                <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
                     <Check className={`h-4 w-4 ${activeTab === 'inicial' ? 'text-primary' : ''}`} />
                     Inicial
                 </div>
                 <div className="text-xl font-bold whitespace-nowrap">R$ 38,51</div>
             </div>
              <div onClick={() => setActiveTab('saldo')} className={`cursor-pointer p-2 rounded-lg ${activeTab === 'saldo' ? 'bg-muted' : ''}`}>
-                <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
                     <div className={`h-3 w-3 rounded-full ${activeTab === 'saldo' ? 'bg-primary' : 'bg-gray-500'}`} />
                     Saldo
                 </div>
                 <div className="text-3xl font-bold text-primary whitespace-nowrap">R$ 1.093,08</div>
             </div>
              <div onClick={() => setActiveTab('previsto')} className={`cursor-pointer p-2 rounded-lg ${activeTab === 'previsto' ? 'bg-muted' : ''}`}>
-                <div className="text-sm text-muted-foreground">Previsto *</div>
+                <div className="text-sm text-muted-foreground whitespace-nowrap">Previsto *</div>
                 <div className="text-xl font-bold whitespace-nowrap">R$ 180,14</div>
             </div>
         </div>
