@@ -1,6 +1,35 @@
 import type { Transaction, Budget, SavingsGoal } from "./types";
 
 export const mockTransactions: Transaction[] = [
+  // Budget transactions (forecasted expenses)
+  {
+    id: "budget-1",
+    date: new Date(),
+    description: "Orçamento de Alimentação",
+    amount: 500,
+    type: "expense",
+    category: "Alimentação",
+    isBudget: true,
+  },
+  {
+    id: "budget-2",
+    date: new Date(),
+    description: "Orçamento de Compras",
+    amount: 300,
+    type: "expense",
+    category: "Compras",
+    isBudget: true,
+  },
+  {
+    id: "budget-3",
+    date: new Date(),
+    description: "Orçamento de Entretenimento",
+    amount: 100,
+    type: "expense",
+    category: "Entretenimento",
+    isBudget: true,
+  },
+  // Actual transactions
   {
     id: "1",
     date: new Date("2024-07-15"),

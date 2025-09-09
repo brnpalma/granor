@@ -16,18 +16,33 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<Budget[]>(mockBudgets);
-  const [transactions] = useState<Transaction[]>(mockTransactions);
+  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addBudgetDialogOpen, setAddBudgetDialogOpen] = useState(false);
 
 
   const addBudget = (budget: Omit<Budget, "id">) => {
-    setBudgets([...budgets, { ...budget, id: crypto.randomUUID() }]);
+    const newBudgetId = crypto.randomUUID();
+    const newBudget = { ...budget, id: newBudgetId };
+    setBudgets([...budgets, newBudget]);
+
+    // This is a local update. For a real app, you'd use a global state manager.
+    const budgetTransaction: Transaction = {
+      id: `budget-${newBudgetId}`,
+      date: new Date(),
+      description: `Orçamento de ${budget.category}`,
+      amount: budget.amount,
+      type: 'expense',
+      category: budget.category,
+      isBudget: true,
+    };
+    setTransactions([...transactions, budgetTransaction]);
+    toast({ title: "Orçamento adicionado", description: "Uma transação prevista foi criada." });
   };
 
   const getSpentAmount = (category: string) => {
     return transactions
-      .filter((t) => t.type === 'expense' && t.category === category)
+      .filter((t) => t.type === 'expense' && t.category === category && !t.isBudget)
       .reduce((sum, t) => sum + t.amount, 0);
   };
 

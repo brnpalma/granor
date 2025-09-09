@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PlusCircle, Wand2 } from "lucide-react";
+import { PlusCircle, Wand2, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -47,14 +47,15 @@ import { useToast } from "@/hooks/use-toast";
 
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions.sort((a, b) => b.date.getTime() - a.date.getTime()));
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const addTransaction = (transaction: Omit<Transaction, "id">) => {
-    setTransactions([
+    const newTransactions = [
       { ...transaction, id: crypto.randomUUID() },
       ...transactions,
-    ]);
+    ].sort((a, b) => b.date.getTime() - a.date.getTime());
+    setTransactions(newTransactions);
   };
 
   return (
@@ -87,18 +88,18 @@ export default function TransactionsPage() {
             </TableHeader>
             <TableBody>
               {transactions.map((t) => (
-                <TableRow key={t.id}>
+                <TableRow key={t.id} className={cn(t.isBudget && "bg-muted/50")}>
                   <TableCell className="font-medium">{t.description}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                        <CategoryIcon category={t.category} className="h-4 w-4 text-muted-foreground" />
+                        {t.isBudget ? <Target className="h-4 w-4 text-muted-foreground" /> : <CategoryIcon category={t.category} className="h-4 w-4 text-muted-foreground" />}
                         {t.category}
                     </div>
                   </TableCell>
                   <TableCell>{t.date.toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell className={cn(
                     "text-right",
-                    t.type === "income" ? "text-green-500" : "text-red-500"
+                    t.type === "income" ? "text-green-500" : t.isBudget ? "text-yellow-600" : "text-red-500"
                   )}>
                     {t.type === "income" ? "+" : "-"}
                     {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}

@@ -19,6 +19,7 @@ export interface Transaction {
   amount: number;
   type: "income" | "expense";
   category: Category;
+  isBudget?: boolean;
 }
 
 export interface Budget {
