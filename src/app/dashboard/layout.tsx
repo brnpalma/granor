@@ -60,9 +60,6 @@ export default function DashboardLayout({
                 ))}
             </nav>
         </div>
-         <div className="mt-auto p-4">
-            <ThemeToggleButton />
-        </div>
     </div>
   );
 
@@ -74,6 +71,7 @@ export default function DashboardLayout({
             <CategoryIcon category="Economias" className="h-6 w-6 text-primary" />
             <span className="">Granor</span>
           </Link>
+          <ThemeToggleButton />
         </div>
         {sidebarContent}
       </aside>
@@ -95,6 +93,7 @@ export default function DashboardLayout({
                     <CategoryIcon category="Economias" className="h-6 w-6 text-primary" />
                     <span className="">Granor</span>
                 </Link>
+                <ThemeToggleButton />
                 </div>
                {sidebarContent}
             </SheetContent>

@@ -19,24 +19,19 @@ export function ThemeToggleButton() {
 
   if (!mounted) {
     // Render a placeholder or nothing on the server to avoid hydration mismatch
-    return (
-        <Button variant="ghost" size="icon" disabled className="w-full justify-start gap-2">
-            <div className="h-4 w-4 bg-muted-foreground/20 rounded-full animate-pulse" />
-            <span className="h-4 w-20 bg-muted-foreground/20 rounded-md animate-pulse"></span>
-        </Button>
-    );
+    return <Button variant="ghost" size="icon" disabled className="h-8 w-8" />;
   }
 
   const isDark = theme === "dark";
 
   return (
-    <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-full justify-start gap-2">
+    <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-8 w-8">
       {isDark ? (
-        <Sun className="h-4 w-4" />
+        <Sun />
       ) : (
-        <Moon className="h-4 w-4" />
+        <Moon />
       )}
-      <span>{isDark ? "Tema Claro" : "Tema Escuro"}</span>
+      <span className="sr-only">{isDark ? "Mudar para tema claro" : "Mudar para tema escuro"}</span>
     </Button>
   );
 }
