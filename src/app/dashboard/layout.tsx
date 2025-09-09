@@ -87,6 +87,9 @@ export default function DashboardLayout({
               </Button>
             </SheetTrigger>
              <SheetContent side="left" className="sm:max-w-xs p-0">
+                <SheetHeader>
+                  <SheetTitle className="sr-only">Menu Principal</SheetTitle>
+                </SheetHeader>
                <div className="flex h-[60px] items-center border-b px-6 justify-between">
                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                     <CategoryIcon category="Economias" className="h-6 w-6 text-primary" />
