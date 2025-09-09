@@ -90,6 +90,7 @@ export default function DashboardLayout({
             </SheetTrigger>
             <SheetContent side="left" className="sm:max-w-xs">
                <SheetHeader className="flex-row items-center justify-between">
+                  <SheetTitle className="sr-only">Menu</SheetTitle>
                  <Link
                   href="/dashboard"
                   className="flex items-center gap-2 text-lg font-semibold"
