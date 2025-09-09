@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useTheme } from "next-themes";
 import {
   LayoutDashboard,
   ArrowRightLeft,
@@ -10,8 +9,6 @@ import {
   AreaChart,
   PiggyBank,
   PanelLeft,
-  Moon,
-  Sun,
   ChevronLeft,
   ChevronRight,
   MoreVertical,
@@ -27,7 +24,6 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
-import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
@@ -43,17 +39,6 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
 
   const sidebarContent = (
      <div className="flex flex-col h-full">
@@ -73,14 +58,6 @@ export default function DashboardLayout({
                 </Link>
                 ))}
             </nav>
-        </div>
-        <div className="mt-auto p-4">
-            {mounted && (
-                <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-full justify-start gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
-                    {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    <span className="text-sm font-medium">{theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}</span>
-                </Button>
-            )}
         </div>
     </div>
   );
