@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -12,24 +12,27 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent
 } from "@/components/ui/chart";
 import { Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 
-import { mockTransactions } from "@/lib/data";
+import { getTransactions } from "@/lib/firestore";
 import type { Transaction } from "@/lib/types";
 import { categories } from "@/lib/types";
 
 
 export default function ReportsPage() {
-  const [transactions] = useState<Transaction[]>(mockTransactions);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = getTransactions(setTransactions);
+    return () => unsubscribe();
+  }, []);
 
   const spendingByCategory = useMemo(() => {
     const expenseCategories = categories.filter(c => c !== 'Salário' && c !== 'Economias');
     return expenseCategories.map(category => {
         const total = transactions
-            .filter(t => t.type === 'expense' && t.category === category)
+            .filter(t => t.type === 'expense' && t.category === category && !t.isBudget)
             .reduce((sum, t) => sum + t.amount, 0);
         return { name: category, total };
     }).filter(c => c.total > 0)

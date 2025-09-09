@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { mockBudgets, mockTransactions } from "@/lib/data";
+import { addBudget, getBudgets, getTransactions } from "@/lib/firestore";
 import type { Budget, Transaction, Category } from "@/lib/types";
 import { categories } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -15,28 +15,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 
 export default function BudgetsPage() {
-  const [budgets, setBudgets] = useState<Budget[]>(mockBudgets);
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addBudgetDialogOpen, setAddBudgetDialogOpen] = useState(false);
+  const { toast } = useToast();
 
-
-  const addBudget = (budget: Omit<Budget, "id">) => {
-    const newBudgetId = crypto.randomUUID();
-    const newBudget = { ...budget, id: newBudgetId };
-    setBudgets([...budgets, newBudget]);
-
-    // This is a local update. For a real app, you'd use a global state manager.
-    const budgetTransaction: Transaction = {
-      id: `budget-${newBudgetId}`,
-      date: new Date(),
-      description: `Orçamento de ${budget.category}`,
-      amount: budget.amount,
-      type: 'expense',
-      category: budget.category,
-      isBudget: true,
+  useEffect(() => {
+    const unsubscribeBudgets = getBudgets(setBudgets);
+    const unsubscribeTransactions = getTransactions(setTransactions);
+    return () => {
+      unsubscribeBudgets();
+      unsubscribeTransactions();
     };
-    setTransactions([...transactions, budgetTransaction]);
+  }, []);
+
+  const handleAddBudget = async (budget: Omit<Budget, "id">) => {
+    await addBudget(budget);
     toast({ title: "Orçamento adicionado", description: "Uma transação prevista foi criada." });
   };
 
@@ -56,7 +51,7 @@ export default function BudgetsPage() {
                     <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Orçamento
                 </Button>
             </DialogTrigger>
-            <BudgetForm onSubmit={addBudget} onSubmitted={() => setDialogOpen(false)} />
+            <BudgetForm onSubmit={handleAddBudget} onSubmitted={() => setDialogOpen(false)} />
         </Dialog>
       </div>
 
@@ -93,7 +88,7 @@ export default function BudgetsPage() {
                     </div>
                 </Button>
             </DialogTrigger>
-            <BudgetForm onSubmit={addBudget} onSubmitted={() => setAddBudgetDialogOpen(false)} />
+            <BudgetForm onSubmit={handleAddBudget} onSubmitted={() => setAddBudgetDialogOpen(false)} />
         </Dialog>
           </Card>
       </div>
@@ -106,23 +101,23 @@ function BudgetForm({
     onSubmit,
     onSubmitted,
 }: {
-    onSubmit: (budget: Omit<Budget, "id">) => void;
+    onSubmit: (budget: Omit<Budget, "id">) => Promise<void>;
     onSubmitted: () => void;
 }) {
     const [amount, setAmount] = useState("");
     const [category, setCategory] = useState<Category | "">("");
     const { toast } = useToast();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!amount || !category) {
             toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
             return;
         }
 
-        onSubmit({
+        await onSubmit({
             amount: parseFloat(amount),
-            category,
+            category: category as Category,
         });
         
         setAmount("");

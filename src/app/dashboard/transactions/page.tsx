@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PlusCircle, Wand2, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { mockTransactions } from "@/lib/data";
+import { addTransaction, getTransactions } from "@/lib/firestore";
 import type { Transaction, Category } from "@/lib/types";
 import { categories } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -47,15 +47,17 @@ import { useToast } from "@/hooks/use-toast";
 
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions.sort((a, b) => b.date.getTime() - a.date.getTime()));
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const addTransaction = (transaction: Omit<Transaction, "id">) => {
-    const newTransactions = [
-      { ...transaction, id: crypto.randomUUID() },
-      ...transactions,
-    ].sort((a, b) => b.date.getTime() - a.date.getTime());
-    setTransactions(newTransactions);
+  useEffect(() => {
+    const unsubscribe = getTransactions(setTransactions);
+    return () => unsubscribe();
+  }, []);
+
+
+  const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
+    await addTransaction(transaction);
   };
 
   return (
@@ -68,7 +70,7 @@ export default function TransactionsPage() {
                     <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Transação
                 </Button>
             </DialogTrigger>
-            <TransactionForm onSubmit={addTransaction} onSubmitted={() => setDialogOpen(false)} transactions={transactions} />
+            <TransactionForm onSubmit={handleAddTransaction} onSubmitted={() => setDialogOpen(false)} transactions={transactions} />
         </Dialog>
       </div>
       <Card>
@@ -120,7 +122,7 @@ function TransactionForm({
     onSubmitted,
     transactions,
 }: {
-    onSubmit: (transaction: Omit<Transaction, "id">) => void;
+    onSubmit: (transaction: Omit<Transaction, "id">) => Promise<void>;
     onSubmitted: () => void;
     transactions: Transaction[];
 }) {
@@ -166,14 +168,14 @@ function TransactionForm({
     };
 
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!description || !amount || !date || !category) {
             toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
             return;
         }
 
-        onSubmit({
+        await onSubmit({
             description,
             amount: parseFloat(amount),
             date,

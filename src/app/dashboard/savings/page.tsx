@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PlusCircle, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { mockSavingsGoals } from "@/lib/data";
+import { addSavingsGoal, getSavingsGoals } from "@/lib/firestore";
 import type { SavingsGoal } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,13 +13,20 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SavingsPage() {
-  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(mockSavingsGoals);
+  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addGoalDialogOpen, setAddGoalDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const unsubscribe = getSavingsGoals(setSavingsGoals);
+    return () => unsubscribe();
+  }, []);
 
 
-  const addSavingsGoal = (goal: Omit<SavingsGoal, "id">) => {
-    setSavingsGoals([...savingsGoals, { ...goal, id: crypto.randomUUID() }]);
+  const handleAddSavingsGoal = async (goal: Omit<SavingsGoal, "id">) => {
+    await addSavingsGoal(goal);
+    toast({ title: "Meta de economia adicionada!" });
   };
 
   return (
@@ -32,7 +39,7 @@ export default function SavingsPage() {
                     <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Meta
                 </Button>
             </DialogTrigger>
-            <SavingsGoalForm onSubmit={addSavingsGoal} onSubmitted={() => setDialogOpen(false)} />
+            <SavingsGoalForm onSubmit={handleAddSavingsGoal} onSubmitted={() => setDialogOpen(false)} />
         </Dialog>
       </div>
 
@@ -67,7 +74,7 @@ export default function SavingsPage() {
                     </div>
                 </Button>
             </DialogTrigger>
-            <SavingsGoalForm onSubmit={addSavingsGoal} onSubmitted={() => setAddGoalDialogOpen(false)} />
+            <SavingsGoalForm onSubmit={handleAddSavingsGoal} onSubmitted={() => setAddGoalDialogOpen(false)} />
         </Dialog>
         </Card>
       </div>
@@ -80,21 +87,21 @@ function SavingsGoalForm({
     onSubmit,
     onSubmitted,
 }: {
-    onSubmit: (goal: Omit<SavingsGoal, "id" | "currentAmount"> & { currentAmount?: number }) => void;
+    onSubmit: (goal: Omit<SavingsGoal, "id" | "currentAmount"> & { currentAmount?: number }) => Promise<void>;
     onSubmitted: () => void;
 }) {
     const [name, setName] = useState("");
     const [targetAmount, setTargetAmount] = useState("");
     const { toast } = useToast();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !targetAmount) {
             toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
             return;
         }
 
-        onSubmit({
+        await onSubmit({
             name,
             targetAmount: parseFloat(targetAmount),
             currentAmount: 0,
