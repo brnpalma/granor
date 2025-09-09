@@ -77,13 +77,6 @@ export default function DashboardLayout({
           </Link>
         </div>
         {sidebarContent}
-         <div className="mt-auto flex flex-col items-center gap-2 p-4 border-t">
-            <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-full">
-              <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              <span className="sr-only">Alternar tema</span>
-            </Button>
-          </div>
       </aside>
       <div className="flex flex-col sm:pl-60">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -110,14 +103,6 @@ export default function DashboardLayout({
                   </Link>
                 ))}
               </nav>
-               <div className="mt-auto flex flex-col items-center gap-2 p-4 border-t">
-                    <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-full justify-center">
-                      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                      <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                      <span className="ml-2 sm:hidden">Alternar tema</span>
-                      <span className="sr-only">Alternar tema</span>
-                    </Button>
-                </div>
             </SheetContent>
           </Sheet>
           
