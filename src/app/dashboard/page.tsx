@@ -57,18 +57,18 @@ export default function DashboardPage() {
                     <Check className={`h-4 w-4 ${activeTab === 'inicial' ? 'text-primary' : ''}`} />
                     Inicial
                 </div>
-                <div className="text-lg font-bold">R$ 38,51</div>
+                <div className="text-xl font-bold whitespace-nowrap">R$ 38,51</div>
             </div>
              <div onClick={() => setActiveTab('saldo')} className={`cursor-pointer p-2 rounded-lg ${activeTab === 'saldo' ? 'bg-muted' : ''}`}>
                 <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
                     <div className={`h-3 w-3 rounded-full ${activeTab === 'saldo' ? 'bg-primary' : 'bg-gray-500'}`} />
                     Saldo
                 </div>
-                <div className="text-2xl font-bold text-primary">R$ 1.093,08</div>
+                <div className="text-3xl font-bold text-primary whitespace-nowrap">R$ 1.093,08</div>
             </div>
              <div onClick={() => setActiveTab('previsto')} className={`cursor-pointer p-2 rounded-lg ${activeTab === 'previsto' ? 'bg-muted' : ''}`}>
                 <div className="text-sm text-muted-foreground">Previsto *</div>
-                <div className="text-lg font-bold">R$ 180,14</div>
+                <div className="text-xl font-bold whitespace-nowrap">R$ 180,14</div>
             </div>
         </div>
 
