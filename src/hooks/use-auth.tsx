@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { migrateLocalDataToFirestore } from '@/lib/firestore';
 
@@ -21,26 +21,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        // Check if this is the first login after having local data
-        const hasMigrated = localStorage.getItem(`migrated_${user.uid}`);
-        if (!hasMigrated) {
-            await migrateLocalDataToFirestore(user.uid);
-            localStorage.setItem(`migrated_${user.uid}`, 'true');
-        }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
+    // This ensures that the user's session is persisted across browser sessions.
+    setPersistence(auth, browserLocalPersistence).then(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                setUser(user);
+                // Check if this is the first login after having local data
+                const hasMigrated = localStorage.getItem(`migrated_${user.uid}`);
+                if (!hasMigrated) {
+                    await migrateLocalDataToFirestore(user.uid);
+                    localStorage.setItem(`migrated_${user.uid}`, 'true');
+                }
+            } else {
+                setUser(null);
+            }
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }).catch((error) => {
+        console.error("Error setting persistence:", error);
+        setLoading(false);
     });
-
-    return () => unsubscribe();
   }, []);
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+        prompt: 'select_account',
+        'login_hint': 'user@example.com',
+        'display': 'popup',
+        'auth_type': 'reauthenticate',
+        'app_name': 'Granor'
+    });
     try {
       await signInWithPopup(auth, provider);
     } catch (error) {
