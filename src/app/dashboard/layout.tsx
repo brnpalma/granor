@@ -15,6 +15,7 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
+  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -74,6 +75,7 @@ export default function DashboardLayout({
             </SheetTrigger>
             <SheetContent side="left" className="sm:max-w-xs">
               <SheetHeader>
+                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                   <CategoryIcon category="Savings" className="h-6 w-6 text-primary" />
                   <span className="">Granor</span>
