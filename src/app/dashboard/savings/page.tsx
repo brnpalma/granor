@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 export default function SavingsPage() {
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(mockSavingsGoals);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [addGoalDialogOpen, setAddGoalDialogOpen] = useState(false);
+
 
   const addSavingsGoal = (goal: Omit<SavingsGoal, "id">) => {
     setSavingsGoals([...savingsGoals, { ...goal, id: crypto.randomUUID() }]);
@@ -56,7 +58,7 @@ export default function SavingsPage() {
           );
         })}
         <Card className="border-dashed flex flex-col items-center justify-center">
-             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+             <Dialog open={addGoalDialogOpen} onOpenChange={setAddGoalDialogOpen}>
             <DialogTrigger asChild>
                 <Button variant="ghost" className="h-full w-full">
                     <div className="flex flex-col items-center gap-2">
@@ -65,7 +67,7 @@ export default function SavingsPage() {
                     </div>
                 </Button>
             </DialogTrigger>
-            <SavingsGoalForm onSubmit={addSavingsGoal} onSubmitted={() => setDialogOpen(false)} />
+            <SavingsGoalForm onSubmit={addSavingsGoal} onSubmitted={() => setAddGoalDialogOpen(false)} />
         </Dialog>
         </Card>
       </div>

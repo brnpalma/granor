@@ -18,6 +18,8 @@ export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<Budget[]>(mockBudgets);
   const [transactions] = useState<Transaction[]>(mockTransactions);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [addBudgetDialogOpen, setAddBudgetDialogOpen] = useState(false);
+
 
   const addBudget = (budget: Omit<Budget, "id">) => {
     setBudgets([...budgets, { ...budget, id: crypto.randomUUID() }]);
@@ -67,7 +69,7 @@ export default function BudgetsPage() {
           );
         })}
          <Card className="border-dashed flex flex-col items-center justify-center">
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={addBudgetDialogOpen} onOpenChange={setAddBudgetDialogOpen}>
             <DialogTrigger asChild>
                 <Button variant="ghost" className="h-full w-full">
                     <div className="flex flex-col items-center gap-2">
@@ -76,7 +78,7 @@ export default function BudgetsPage() {
                     </div>
                 </Button>
             </DialogTrigger>
-            <BudgetForm onSubmit={addBudget} onSubmitted={() => setDialogOpen(false)} />
+            <BudgetForm onSubmit={addBudget} onSubmitted={() => setAddBudgetDialogOpen(false)} />
         </Dialog>
           </Card>
       </div>
