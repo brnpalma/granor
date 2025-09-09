@@ -11,21 +11,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function SavingsPage() {
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addGoalDialogOpen, setAddGoalDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    const unsubscribe = getSavingsGoals(setSavingsGoals);
+    if (typeof window === 'undefined') return;
+    const unsubscribe = getSavingsGoals(user?.uid || null, setSavingsGoals);
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
 
   const handleAddSavingsGoal = async (goal: Omit<SavingsGoal, "id">) => {
-    await addSavingsGoal(goal);
+    await addSavingsGoal(user?.uid || null, goal);
     toast({ title: "Meta de economia adicionada!" });
   };
 

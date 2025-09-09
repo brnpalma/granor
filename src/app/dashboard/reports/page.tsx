@@ -18,15 +18,18 @@ import { Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 
 import { getTransactions } from "@/lib/firestore";
 import type { Transaction } from "@/lib/types";
 import { categories } from "@/lib/types";
+import { useAuth } from "@/hooks/use-auth";
 
 
 export default function ReportsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
-    const unsubscribe = getTransactions(setTransactions);
+    if (typeof window === 'undefined') return;
+    const unsubscribe = getTransactions(user?.uid || null, setTransactions);
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   const spendingByCategory = useMemo(() => {
     const expenseCategories = categories.filter(c => c !== 'Salário' && c !== 'Economias');

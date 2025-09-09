@@ -44,20 +44,24 @@ import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
 import { categorizeTransaction } from "@/ai/flows/categorize-transaction";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
-    const unsubscribe = getTransactions(setTransactions);
+    if (typeof window === 'undefined') return;
+
+    const unsubscribe = getTransactions(user?.uid || null, setTransactions);
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
 
   const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
-    await addTransaction(transaction);
+    await addTransaction(user?.uid || null, transaction);
   };
 
   return (

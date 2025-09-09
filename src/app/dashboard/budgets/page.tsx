@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -20,18 +21,20 @@ export default function BudgetsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addBudgetDialogOpen, setAddBudgetDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    const unsubscribeBudgets = getBudgets(setBudgets);
-    const unsubscribeTransactions = getTransactions(setTransactions);
+    if (typeof window === 'undefined') return;
+    const unsubscribeBudgets = getBudgets(user?.uid || null, setBudgets);
+    const unsubscribeTransactions = getTransactions(user?.uid || null, setTransactions);
     return () => {
       unsubscribeBudgets();
       unsubscribeTransactions();
     };
-  }, []);
+  }, [user]);
 
   const handleAddBudget = async (budget: Omit<Budget, "id">) => {
-    await addBudget(budget);
+    await addBudget(user?.uid || null, budget);
     toast({ title: "Orçamento adicionado", description: "Uma transação prevista foi criada." });
   };
 
