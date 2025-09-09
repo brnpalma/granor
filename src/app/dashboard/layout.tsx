@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
@@ -43,6 +44,12 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
@@ -68,10 +75,12 @@ export default function DashboardLayout({
             </nav>
         </div>
         <div className="mt-auto p-4">
-            <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-full justify-start gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
-                 {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                 <span className="text-sm font-medium">{theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}</span>
-            </Button>
+            {mounted && (
+                <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-full justify-start gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
+                    {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    <span className="text-sm font-medium">{theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}</span>
+                </Button>
+            )}
         </div>
     </div>
   );
@@ -97,9 +106,9 @@ export default function DashboardLayout({
               </Button>
             </SheetTrigger>
              <SheetContent side="left" className="sm:max-w-xs p-0">
-               <SheetHeader className="p-6">
-                 <SheetTitle className="sr-only">Menu</SheetTitle>
-               </SheetHeader>
+                <SheetHeader>
+                    <SheetTitle className="sr-only">Menu</SheetTitle>
+                </SheetHeader>
                <div className="flex h-[60px] items-center border-b px-6 justify-between">
                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                     <CategoryIcon category="Economias" className="h-6 w-6 text-primary" />
