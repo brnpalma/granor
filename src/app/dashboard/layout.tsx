@@ -1,3 +1,4 @@
+
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -116,6 +117,9 @@ export default function DashboardLayout({
               </Button>
             </SheetTrigger>
              <SheetContent side="left" className="sm:max-w-xs p-0">
+                 <SheetHeader>
+                    <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
+                 </SheetHeader>
                  <SidebarContent />
             </SheetContent>
           </Sheet>
