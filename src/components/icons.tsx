@@ -15,15 +15,15 @@ import {
 } from "lucide-react";
 
 const iconMap: Record<Category, React.ComponentType<LucideProps>> = {
-  Food: Utensils,
-  Transportation: Car,
-  Shopping: ShoppingBag,
-  Entertainment: Ticket,
-  Utilities: Bolt,
-  Rent: Home,
-  Salary: Landmark,
-  Savings: PiggyBank,
-  Other: MoreHorizontal,
+  Alimentação: Utensils,
+  Transporte: Car,
+  Compras: ShoppingBag,
+  Entretenimento: Ticket,
+  Serviços: Bolt,
+  Aluguel: Home,
+  Salário: Landmark,
+  Economias: PiggyBank,
+  Outros: MoreHorizontal,
 };
 
 interface CategoryIconProps extends LucideProps {

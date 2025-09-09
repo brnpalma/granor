@@ -1,13 +1,13 @@
 export const categories = [
-  "Food",
-  "Transportation",
-  "Shopping",
-  "Entertainment",
-  "Utilities",
-  "Rent",
-  "Salary",
-  "Savings",
-  "Other",
+  "Alimentação",
+  "Transporte",
+  "Compras",
+  "Entretenimento",
+  "Serviços",
+  "Aluguel",
+  "Salário",
+  "Economias",
+  "Outros",
 ] as const;
 
 export type Category = (typeof categories)[number];

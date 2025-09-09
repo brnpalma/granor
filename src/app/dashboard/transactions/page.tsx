@@ -60,11 +60,11 @@ export default function TransactionsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Transactions</h1>
+        <h1 className="text-2xl font-bold">Transações</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
                 <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Transaction
+                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Transação
                 </Button>
             </DialogTrigger>
             <TransactionForm onSubmit={addTransaction} onSubmitted={() => setDialogOpen(false)} transactions={transactions} />
@@ -72,17 +72,17 @@ export default function TransactionsPage() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Transaction History</CardTitle>
-          <CardDescription>A list of your recent income and expenses.</CardDescription>
+          <CardTitle>Histórico de Transações</CardTitle>
+          <CardDescription>Uma lista de suas receitas e despesas recentes.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Categoria</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead className="text-right">Valor</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -95,13 +95,13 @@ export default function TransactionsPage() {
                         {t.category}
                     </div>
                   </TableCell>
-                  <TableCell>{t.date.toLocaleDateString()}</TableCell>
+                  <TableCell>{t.date.toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell className={cn(
                     "text-right",
                     t.type === "income" ? "text-green-500" : "text-red-500"
                   )}>
                     {t.type === "income" ? "+" : "-"}
-                    {t.amount.toLocaleString("en-US", { style: "currency", currency: "USD" })}
+                    {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   </TableCell>
                 </TableRow>
               ))}
@@ -134,14 +134,14 @@ function TransactionForm({
 
     const handleSuggestCategory = async () => {
         if (!description) {
-            toast({ title: "Please enter a description first.", variant: 'destructive' });
+            toast({ title: "Por favor, insira uma descrição primeiro.", variant: 'destructive' });
             return;
         }
         setIsSuggesting(true);
         try {
             const transactionHistory = transactions
                 .slice(0, 10)
-                .map(t => `${t.date.toLocaleDateString()}: ${t.description} -> ${t.category} ($${t.amount})`)
+                .map(t => `${t.date.toLocaleDateString('pt-BR')}: ${t.description} -> ${t.category} (R$${t.amount})`)
                 .join('\n');
 
             const result = await categorizeTransaction({
@@ -152,13 +152,13 @@ function TransactionForm({
             if (result.suggestedCategory && categories.includes(result.suggestedCategory as Category)) {
                 setSuggestedCategory(result.suggestedCategory as Category);
                 setCategory(result.suggestedCategory as Category);
-                toast({ title: `Suggested category: ${result.suggestedCategory}`, description: `Confidence: ${(result.confidence * 100).toFixed(0)}%` });
+                toast({ title: `Categoria sugerida: ${result.suggestedCategory}`, description: `Confiança: ${(result.confidence * 100).toFixed(0)}%` });
             } else {
-                 toast({ title: "Could not suggest a category.", description: "Please select one manually.", variant: 'destructive' });
+                 toast({ title: "Não foi possível sugerir uma categoria.", description: "Por favor, selecione uma manualmente.", variant: 'destructive' });
             }
         } catch (error) {
-            console.error("AI categorization failed:", error);
-            toast({ title: "AI suggestion failed.", description: "There was an error getting a suggestion.", variant: 'destructive' });
+            console.error("Falha na categorização por IA:", error);
+            toast({ title: "Falha na sugestão da IA.", description: "Ocorreu um erro ao obter uma sugestão.", variant: 'destructive' });
         } finally {
             setIsSuggesting(false);
         }
@@ -168,7 +168,7 @@ function TransactionForm({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!description || !amount || !date || !category) {
-            toast({ title: "Please fill all fields", variant: 'destructive' });
+            toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
             return;
         }
 
@@ -193,13 +193,13 @@ function TransactionForm({
     return (
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Add New Transaction</DialogTitle>
+                <DialogTitle>Adicionar Nova Transação</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description">Descrição</Label>
                     <div className="flex items-center gap-2">
-                         <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g., Coffee with friends" />
+                         <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="ex: Café com amigos" />
                          <Button type="button" size="icon" variant="outline" onClick={handleSuggestCategory} disabled={isSuggesting}>
                             <Wand2 className={cn("h-4 w-4", isSuggesting && "animate-spin")} />
                          </Button>
@@ -207,15 +207,15 @@ function TransactionForm({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="amount">Amount</Label>
-                        <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
+                        <Label htmlFor="amount">Valor</Label>
+                        <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="date">Date</Label>
+                        <Label htmlFor="date">Data</Label>
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
-                                    {date ? date.toLocaleDateString() : <span>Pick a date</span>}
+                                    {date ? date.toLocaleDateString('pt-BR') : <span>Escolha uma data</span>}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">
@@ -226,22 +226,22 @@ function TransactionForm({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="type">Type</Label>
+                        <Label htmlFor="type">Tipo</Label>
                         <Select onValueChange={(value: "income" | "expense") => setType(value)} defaultValue={type}>
                             <SelectTrigger id="type">
-                                <SelectValue placeholder="Select type" />
+                                <SelectValue placeholder="Selecione o tipo" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="expense">Expense</SelectItem>
-                                <SelectItem value="income">Income</SelectItem>
+                                <SelectItem value="expense">Despesa</SelectItem>
+                                <SelectItem value="income">Receita</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="category">Category</Label>
+                        <Label htmlFor="category">Categoria</Label>
                         <Select onValueChange={(value: Category) => setCategory(value)} value={category}>
                             <SelectTrigger id="category">
-                                <SelectValue placeholder="Select category" />
+                                <SelectValue placeholder="Selecione a categoria" />
                             </SelectTrigger>
                             <SelectContent>
                                 {categories.map(cat => (
@@ -252,7 +252,7 @@ function TransactionForm({
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button type="submit">Add Transaction</Button>
+                    <Button type="submit">Adicionar Transação</Button>
                 </DialogFooter>
             </form>
         </DialogContent>

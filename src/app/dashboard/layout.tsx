@@ -25,11 +25,11 @@ import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/transactions", label: "Transactions", icon: ArrowRightLeft },
-  { href: "/dashboard/budgets", label: "Budgets", icon: Wallet },
-  { href: "/dashboard/reports", label: "Reports", icon: AreaChart },
-  { href: "/dashboard/savings", label: "Savings", icon: PiggyBank },
+  { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
+  { href: "/dashboard/transactions", label: "Transações", icon: ArrowRightLeft },
+  { href: "/dashboard/budgets", label: "Orçamentos", icon: Wallet },
+  { href: "/dashboard/reports", label: "Relatórios", icon: AreaChart },
+  { href: "/dashboard/savings", label: "Economias", icon: PiggyBank },
 ];
 
 export default function DashboardLayout({
@@ -68,13 +68,13 @@ export default function DashboardLayout({
       <aside className="fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r bg-background sm:flex">
         <div className="flex h-[60px] items-center border-b px-6 justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-            <CategoryIcon category="Savings" className="h-6 w-6 text-primary" />
+            <CategoryIcon category="Economias" className="h-6 w-6 text-primary" />
             <span className="">Granor</span>
           </Link>
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
               <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              <span className="sr-only">Toggle theme</span>
+              <span className="sr-only">Alternar tema</span>
             </Button>
         </div>
         {sidebarContent}
@@ -85,23 +85,23 @@ export default function DashboardLayout({
             <SheetTrigger asChild>
               <Button size="icon" variant="outline" className="sm:hidden">
                 <PanelLeft className="h-5 w-5" />
-                <span className="sr-only">Toggle Menu</span>
+                <span className="sr-only">Alternar Menu</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="sm:max-w-xs">
-               <SheetHeader className="flex-row items-center justify-between">
+              <SheetHeader className="flex-row items-center justify-between">
                   <SheetTitle className="sr-only">Menu</SheetTitle>
                  <Link
                   href="/dashboard"
                   className="flex items-center gap-2 text-lg font-semibold"
                 >
-                  <CategoryIcon category="Savings" className="h-6 w-6 text-primary" />
+                  <CategoryIcon category="Economias" className="h-6 w-6 text-primary" />
                   <span className="">Granor</span>
                 </Link>
                 <Button variant="ghost" size="icon" onClick={toggleTheme}>
                   <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                   <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                  <span className="sr-only">Toggle theme</span>
+                  <span className="sr-only">Alternar tema</span>
                 </Button>
               </SheetHeader>
               <nav className="grid gap-6 text-lg font-medium mt-4">

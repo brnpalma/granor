@@ -16,11 +16,11 @@ import {z} from 'genkit';
 const CategorizeTransactionInputSchema = z.object({
   transactionDescription: z
     .string()
-    .describe('The description of the transaction.'),
+    .describe('A descrição da transação.'),
   transactionHistory: z
     .string()
     .describe(
-      'The transaction history of the user, including date, description, and category of previous transactions.'
+      'O histórico de transações do usuário, incluindo data, descrição e categoria de transações anteriores.'
     ),
 });
 export type CategorizeTransactionInput = z.infer<
@@ -30,11 +30,11 @@ export type CategorizeTransactionInput = z.infer<
 const CategorizeTransactionOutputSchema = z.object({
   suggestedCategory: z
     .string()
-    .describe('The suggested category for the transaction.'),
+    .describe('A categoria sugerida para a transação.'),
   confidence: z
     .number()
     .describe(
-      'A confidence score between 0 and 1 indicating the certainty of the suggested category.'
+      'Uma pontuação de confiança entre 0 e 1 indicando a certeza da categoria sugerida.'
     ),
 });
 export type CategorizeTransactionOutput = z.infer<
@@ -51,13 +51,13 @@ const prompt = ai.definePrompt({
   name: 'categorizeTransactionPrompt',
   input: {schema: CategorizeTransactionInputSchema},
   output: {schema: CategorizeTransactionOutputSchema},
-  prompt: `You are a personal finance assistant that suggests transaction categories based on the transaction description and history.
+  prompt: `Você é um assistente de finanças pessoais que sugere categorias de transação com base na descrição e no histórico da transação.
 
-Transaction Description: {{{transactionDescription}}}
-Transaction History: {{{transactionHistory}}}
+Descrição da Transação: {{{transactionDescription}}}
+Histórico de Transações: {{{transactionHistory}}}
 
-Based on the transaction description and history, suggest a category for this transaction and a confidence score between 0 and 1.
-Ensure that the suggestedCategory is limited to one of the following options: "Food", "Transportation", "Shopping", "Entertainment", "Utilities", "Rent", "Salary", "Other".
+Com base na descrição e no histórico da transação, sugira uma categoria para esta transação e uma pontuação de confiança entre 0 e 1.
+Certifique-se de que a suggestedCategory esteja limitada a uma das seguintes opções: "Alimentação", "Transporte", "Compras", "Entretenimento", "Serviços", "Aluguel", "Salário", "Outros".
 
 {{json output}}`,
 });

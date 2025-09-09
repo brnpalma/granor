@@ -25,11 +25,11 @@ export default function SavingsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Savings Goals</h1>
+        <h1 className="text-2xl font-bold">Metas de Economia</h1>
          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
                 <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Goal
+                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Meta
                 </Button>
             </DialogTrigger>
             <SavingsGoalForm onSubmit={addSavingsGoal} onSubmitted={() => setDialogOpen(false)} />
@@ -47,10 +47,10 @@ export default function SavingsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {goal.currentAmount.toLocaleString("en-US", { style: "currency", currency: "USD" })}
+                  {goal.currentAmount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  saved of {goal.targetAmount.toLocaleString("en-US", { style: "currency", currency: "USD" })}
+                  economizado de {goal.targetAmount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </p>
                 <Progress value={progress} className="mt-4" />
               </CardContent>
@@ -63,7 +63,7 @@ export default function SavingsPage() {
                 <Button variant="ghost" className="h-full w-full">
                     <div className="flex flex-col items-center gap-2">
                         <PlusCircle className="h-8 w-8 text-muted-foreground" />
-                        <span className="text-muted-foreground">Add New Goal</span>
+                        <span className="text-muted-foreground">Adicionar Nova Meta</span>
                     </div>
                 </Button>
             </DialogTrigger>
@@ -90,7 +90,7 @@ function SavingsGoalForm({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !targetAmount) {
-            toast({ title: "Please fill all fields", variant: 'destructive' });
+            toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
             return;
         }
 
@@ -108,19 +108,19 @@ function SavingsGoalForm({
     return (
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Add New Savings Goal</DialogTitle>
+                <DialogTitle>Adicionar Nova Meta de Economia</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="name">Goal Name</Label>
-                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., New MacBook Pro" />
+                    <Label htmlFor="name">Nome da Meta</Label>
+                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Novo MacBook Pro" />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="targetAmount">Target Amount</Label>
-                    <Input id="targetAmount" type="number" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} placeholder="0.00" />
+                    <Label htmlFor="targetAmount">Valor Alvo</Label>
+                    <Input id="targetAmount" type="number" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} placeholder="0,00" />
                 </div>
                 <DialogFooter>
-                    <Button type="submit">Add Goal</Button>
+                    <Button type="submit">Adicionar Meta</Button>
                 </DialogFooter>
             </form>
         </DialogContent>

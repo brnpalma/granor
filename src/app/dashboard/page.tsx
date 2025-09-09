@@ -50,79 +50,79 @@ export default function DashboardPage() {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
-          <span className="text-muted-foreground">$</span>
+          <CardTitle className="text-sm font-medium">Saldo Total</CardTitle>
+          <span className="text-muted-foreground">R$</span>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {balance.toLocaleString("en-US", {
+            {balance.toLocaleString("pt-BR", {
               style: "currency",
-              currency: "USD",
+              currency: "BRL",
             })}
           </div>
           <p className="text-xs text-muted-foreground">
-            Total income minus expenses
+            Renda total menos despesas
           </p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Income</CardTitle>
+          <CardTitle className="text-sm font-medium">Renda Total</CardTitle>
           <span className="text-muted-foreground text-green-500">+</span>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {totalIncome.toLocaleString("en-US", {
+            {totalIncome.toLocaleString("pt-BR", {
               style: "currency",
-              currency: "USD",
+              currency: "BRL",
             })}
           </div>
-           <p className="text-xs text-muted-foreground">This month</p>
+           <p className="text-xs text-muted-foreground">Este mês</p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+          <CardTitle className="text-sm font-medium">Despesas Totais</CardTitle>
           <span className="text-muted-foreground text-red-500">-</span>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {totalExpense.toLocaleString("en-US", {
+            {totalExpense.toLocaleString("pt-BR", {
               style: "currency",
-              currency: "USD",
+              currency: "BRL",
             })}
           </div>
-           <p className="text-xs text-muted-foreground">This month</p>
+           <p className="text-xs text-muted-foreground">Este mês</p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Savings Progress</CardTitle>
-          <CategoryIcon category="Savings" className="text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Progresso das Economias</CardTitle>
+          <CategoryIcon category="Economias" className="text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {savingsGoals.reduce((acc,g) => acc + g.currentAmount, 0).toLocaleString("en-US", {
+            {savingsGoals.reduce((acc,g) => acc + g.currentAmount, 0).toLocaleString("pt-BR", {
               style: "currency",
-              currency: "USD",
+              currency: "BRL",
             })}
           </div>
           <p className="text-xs text-muted-foreground">
-            Across all savings goals
+            Em todas as metas de economia
           </p>
         </CardContent>
       </Card>
 
       <Card className="lg:col-span-2">
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
+          <CardTitle>Transações Recentes</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead className="text-right">Valor</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -131,7 +131,7 @@ export default function DashboardPage() {
                   <TableCell>
                     <div className="font-medium">{transaction.description}</div>
                     <div className="text-sm text-muted-foreground">
-                      {transaction.date.toLocaleDateString()}
+                      {transaction.date.toLocaleDateString('pt-BR')}
                     </div>
                   </TableCell>
                   <TableCell
@@ -143,9 +143,9 @@ export default function DashboardPage() {
                     )}
                   >
                     {transaction.type === "income" ? "+" : "-"}
-                    {transaction.amount.toLocaleString("en-US", {
+                    {transaction.amount.toLocaleString("pt-BR", {
                       style: "currency",
-                      currency: "USD",
+                      currency: "BRL",
                     })}
                   </TableCell>
                 </TableRow>
@@ -157,8 +157,8 @@ export default function DashboardPage() {
 
       <Card className="lg:col-span-2">
         <CardHeader>
-          <CardTitle>Budgets Overview</CardTitle>
-          <CardDescription>Your spending vs. your monthly budgets.</CardDescription>
+          <CardTitle>Visão Geral dos Orçamentos</CardTitle>
+          <CardDescription>Seus gastos vs. seus orçamentos mensais.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
             {budgets.map(budget => {
@@ -169,7 +169,7 @@ export default function DashboardPage() {
                         <div className="flex justify-between items-center text-sm">
                             <span className="font-medium">{budget.category}</span>
                             <span className="text-muted-foreground">
-                                {spent.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} / {budget.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                                {spent.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} / {budget.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                             </span>
                         </div>
                         <Progress value={progress} />

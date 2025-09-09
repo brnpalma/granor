@@ -34,11 +34,11 @@ export default function BudgetsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Budgets</h1>
+        <h1 className="text-2xl font-bold">Orçamentos</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
                 <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Budget
+                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Orçamento
                 </Button>
             </DialogTrigger>
             <BudgetForm onSubmit={addBudget} onSubmitted={() => setDialogOpen(false)} />
@@ -56,13 +56,13 @@ export default function BudgetsPage() {
               <CardHeader>
                 <CardTitle>{budget.category}</CardTitle>
                 <CardDescription>
-                  {`$${spent.toFixed(2)} of $${budget.amount.toFixed(2)}`}
+                  {`${spent.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} de ${budget.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Progress value={progress} className="mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  {remaining >= 0 ? `$${remaining.toFixed(2)} remaining` : `$${Math.abs(remaining).toFixed(2)} over`}
+                  {remaining >= 0 ? `${remaining.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} restantes` : `${Math.abs(remaining).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} acima`}
                 </p>
               </CardContent>
             </Card>
@@ -74,7 +74,7 @@ export default function BudgetsPage() {
                 <Button variant="ghost" className="h-full w-full">
                     <div className="flex flex-col items-center gap-2">
                         <PlusCircle className="h-8 w-8 text-muted-foreground" />
-                        <span className="text-muted-foreground">Add New Budget</span>
+                        <span className="text-muted-foreground">Adicionar Novo Orçamento</span>
                     </div>
                 </Button>
             </DialogTrigger>
@@ -101,7 +101,7 @@ function BudgetForm({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!amount || !category) {
-            toast({ title: "Please fill all fields", variant: 'destructive' });
+            toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
             return;
         }
 
@@ -118,28 +118,28 @@ function BudgetForm({
     return (
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Add New Budget</DialogTitle>
+                <DialogTitle>Adicionar Novo Orçamento</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
                  <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
+                    <Label htmlFor="category">Categoria</Label>
                     <Select onValueChange={(value: Category) => setCategory(value)} value={category}>
                         <SelectTrigger id="category">
-                            <SelectValue placeholder="Select category" />
+                            <SelectValue placeholder="Selecione a categoria" />
                         </SelectTrigger>
                         <SelectContent>
-                            {categories.filter(c => c !== 'Salary').map(cat => (
+                            {categories.filter(c => c !== 'Salário').map(cat => (
                                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="amount">Monthly Budget Amount</Label>
-                    <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
+                    <Label htmlFor="amount">Valor do Orçamento Mensal</Label>
+                    <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
                 </div>
                 <DialogFooter>
-                    <Button type="submit">Add Budget</Button>
+                    <Button type="submit">Adicionar Orçamento</Button>
                 </DialogFooter>
             </form>
         </DialogContent>

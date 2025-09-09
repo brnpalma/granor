@@ -26,7 +26,7 @@ export default function ReportsPage() {
   const [transactions] = useState<Transaction[]>(mockTransactions);
 
   const spendingByCategory = useMemo(() => {
-    const expenseCategories = categories.filter(c => c !== 'Salary' && c !== 'Savings');
+    const expenseCategories = categories.filter(c => c !== 'Salário' && c !== 'Economias');
     return expenseCategories.map(category => {
         const total = transactions
             .filter(t => t.type === 'expense' && t.category === category)
@@ -45,12 +45,12 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Reports</h1>
+      <h1 className="text-2xl font-bold">Relatórios</h1>
       <Card>
         <CardHeader>
-          <CardTitle>Spending by Category</CardTitle>
+          <CardTitle>Gastos por Categoria</CardTitle>
           <CardDescription>
-            A breakdown of your expenses for the current period.
+            Uma análise de suas despesas para o período atual.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -59,12 +59,12 @@ export default function ReportsPage() {
               <BarChart data={spendingByCategory} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
                 <ChartTooltip
                     cursor={false}
                     content={<ChartTooltipContent 
                         labelFormatter={(label) => { return `${label}`}}
-                        formatter={(value) => value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                        formatter={(value) => (value as number).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     />}
                 />
                 <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
