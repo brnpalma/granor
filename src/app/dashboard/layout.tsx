@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
+import { ThemeToggleButton } from "@/components/theme-toggle-button";
 
 const navItems = [
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
@@ -59,6 +60,9 @@ export default function DashboardLayout({
                 ))}
             </nav>
         </div>
+         <div className="mt-auto p-4">
+            <ThemeToggleButton />
+        </div>
     </div>
   );
 
@@ -83,9 +87,6 @@ export default function DashboardLayout({
               </Button>
             </SheetTrigger>
              <SheetContent side="left" className="sm:max-w-xs p-0">
-                <SheetHeader>
-                    <SheetTitle className="sr-only">Menu</SheetTitle>
-                </SheetHeader>
                <div className="flex h-[60px] items-center border-b px-6 justify-between">
                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                     <CategoryIcon category="Economias" className="h-6 w-6 text-primary" />
