@@ -217,8 +217,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-6 text-white px-2">
-        <div className="flex justify-center items-center text-center p-2 gap-4">
-            <div className="flex-1 text-center">
+        <div className="flex w-full items-center justify-center text-center p-2 gap-4">
+            <div className="flex-1 flex flex-col items-center gap-1">
                 <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Inicial</span>
@@ -227,7 +227,7 @@ export default function DashboardPage() {
                     {previousMonthLeftover.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
-            <div className="text-center">
+            <div className="flex-shrink-0 flex flex-col items-center gap-1">
                 <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
                      <div className="h-4 w-4 rounded-full border-2 border-gray-400 flex items-center justify-center">
                         <div className="h-1.5 w-1.5 rounded-full bg-gray-400"></div>
@@ -238,7 +238,7 @@ export default function DashboardPage() {
                     {monthlyNetBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
-            <div className="flex-1 text-center">
+            <div className="flex-1 flex flex-col items-center gap-1">
                  <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
                     <Clock className="h-4 w-4"/>
                     <span>Previsto *</span>
