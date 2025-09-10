@@ -1,3 +1,4 @@
+
 export const defaultCategories = [
   "Alimentação",
   "Transporte",
@@ -15,6 +16,7 @@ export type DefaultCategory = (typeof defaultCategories)[number];
 export interface Category {
   id: string;
   name: DefaultCategory | string;
+  type: "income" | "expense";
 }
 
 

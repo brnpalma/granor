@@ -23,7 +23,6 @@ import {
   Shapes,
   ArrowUpDown,
   Minus,
-  Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,7 +69,6 @@ import { TransactionDialogProvider, useTransactionDialog } from "@/hooks/use-tra
 import { useToast } from "@/hooks/use-toast";
 import type { Transaction, Account, Category, CreditCard as CreditCardType } from "@/lib/types";
 import { getAccounts, getCategories, getCreditCards, getTransactions, addTransaction } from "@/lib/firestore";
-import { categorizeTransaction } from "@/ai/flows/categorize-transaction";
 
 const navItems = [
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
@@ -491,7 +489,7 @@ function TransactionForm({
                                 <SelectValue placeholder="Selecione a categoria" />
                             </SelectTrigger>
                             <SelectContent>
-                                {categories.filter(c => type === 'income' ? c.name === 'Salário' : c.name !== 'Salário').map(cat => (
+                                {categories.filter(c => c.type === type).map(cat => (
                                     <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                                 ))}
                             </SelectContent>

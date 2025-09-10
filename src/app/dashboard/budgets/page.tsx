@@ -222,7 +222,7 @@ function BudgetForm({
                             <SelectValue placeholder="Selecione a categoria" />
                         </SelectTrigger>
                         <SelectContent>
-                            {categories.filter(c => c.name !== 'Salário').map(cat => (
+                            {categories.filter(c => c.type === 'expense').map(cat => (
                                 <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                             ))}
                         </SelectContent>

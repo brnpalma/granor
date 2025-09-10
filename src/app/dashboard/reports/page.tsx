@@ -67,7 +67,7 @@ export default function ReportsPage() {
   }, [user, selectedDate, getMonthDateRange]);
 
   const spendingByCategory = useMemo(() => {
-    const expenseCategories = categories.filter(c => c.name !== 'Salário' && c.name !== 'Economias');
+    const expenseCategories = categories.filter(c => c.type === 'expense');
     return expenseCategories.map(category => {
         const total = transactions
             .filter(t => t.type === 'expense' && t.category === category.name && !t.isBudget)

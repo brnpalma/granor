@@ -44,6 +44,7 @@ import { addCategory, deleteCategory, getCategories } from "@/lib/firestore";
 import type { Category } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -107,6 +108,7 @@ export default function CategoriesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -114,6 +116,7 @@ export default function CategoriesPage() {
               {categories.map((cat) => (
                 <TableRow key={cat.id}>
                   <TableCell className="font-medium">{cat.name}</TableCell>
+                  <TableCell>{cat.type === 'income' ? 'Receita' : 'Despesa'}</TableCell>
                   <TableCell className="text-right">
                      <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -154,18 +157,20 @@ function CategoryForm({
     onSubmitted: () => void;
 }) {
     const [name, setName] = useState("");
+    const [type, setType] = useState<"income" | "expense">("expense");
     const { toast } = useToast();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name) {
-            toast({ title: "Por favor, preencha o nome da categoria", variant: 'destructive' });
+        if (!name || !type) {
+            toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
             return;
         }
 
-        await onSubmit({ name });
+        await onSubmit({ name, type });
 
         setName("");
+        setType("expense");
         onSubmitted();
     };
 
@@ -178,6 +183,19 @@ function CategoryForm({
                 <div className="space-y-2">
                     <Label htmlFor="name">Nome da Categoria</Label>
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Lazer" />
+                </div>
+                 <div className="space-y-2">
+                    <Label>Tipo</Label>
+                    <RadioGroup value={type} onValueChange={(value) => setType(value as "income" | "expense")} className="flex gap-4">
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="expense" id="expense" />
+                            <Label htmlFor="expense">Despesa</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="income" id="income" />
+                            <Label htmlFor="income">Receita</Label>
+                        </div>
+                    </RadioGroup>
                 </div>
                 <DialogFooter>
                     <Button type="submit">Adicionar Categoria</Button>

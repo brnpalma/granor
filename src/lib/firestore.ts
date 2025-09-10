@@ -40,7 +40,7 @@ const getLocalData = <T>(key: string): T[] => {
     if (!data) return [];
     
     if (key === 'categories' && !data) {
-        const defaultData = defaultCategories.map(name => ({ id: name.toLowerCase(), name }));
+        const defaultData = defaultCategories.map(name => ({ id: name.toLowerCase(), name, type: name === 'Salário' ? 'income' : 'expense' }));
         setLocalData('categories', defaultData);
         return defaultData as T[];
     }
@@ -128,7 +128,8 @@ const getDataSubscription = <T extends DataType>(
                 const batch = writeBatch(db);
                 defaultCategories.forEach(name => {
                     const docRef = doc(collection(db, path));
-                    batch.set(docRef, { name, isDefault: true });
+                    const type = name === 'Salário' ? 'income' : 'expense';
+                    batch.set(docRef, { name, isDefault: true, type });
                 });
                 batch.commit();
             } else {
