@@ -256,7 +256,7 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        <div className="h-40 -mt-4">
+        <div className="h-40 w-full mx-auto">
              <ResponsiveContainer width="100%" height="100%">
                 <AreaChart 
                     data={balanceChartData}
@@ -382,3 +382,4 @@ export default function DashboardPage() {
     
 
     
+
