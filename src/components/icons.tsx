@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -12,6 +13,7 @@ import {
   MoreHorizontal,
   type LucideProps,
   Shapes,
+  Wallet,
 } from "lucide-react";
 import Image from 'next/image';
 
@@ -101,3 +103,26 @@ export const NubankLogo = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
   </div>
 );
+
+export const BankIcon = ({ name }: { name: string }) => {
+    const lowerCaseName = name.toLowerCase();
+    if (lowerCaseName.includes("itaú") || lowerCaseName.includes("itau")) {
+        return <ItauLogo />;
+    }
+    if (lowerCaseName.includes("nubank")) {
+        return <NubankLogo />;
+    }
+    if (lowerCaseName.includes("picpay")) {
+        return <PicpayLogo />;
+    }
+    if (lowerCaseName.includes("mercado pago")) {
+        return <MercadoPagoLogo />;
+    }
+     if (lowerCaseName.includes("bradesco")) {
+        return <BradescoLogo />;
+    }
+    if (lowerCaseName.includes("carteira")) {
+        return <div className="bg-muted rounded-full h-8 w-8 flex items-center justify-center"><Wallet className="h-5 w-5 text-muted-foreground"/></div>;
+    }
+    return <CategoryIcon category="Outros" className="h-8 w-8 text-muted-foreground" />;
+};

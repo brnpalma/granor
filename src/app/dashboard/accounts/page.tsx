@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { PlusCircle, Trash2, Wallet } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { PlusCircle, Trash2, MoreVertical, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,14 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +44,7 @@ import type { Account, AccountType } from "@/lib/types";
 import { accountTypes } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { BankIcon } from "@/components/icons";
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -78,6 +71,10 @@ export default function AccountsPage() {
     await deleteAccount(user?.uid || null, accountId);
     toast({ title: "Conta removida!"});
   }
+  
+  const totalBalance = useMemo(() => {
+    return accounts.reduce((sum, acc) => sum + acc.balance, 0);
+  }, [accounts]);
 
   if (isLoading) {
     return (
@@ -100,56 +97,58 @@ export default function AccountsPage() {
             <AccountForm onSubmit={handleAddAccount} onSubmitted={() => setDialogOpen(false)} />
         </Dialog>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Suas Contas</CardTitle>
-          <CardDescription>Uma lista de todas as suas contas cadastradas.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Saldo</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {accounts.map((acc) => (
-                <TableRow key={acc.id}>
-                  <TableCell className="font-medium">{acc.name}</TableCell>
-                  <TableCell>{acc.type}</TableCell>
-                  <TableCell>
-                    {acc.balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Esta ação não pode ser desfeita. Isso removerá permanentemente a conta e todas as transações associadas a ela.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDeleteAccount(acc.id)}>Remover</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+
+       <div className="space-y-2">
+            <Card>
+              <CardContent className="p-2 space-y-4">
+                {accounts.map(account => (
+                    <div key={account.id} className="flex items-center gap-4 p-2 rounded-lg hover:bg-muted">
+                        <BankIcon name={account.name} />
+                        <div className="flex-1">
+                            <p className="text-xs text-muted-foreground">{account.type}</p>
+                            <p className="font-bold uppercase">{account.name}</p>
+                        </div>
+                        <div className="text-right">
+                           <p className="font-bold">{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                           <p className="text-xs text-muted-foreground">Saldo previsto R$ 0,00</p>
+                        </div>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                             <Button variant="ghost" size="icon" className="shrink-0">
+                                <MoreVertical className="h-5 w-5" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação não pode ser desfeita. Isso removerá permanentemente a conta e todas as transações associadas a ela.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteAccount(account.id)}>Remover</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                ))}
+                 <div className="border-t border-border my-2"></div>
+                 <div className="flex items-center gap-4 p-2">
+                    <div className="w-8 h-8"></div>
+                    <div className="flex-1">
+                        <p className="font-bold">Total</p>
+                         <p className="text-sm text-muted-foreground">Previsto</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="font-bold">{totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                         <p className="text-sm text-muted-foreground">R$ 0,00</p>
+                    </div>
+                    <div className="w-10"></div>
+                </div>
+              </CardContent>
+            </Card>
+        </div>
     </div>
   );
 }
