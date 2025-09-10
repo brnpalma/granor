@@ -129,10 +129,10 @@ export default function TransactionsPage() {
       groups[dateKey].push(t);
     });
     return Object.entries(groups).map(([date, transactions]) => {
-      const day = date.split('/')[0];
-      const weekday = transactions[0].date.toLocaleDateString('pt-BR', { weekday: 'long' });
+      const [day] = date.split('/');
+      const weekday = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(transactions[0].date);
       return {
-        date: `${day} • ${weekday}`,
+        date: `${day} • ${weekday.charAt(0).toUpperCase() + weekday.slice(1)}`,
         transactions,
       };
     });
