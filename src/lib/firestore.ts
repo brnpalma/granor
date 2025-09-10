@@ -13,8 +13,10 @@ import {
   getDocs,
   updateDoc,
   runTransaction,
+  deleteDoc,
 } from "firebase/firestore";
-import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard } from "./types";
+import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, DefaultCategory } from "./types";
+import { defaultCategories } from "./types";
 import { useToast } from "@/hooks/use-toast";
 
 // Toast hook must be called from a component
@@ -33,6 +35,13 @@ const getLocalData = <T>(key: string): T[] => {
     if (typeof window === 'undefined') return [];
     const data = window.localStorage.getItem(key);
     if (!data) return [];
+    
+    if (key === 'categories' && !data) {
+        const defaultData = defaultCategories.map(name => ({ id: name.toLowerCase(), name }));
+        setLocalData('categories', defaultData);
+        return defaultData as T[];
+    }
+
     return JSON.parse(data, (key, value) => {
         if (key === 'date' && typeof value === 'string') {
             return new Date(value);
@@ -48,7 +57,7 @@ const setLocalData = <T>(key: string, data: T[]) => {
 
 // --- Generic Data Operations ---
 
-type DataType = Transaction | Budget | SavingsGoal | Account | CreditCard;
+type DataType = Transaction | Budget | SavingsGoal | Account | CreditCard | Category;
 type DataTypeOmitId<T> = Omit<T, "id">;
 
 const addDataItem = async <T extends DataType>(
@@ -72,6 +81,27 @@ const addDataItem = async <T extends DataType>(
     }
 };
 
+const deleteDataItem = async (
+    userId: string | null,
+    collectionName: string,
+    itemId: string
+) => {
+    const path = getCollectionPath(userId, collectionName);
+    if (path) {
+        try {
+            await deleteDoc(doc(db, path, itemId));
+        } catch (error) {
+            console.error(`Error deleting ${collectionName}: `, error);
+            showToast({ title: "Erro", description: `Não foi possível remover ${collectionName}.`, variant: "destructive" });
+        }
+    } else {
+        let localData = getLocalData<any>(collectionName);
+        localData = localData.filter((item: any) => item.id !== itemId);
+        setLocalData(collectionName, localData);
+    }
+};
+
+
 const getDataSubscription = <T extends DataType>(
     userId: string | null,
     collectionName: string,
@@ -82,20 +112,31 @@ const getDataSubscription = <T extends DataType>(
     const path = getCollectionPath(userId, collectionName);
     if (path) {
         const q = query(collection(db, path), orderBy(orderField, "desc"));
-        return onSnapshot(q, (querySnapshot) => {
-            const data: T[] = [];
-            querySnapshot.forEach((doc) => {
-                data.push({
-                    id: doc.id,
-                    ...postProcess(doc.data()),
-                } as T);
-            });
-            callback(data);
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            if (querySnapshot.empty && collectionName === 'categories') {
+                // If firestore is empty for categories, populate with defaults
+                const batch = writeBatch(db);
+                defaultCategories.forEach(name => {
+                    const docRef = doc(collection(db, path));
+                    batch.set(docRef, { name, isDefault: true });
+                });
+                batch.commit();
+                // Snapshot will re-trigger with the new data
+            } else {
+                const data: T[] = [];
+                querySnapshot.forEach((doc) => {
+                    data.push({
+                        id: doc.id,
+                        ...postProcess(doc.data()),
+                    } as T);
+                });
+                callback(data);
+            }
         });
+        return unsubscribe;
     } else {
         // For local storage, we can't use real-time subscriptions.
         // We'll call the callback once with the current data.
-        // The component will need to re-fetch on its own if needed.
         const data = getLocalData<T>(collectionName);
         callback(data);
         // Return a no-op unsubscribe function
@@ -103,6 +144,18 @@ const getDataSubscription = <T extends DataType>(
     }
 };
 
+// Categories
+export const addCategory = (userId: string | null, category: Omit<Category, "id">) => {
+    return addDataItem<Category>(userId, "categories", category, (item) => ({ ...item, isDefault: false }));
+};
+
+export const deleteCategory = (userId: string | null, categoryId: string) => {
+    return deleteDataItem(userId, "categories", categoryId);
+};
+
+export const getCategories = (userId: string | null, callback: (categories: Category[]) => void) => {
+    return getDataSubscription<Category>(userId, "categories", callback, 'name');
+};
 
 // Accounts
 export const addAccount = (userId: string | null, account: Omit<Account, "id">) => {
@@ -218,7 +271,7 @@ export const getSavingsGoals = (userId: string | null, callback: (goals: Savings
 export const migrateLocalDataToFirestore = async (userId: string) => {
     if (!userId) return;
 
-    const collections = ["transactions", "budgets", "savings_goals", "accounts", "credit_cards"];
+    const collections = ["transactions", "budgets", "savings_goals", "accounts", "credit_cards", "categories"];
 
     for (const collectionName of collections) {
         const localData = getLocalData<any>(collectionName);

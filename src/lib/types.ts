@@ -1,4 +1,4 @@
-export const categories = [
+export const defaultCategories = [
   "Alimentação",
   "Transporte",
   "Compras",
@@ -10,7 +10,13 @@ export const categories = [
   "Outros",
 ] as const;
 
-export type Category = (typeof categories)[number];
+export type DefaultCategory = (typeof defaultCategories)[number];
+
+export interface Category {
+  id: string;
+  name: DefaultCategory | string;
+}
+
 
 export const accountTypes = [
   "Conta Corrente",
@@ -44,7 +50,7 @@ export interface Transaction {
   description: string;
   amount: number;
   type: "income" | "expense";
-  category: Category;
+  category: DefaultCategory | string;
   accountId?: string; // Optional: for bank account transactions
   creditCardId?: string; // Optional: for credit card transactions
   isBudget?: boolean;
@@ -52,7 +58,7 @@ export interface Transaction {
 
 export interface Budget {
   id: string;
-  category: Category;
+  category: DefaultCategory | string;
   amount: number;
 }
 

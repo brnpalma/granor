@@ -37,9 +37,8 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { addTransaction, getTransactions, getAccounts, getCreditCards } from "@/lib/firestore";
+import { addTransaction, getTransactions, getAccounts, getCreditCards, getCategories } from "@/lib/firestore";
 import type { Transaction, Category, Account, CreditCard as CreditCardType } from "@/lib/types";
-import { categories } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
 import { categorizeTransaction } from "@/ai/flows/categorize-transaction";
@@ -52,26 +51,44 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !user?.uid) return;
 
-    const unsubscribeTransactions = getTransactions(user?.uid || null, (data) => {
-        setTransactions(data);
-        setIsLoading(false);
-    });
-    
-    const unsubscribeAccounts = getAccounts(user?.uid || null, setAccounts);
-    const unsubscribeCreditCards = getCreditCards(user?.uid || null, setCreditCards);
+    let dataLoaded = { transactions: false, accounts: false, creditCards: false, categories: false };
+    const checkLoading = () => {
+        if(Object.values(dataLoaded).every(Boolean)) {
+            setIsLoading(false);
+        }
+    }
+
+    const createUnsubscriber = <T,>(name: keyof typeof dataLoaded, getter: (uid: string, cb: (data: T[]) => void) => () => void) => {
+        return getter(user.uid, (data) => {
+            if(name === 'transactions') setTransactions(data as Transaction[]);
+            if(name === 'accounts') setAccounts(data as Account[]);
+            if(name === 'creditCards') setCreditCards(data as CreditCardType[]);
+            if(name === 'categories') setCategories(data as Category[]);
+            dataLoaded[name] = true;
+            checkLoading();
+        });
+    }
+
+    const unsubscribeTransactions = createUnsubscriber('transactions', getTransactions);
+    const unsubscribeAccounts = createUnsubscriber('accounts', getAccounts);
+    const unsubscribeCreditCards = createUnsubscriber('creditCards', getCreditCards);
+    const unsubscribeCategories = createUnsubscriber('categories', getCategories);
+
 
     return () => {
         unsubscribeTransactions();
         unsubscribeAccounts();
         unsubscribeCreditCards();
+        unsubscribeCategories();
     };
   }, [user]);
 
@@ -115,6 +132,7 @@ export default function TransactionsPage() {
                 transactions={transactions}
                 accounts={accounts}
                 creditCards={creditCards}
+                categories={categories}
             />
         </Dialog>
       </div>
@@ -180,22 +198,24 @@ function TransactionForm({
     onSubmitted,
     transactions,
     accounts,
-    creditCards
+    creditCards,
+    categories
 }: {
     onSubmit: (transaction: Omit<Transaction, "id">) => Promise<void>;
     onSubmitted: () => void;
     transactions: Transaction[];
     accounts: Account[];
     creditCards: CreditCardType[];
+    categories: Category[];
 }) {
     const [description, setDescription] = useState("");
     const [amount, setAmount] = useState("");
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [type, setType] = useState<"income" | "expense">("expense");
-    const [category, setCategory] = useState<Category | "">("");
+    const [category, setCategory] = useState<string>("");
     const [source, setSource] = useState<"account" | "creditCard">("account");
     const [sourceId, setSourceId] = useState<string>("");
-    const [suggestedCategory, setSuggestedCategory] = useState<Category | null>(null);
+    const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
     const [isSuggesting, setIsSuggesting] = useState(false);
     const { toast } = useToast();
 
@@ -229,12 +249,13 @@ function TransactionForm({
                 transactionHistory: transactionHistory,
             });
             
-            if (result.suggestedCategory && categories.includes(result.suggestedCategory as Category)) {
-                setSuggestedCategory(result.suggestedCategory as Category);
-                setCategory(result.suggestedCategory as Category);
+            const categoryExists = categories.some(c => c.name === result.suggestedCategory);
+            if (result.suggestedCategory && categoryExists) {
+                setSuggestedCategory(result.suggestedCategory);
+                setCategory(result.suggestedCategory);
                 toast({ title: `Categoria sugerida: ${result.suggestedCategory}`, description: `Confiança: ${(result.confidence * 100).toFixed(0)}%` });
             } else {
-                 toast({ title: "Não foi possível sugerir uma categoria.", description: "Por favor, selecione uma manualmente.", variant: 'destructive' });
+                 toast({ title: "Não foi possível sugerir uma categoria.", description: "A categoria sugerida não existe ou a IA não pôde determinar uma. Por favor, selecione uma manualmente.", variant: 'destructive' });
             }
         } catch (error) {
             console.error("Falha na categorização por IA:", error);
@@ -360,13 +381,13 @@ function TransactionForm({
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="category">Categoria</Label>
-                        <Select onValueChange={(value: Category) => setCategory(value)} value={category}>
+                        <Select onValueChange={(value: string) => setCategory(value)} value={category}>
                             <SelectTrigger id="category">
                                 <SelectValue placeholder="Selecione a categoria" />
                             </SelectTrigger>
                             <SelectContent>
-                                {categories.filter(c => type === 'income' ? c === 'Salário' : c !== 'Salário').map(cat => (
-                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                {categories.filter(c => type === 'income' ? c.name === 'Salário' : c.name !== 'Salário').map(cat => (
+                                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>

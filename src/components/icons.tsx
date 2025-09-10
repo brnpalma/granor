@@ -1,6 +1,6 @@
 "use client";
 
-import type { Category } from "@/lib/types";
+import type { DefaultCategory } from "@/lib/types";
 import {
   Utensils,
   Car,
@@ -12,10 +12,11 @@ import {
   PiggyBank,
   MoreHorizontal,
   type LucideProps,
+  Shapes,
 } from "lucide-react";
 import Image from 'next/image';
 
-const iconMap: Record<Category, React.ComponentType<LucideProps>> = {
+const iconMap: Record<DefaultCategory | 'Categorias', React.ComponentType<LucideProps>> = {
   Alimentação: Utensils,
   Transporte: Car,
   Compras: ShoppingBag,
@@ -23,16 +24,17 @@ const iconMap: Record<Category, React.ComponentType<LucideProps>> = {
   Serviços: Bolt,
   Aluguel: Home,
   Salário: Landmark,
-  Economias: PiggyBank, // This icon looks like a boar, representing Gullinbursti
+  Economias: PiggyBank,
   Outros: MoreHorizontal,
+  Categorias: Shapes,
 };
 
 interface CategoryIconProps extends LucideProps {
-  category: Category;
+  category: DefaultCategory | string;
 }
 
 export function CategoryIcon({ category, ...props }: CategoryIconProps) {
-  const IconComponent = iconMap[category] || MoreHorizontal;
+  const IconComponent = (iconMap as Record<string, React.ComponentType<LucideProps>>)[category] || MoreHorizontal;
   return <IconComponent {...props} />;
 }
 

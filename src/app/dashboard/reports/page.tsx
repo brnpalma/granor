@@ -15,36 +15,55 @@ import {
 } from "@/components/ui/chart";
 import { Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 
-import { getTransactions } from "@/lib/firestore";
-import type { Transaction } from "@/lib/types";
-import { categories } from "@/lib/types";
+import { getTransactions, getCategories } from "@/lib/firestore";
+import type { Transaction, Category } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 
 
 export default function ReportsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const unsubscribe = getTransactions(user?.uid || null, (data) => {
+    if (typeof window === 'undefined' || !user?.uid) return;
+
+    const unsubscribeTransactions = getTransactions(user.uid, (data) => {
         setTransactions(data);
-        setIsLoading(false);
+        checkLoading();
     });
-    return () => unsubscribe();
-  }, [user]);
+    const unsubscribeCategories = getCategories(user.uid, (data) => {
+        setCategories(data);
+        checkLoading();
+    })
+    
+    const checkLoading = () => {
+        // A simple check, assumes categories load after or at same time as transactions
+        if (categories.length > 0) {
+            setIsLoading(false);
+        }
+    }
+
+    const timeout = setTimeout(() => setIsLoading(false), 2500);
+
+    return () => {
+        unsubscribeTransactions();
+        unsubscribeCategories();
+        clearTimeout(timeout);
+    };
+  }, [user, categories.length]);
 
   const spendingByCategory = useMemo(() => {
-    const expenseCategories = categories.filter(c => c !== 'Salário' && c !== 'Economias');
+    const expenseCategories = categories.filter(c => c.name !== 'Salário' && c.name !== 'Economias');
     return expenseCategories.map(category => {
         const total = transactions
-            .filter(t => t.type === 'expense' && t.category === category && !t.isBudget)
+            .filter(t => t.type === 'expense' && t.category === category.name && !t.isBudget)
             .reduce((sum, t) => sum + t.amount, 0);
-        return { name: category, total };
+        return { name: category.name, total };
     }).filter(c => c.total > 0)
     .sort((a,b) => b.total - a.total);
-  }, [transactions]);
+  }, [transactions, categories]);
   
   const chartConfig = {
     total: {

@@ -5,9 +5,8 @@ import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { addBudget, getBudgets, getTransactions } from "@/lib/firestore";
+import { addBudget, getBudgets, getTransactions, getCategories } from "@/lib/firestore";
 import type { Budget, Transaction, Category } from "@/lib/types";
-import { categories } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addBudgetDialogOpen, setAddBudgetDialogOpen] = useState(false);
@@ -25,15 +25,33 @@ export default function BudgetsPage() {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !user?.uid) return;
 
-    const handleData = <T,>(setter: React.Dispatch<React.SetStateAction<T[]>>) => (data: T[]) => {
-        setter(data);
-        setIsLoading(false);
-    };
+    let budgetsLoaded = false;
+    let transactionsLoaded = false;
+    let categoriesLoaded = false;
 
-    const unsubscribeBudgets = getBudgets(user?.uid || null, handleData(setBudgets));
-    const unsubscribeTransactions = getTransactions(user?.uid || null, handleData(setTransactions));
+    const checkLoading = () => {
+        if(budgetsLoaded && transactionsLoaded && categoriesLoaded) {
+            setIsLoading(false);
+        }
+    }
+
+    const unsubscribeBudgets = getBudgets(user.uid, (data) => {
+        setBudgets(data);
+        budgetsLoaded = true;
+        checkLoading();
+    });
+    const unsubscribeTransactions = getTransactions(user.uid, (data) => {
+        setTransactions(data);
+        transactionsLoaded = true;
+        checkLoading();
+    });
+    const unsubscribeCategories = getCategories(user.uid, (data) => {
+        setCategories(data);
+        categoriesLoaded = true;
+        checkLoading();
+    });
     
     // In case one of them returns empty and the other has data
     const timeout = setTimeout(() => setIsLoading(false), 2000);
@@ -42,6 +60,7 @@ export default function BudgetsPage() {
     return () => {
       unsubscribeBudgets();
       unsubscribeTransactions();
+      unsubscribeCategories();
       clearTimeout(timeout);
     };
   }, [user]);
@@ -75,7 +94,7 @@ export default function BudgetsPage() {
                     <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Orçamento
                 </Button>
             </DialogTrigger>
-            <BudgetForm onSubmit={handleAddBudget} onSubmitted={() => setDialogOpen(false)} />
+            <BudgetForm onSubmit={handleAddBudget} onSubmitted={() => setDialogOpen(false)} categories={categories} />
         </Dialog>
       </div>
 
@@ -112,7 +131,7 @@ export default function BudgetsPage() {
                     </div>
                 </Button>
             </DialogTrigger>
-            <BudgetForm onSubmit={handleAddBudget} onSubmitted={() => setAddBudgetDialogOpen(false)} />
+            <BudgetForm onSubmit={handleAddBudget} onSubmitted={() => setAddBudgetDialogOpen(false)} categories={categories} />
         </Dialog>
           </Card>
       </div>
@@ -124,12 +143,14 @@ export default function BudgetsPage() {
 function BudgetForm({
     onSubmit,
     onSubmitted,
+    categories,
 }: {
     onSubmit: (budget: Omit<Budget, "id">) => Promise<void>;
     onSubmitted: () => void;
+    categories: Category[];
 }) {
     const [amount, setAmount] = useState("");
-    const [category, setCategory] = useState<Category | "">("");
+    const [category, setCategory] = useState<string>("");
     const { toast } = useToast();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -141,7 +162,7 @@ function BudgetForm({
 
         await onSubmit({
             amount: parseFloat(amount),
-            category: category as Category,
+            category: category,
         });
         
         setAmount("");
@@ -157,13 +178,13 @@ function BudgetForm({
             <form onSubmit={handleSubmit} className="space-y-4">
                  <div className="space-y-2">
                     <Label htmlFor="category">Categoria</Label>
-                    <Select onValueChange={(value: Category) => setCategory(value)} value={category}>
+                    <Select onValueChange={(value: string) => setCategory(value)} value={category}>
                         <SelectTrigger id="category">
                             <SelectValue placeholder="Selecione a categoria" />
                         </SelectTrigger>
                         <SelectContent>
-                            {categories.filter(c => c !== 'Salário').map(cat => (
-                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            {categories.filter(c => c.name !== 'Salário').map(cat => (
+                                <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>

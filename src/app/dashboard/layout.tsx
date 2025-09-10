@@ -19,6 +19,7 @@ import {
   Menu,
   Target,
   CreditCard,
+  Shapes,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +40,7 @@ const navItems = [
   { href: "/dashboard/accounts", label: "Contas", icon: Wallet },
   { href: "/dashboard/credit-cards", label: "Cartões de Crédito", icon: CreditCard },
   { href: "/dashboard/transactions", label: "Transações", icon: ArrowRightLeft },
+  { href: "/dashboard/categories", label: "Categorias", icon: Shapes },
   { href: "/dashboard/budgets", label: "Orçamentos", icon: Target },
   { href: "/dashboard/reports", label: "Relatórios", icon: AreaChart },
   { href: "/dashboard/savings", label: "Economias", icon: PiggyBank },
@@ -109,6 +111,16 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+        setIsLoading(false);
+    }, 300); // Small delay to allow the new page to start its own loading
+    return () => clearTimeout(timer);
+  }, [pathname]);
 
   const handleLinkClick = () => {
     setMobileMenuOpen(false);
@@ -150,7 +162,15 @@ export default function DashboardLayout({
             <MoreVertical className="h-5 w-5" />
           </Button>
         </header>
-        <main className="flex-1 p-4 sm:px-6 sm:py-0">{children}</main>
+        <main className="flex-1 p-4 sm:px-6 sm:py-0">
+            {isLoading ? (
+                 <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                </div>
+            ) : (
+                children
+            )}
+        </main>
         <div className="fixed bottom-4 right-4">
             <Button className="rounded-full h-16 w-16 shadow-lg">
                 <Plus className="h-8 w-8" />
