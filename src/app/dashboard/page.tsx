@@ -20,50 +20,77 @@ import {
 } from "@/components/ui/chart";
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Pie, PieChart, Cell, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, MoreVertical, ShieldCheck, Target } from 'lucide-react';
+import { ExternalLink, MoreVertical, Search, CheckCircle, Clock, Lock } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { getAccounts, getCreditCards, getBudgets, getTransactions } from "@/lib/firestore";
 import type { Account, CreditCard, Budget, Transaction, Category } from "@/lib/types";
-import { CategoryIcon } from "@/components/icons";
+import { CategoryIcon, ItauLogo, NubankLogo, PicpayLogo, MercadoPagoLogo, BradescoLogo } from "@/components/icons";
 import { categories } from "@/lib/types";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 
 
-const COLORS = ["#38bdf8", "#f472b6", "#f97316", "#f59e0b", "#6366f1", "#10b981", "#8b5cf6"];
+const BankIcon = ({ name }: { name: string }) => {
+    const lowerCaseName = name.toLowerCase();
+    if (lowerCaseName.includes("itaú") || lowerCaseName.includes("itau")) {
+        return <ItauLogo />;
+    }
+    if (lowerCaseName.includes("nubank")) {
+        return <NubankLogo />;
+    }
+    if (lowerCaseName.includes("picpay")) {
+        return <PicpayLogo />;
+    }
+    if (lowerCaseName.includes("mercado pago")) {
+        return <MercadoPagoLogo />;
+    }
+     if (lowerCaseName.includes("bradesco")) {
+        return <BradescoLogo />;
+    }
+    return <CategoryIcon category="Outros" className="h-8 w-8 text-muted-foreground" />;
+};
 
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+        setIsLoading(false);
+        return;
+    };
 
-    const unsubscribers = [
-        getAccounts(user.uid, setAccounts),
-        getCreditCards(user.uid, setCreditCards),
-        getBudgets(user.uid, setBudgets),
-        getTransactions(user.uid, setTransactions),
-    ];
-    
-    // Check if all initial data has been loaded
+    let dataLoaded = { accounts: false, creditCards: false, transactions: false };
     const checkLoading = () => {
-        if (accounts.length > 0 || creditCards.length > 0 || budgets.length > 0 || transactions.length > 0) {
-           setIsLoading(false);
+        if(Object.values(dataLoaded).every(Boolean)) {
+            setIsLoading(false);
         }
     }
-    
-    // Give it a moment to load, then disable spinner
-    const timer = setTimeout(() => setIsLoading(false), 2500);
+
+    const createUnsubscriber = <T,>(name: keyof typeof dataLoaded, getter: (uid: string, cb: (data: T[]) => void) => () => void, setter: React.Dispatch<React.SetStateAction<T[]>>) => {
+        return getter(user.uid, (data) => {
+            setter(data);
+            dataLoaded[name] = true;
+            checkLoading();
+        });
+    }
+
+    const unsubscribeAccounts = createUnsubscriber('accounts', getAccounts, setAccounts);
+    const unsubscribeCreditCards = createUnsubscriber('creditCards', getCreditCards, setCreditCards);
+    const unsubscribeTransactions = createUnsubscriber('transactions', getTransactions, setTransactions);
+
+    const timer = setTimeout(() => setIsLoading(false), 3000);
 
     return () => {
-        unsubscribers.forEach(unsub => unsub());
+        unsubscribeAccounts();
+        unsubscribeCreditCards();
+        unsubscribeTransactions();
         clearTimeout(timer);
     };
   }, [user?.uid]);
@@ -72,14 +99,6 @@ export default function DashboardPage() {
     return accounts.reduce((sum, acc) => sum + acc.balance, 0);
   }, [accounts]);
   
-  const totalIncome = useMemo(() => {
-    return transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-  }, [transactions]);
-  
-  const totalExpenses = useMemo(() => {
-    return transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-  }, [transactions]);
-
   const creditCardInvoices = useMemo(() => {
     return creditCards.map(card => {
         const invoiceTotal = transactions
@@ -88,65 +107,63 @@ export default function DashboardPage() {
         return { ...card, invoiceTotal };
     });
   }, [creditCards, transactions]);
+
   
-  const getSpentAmount = (category: string) => {
-    return transactions
-      .filter((t) => t.type === 'expense' && t.category === category)
-      .reduce((sum, t) => sum + t.amount, 0);
-  };
-  
-   const categoryExpenses = useMemo(() => {
-    const expenseData: { [key in Category["name"]]?: number } = {};
-    transactions
-      .filter(t => t.type === 'expense')
-      .forEach(t => {
-        if (expenseData[t.category]) {
-          expenseData[t.category]! += t.amount;
-        } else {
-          expenseData[t.category] = t.amount;
+  const balanceChartData = useMemo(() => {
+    if (transactions.length === 0 && accounts.length === 0) return [];
+    
+    const sortedTransactions = [...transactions].sort((a, b) => a.date.getTime() - b.date.getTime());
+    const initialBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0) - sortedTransactions.reduce((sum, t) => {
+        if(t.accountId) {
+             return t.type === 'income' ? sum - t.amount : sum + t.amount;
         }
-      });
-      
-    return Object.entries(expenseData)
-      .map(([name, value], index) => ({ name, value, color: COLORS[index % COLORS.length] }))
-      .sort((a,b) => b.value - a.value);
-  }, [transactions]);
-  
-  const totalCategoryExpenses = useMemo(() => {
-      return categoryExpenses.reduce((sum, item) => sum + item.value, 0);
-  }, [categoryExpenses])
-  
-  const cashFlowData = useMemo(() => {
-    const dailyData: { [date: string]: { income: number, expense: number } } = {};
+        return sum;
+    }, 0);
+
+    const data: { date: string; Saldo: number }[] = [];
+    const dailyBalances: { [date: string]: number } = {};
     const today = new Date();
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-    for(let i=0; i < today.getDate(); i++) {
-        const date = new Date(firstDayOfMonth);
-        date.setDate(firstDayOfMonth.getDate() + i);
-        const dateString = date.toLocaleDateString('en-CA'); // YYYY-MM-DD
-        dailyData[dateString] = { income: 0, expense: 0 };
+    let currentBalance = initialBalance;
+    
+    // Initialize all days of the month
+    for (let d = new Date(firstDayOfMonth); d <= lastDayOfMonth; d.setDate(d.getDate() + 1)) {
+        const dateString = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        dailyBalances[dateString] = -1; // Use -1 to indicate not yet calculated
     }
+    
+    // Set initial balance for the first day
+    const firstDayString = firstDayOfMonth.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    dailyBalances[firstDayString] = initialBalance;
 
-    transactions.forEach(t => {
-      const dateString = t.date.toLocaleDateString('en-CA');
-      if (dailyData[dateString]) {
-        if (t.type === 'income') {
-          dailyData[dateString].income += t.amount;
-        } else {
-          dailyData[dateString].expense += t.amount;
-        }
-      }
+
+    // Process transactions to get daily final balances
+    sortedTransactions.forEach(t => {
+         if (t.accountId) {
+            const dateString = t.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            currentBalance = t.type === 'income' ? currentBalance + t.amount : currentBalance - t.amount;
+            if(dailyBalances[dateString] !== undefined) {
+                 dailyBalances[dateString] = currentBalance;
+            }
+         }
     });
     
-    return Object.entries(dailyData).map(([date, values]) => ({
-      date: new Date(date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}),
-      Receitas: values.income,
-      Despesas: values.expense,
-    })).sort((a, b) => a.date.localeCompare(b.date));
+    // Fill in the gaps
+    let lastKnownBalance = initialBalance;
+    for (const dateString in dailyBalances) {
+        if (dailyBalances[dateString] === -1) {
+            dailyBalances[dateString] = lastKnownBalance;
+        } else {
+            lastKnownBalance = dailyBalances[dateString];
+        }
+        data.push({ date: dateString, Saldo: dailyBalances[dateString] });
+    }
+    
+    return data.slice(0, today.getDate());
 
-  }, [transactions]);
-
+  }, [transactions, accounts]);
 
   if (isLoading) {
     return (
@@ -156,168 +173,164 @@ export default function DashboardPage() {
                 <Skeleton className="h-24" />
                 <Skeleton className="h-24" />
              </div>
-             <Skeleton className="h-80" />
-             <div className="grid md:grid-cols-2 gap-4">
-                <Skeleton className="h-64" />
-                <Skeleton className="h-64" />
+             <Skeleton className="h-40" />
+             <div className="grid gap-4">
+                <Skeleton className="h-32" />
+                <Skeleton className="h-48" />
              </div>
         </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-16">
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Saldo Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-            <p className="text-xs text-muted-foreground">Soma de todas as suas contas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Receitas do Mês</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">{totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-             <p className="text-xs text-muted-foreground">Total de entradas no período</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Despesas do Mês</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">{totalExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-             <p className="text-xs text-muted-foreground">Total de saídas no período</p>
-          </CardContent>
-        </Card>
-      </div>
-
-       <Card>
-        <CardHeader>
-          <CardTitle>Fluxo de Caixa Mensal</CardTitle>
-           <CardDescription>Visão geral de entradas e saídas durante o mês.</CardDescription>
-        </CardHeader>
-        <CardContent className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={cashFlowData}>
-              <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value/1000}k`} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
-                formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-              />
-              <Area type="monotone" dataKey="Receitas" stackId="1" stroke="#16a34a" fill="#16a34a" fillOpacity={0.3} />
-              <Area type="monotone" dataKey="Despesas" stackId="1" stroke="#dc2626" fill="#dc2626" fillOpacity={0.3} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-      
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-            <div className="flex justify-between items-center mb-2">
-            <h2 className="text-xl font-semibold">Orçamentos</h2>
-            <Button variant="ghost" size="icon" asChild>
-                    <Link href="/dashboard/budgets"><ExternalLink className="h-5 w-5" /></Link>
-                </Button>
+    <div className="space-y-6 pb-20 text-white">
+        {/* Balance Info */}
+        <div className="flex justify-between items-center text-center p-4">
+            <div className="flex-1">
+                <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span>Inicial</span>
+                </div>
+                <p className="text-lg font-bold">
+                    {balanceChartData[0]?.Saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
+                </p>
             </div>
-            <Card>
-            <CardContent className="p-4 space-y-4">
-                {budgets.length > 0 ? (
-                    budgets.map((budget) => {
-                    const spent = getSpentAmount(budget.category);
-                    const progress = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
-                    return (
-                        <div key={budget.id}>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-muted">
-                                <CategoryIcon category={budget.category} className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <div className="flex-1">
-                            <div className="flex justify-between items-center">
-                                <span className="font-semibold">{budget.category}</span>
-                                <span className="text-sm font-medium">
-                                    {spent.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} / {budget.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                                </span>
-                            </div>
-                            <Progress value={progress} className="h-2 mt-1" />
-                            </div>
+            <div className="flex-1">
+                <p className="text-sm text-gray-400">Saldo</p>
+                <p className="text-4xl font-bold">
+                    {totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </p>
+            </div>
+            <div className="flex-1">
+                 <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
+                    <Clock className="h-4 w-4"/>
+                    <span>Previsto *</span>
+                </div>
+                <p className="text-lg font-bold">R$ 0,00</p>
+            </div>
+        </div>
+
+        {/* Balance Chart */}
+        <div className="h-40 -mt-4">
+             <ResponsiveContainer width="100%" height="100%">
+                <AreaChart 
+                    data={balanceChartData}
+                    margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
+                >
+                <defs>
+                    <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="rgba(239, 68, 68, 0.4)" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="rgba(239, 68, 68, 0.1)" stopOpacity={0}/>
+                    </linearGradient>
+                </defs>
+                <XAxis 
+                    dataKey="date" 
+                    stroke="#6b7280" 
+                    fontSize={12} 
+                    tickLine={false} 
+                    axisLine={false}
+                    interval="preserveStartEnd"
+                />
+                <YAxis 
+                    stroke="#6b7280" 
+                    fontSize={12} 
+                    tickLine={false} 
+                    axisLine={false}
+                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                    domain={['dataMin - 500', 'dataMax + 500']}
+                />
+                <Tooltip
+                    contentStyle={{ backgroundColor: '#27272a', border: '1px solid #3f3f46', color: '#fff' }}
+                    formatter={(value: number) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), "Saldo"]}
+                    labelStyle={{ fontWeight: 'bold' }}
+                 />
+                <Area type="monotone" dataKey="Saldo" stroke="#ef4444" fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={2} dot={{ stroke: '#ef4444', strokeWidth: 2, r: 4, fill: '#18181b' }} activeDot={{ r: 6 }}/>
+                </AreaChart>
+            </ResponsiveContainer>
+        </div>
+        
+        {/* Search Bar */}
+        <div className="px-4">
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input placeholder="Pesquisar no Minhas Finanças" className="bg-[#27272a] border-[#3f3f46] pl-10 h-12 rounded-lg" />
+            </div>
+        </div>
+
+        {/* Accounts List */}
+        <div className="px-4 space-y-2">
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold">Contas</h2>
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-gray-400" /></Button>
+                    <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-gray-400" /></Button>
+                </div>
+            </div>
+            <div className="bg-[#27272a] rounded-lg p-4 space-y-4">
+                {accounts.map(account => (
+                    <div key={account.id} className="flex items-center gap-4">
+                        <BankIcon name={account.name} />
+                        <div className="flex-1">
+                            <p className="font-bold uppercase">{account.name}</p>
                         </div>
+                        <p className="font-bold">{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                         <Button variant="ghost" size="icon" className="text-gray-400"><MoreVertical className="h-5 w-5" /></Button>
+                    </div>
+                ))}
+                 <div className="border-t border-gray-700 my-2"></div>
+                 <div className="flex items-center gap-4">
+                    <div className="w-8 h-8"></div>
+                    <div className="flex-1">
+                        <p className="font-bold">Total</p>
+                         <p className="text-sm text-gray-400">Previsto</p>
+                    </div>
+                    <div>
+                        <p className="font-bold text-right">{totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                         <p className="text-sm text-gray-400 text-right">R$ 0,00</p>
+                    </div>
+                    <div className="w-10"></div>
+                </div>
+            </div>
+        </div>
+        
+        {/* Credit Cards List */}
+        <div className="px-4 space-y-2">
+             <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold">Cartões de crédito</h2>
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-gray-400" /></Button>
+                    <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-gray-400" /></Button>
+                </div>
+            </div>
+            <div className="bg-[#27272a] rounded-lg p-4 space-y-4">
+                {creditCardInvoices.map(card => {
+                    const dueDate = new Date();
+                    dueDate.setDate(card.dueDay);
+                    const isClosed = new Date().getDate() > card.closingDay;
+
+                    return (
+                        <div key={card.id} className="flex items-center gap-4">
+                            <BankIcon name={card.name} />
+                            <div className="flex-1">
+                                <p className="font-bold uppercase">{card.name}</p>
+                                <p className="text-sm text-gray-400">Vencimento</p>
+                            </div>
+                            <div className="text-right">
+                                <div className="flex items-center justify-end gap-2 font-bold">
+                                    {isClosed ? <Lock className="h-4 w-4 text-red-500" /> : <CheckCircle className="h-4 w-4 text-green-500" />}
+                                    <span>{card.invoiceTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                </div>
+                                <p className="text-sm text-gray-400">{dueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}</p>
+                            </div>
+                            <Button variant="ghost" size="icon" className="text-gray-400"><MoreVertical className="h-5 w-5" /></Button>
                         </div>
                     )
-                    })
-                ) : (
-                    <div className="p-6 text-center text-muted-foreground">Nenhum orçamento cadastrado.</div>
-                )}
-            </CardContent>
-            </Card>
-        </div>
-        <div>
-            <div className="flex justify-between items-center mb-2">
-            <h2 className="text-xl font-semibold">Despesas por categoria</h2>
-                <Button variant="ghost" size="icon" asChild>
-                    <Link href="/dashboard/reports"><ExternalLink className="h-5 w-5" /></Link>
-                </Button>
+                })}
             </div>
-            <Card>
-                <CardContent className="p-4">
-                    {categoryExpenses.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                            <div className="h-48 relative">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie 
-                                            data={categoryExpenses} 
-                                            dataKey="value" 
-                                            nameKey="name" 
-                                            cx="50%" 
-                                            cy="50%" 
-                                            innerRadius="60%" 
-                                            outerRadius="80%"
-                                            paddingAngle={2}
-                                            stroke="none"
-                                        >
-                                            {categoryExpenses.map((entry) => (
-                                                <Cell key={`cell-${entry.name}`} fill={entry.color} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
-                                            formatter={(value: number) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), "Total"]}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <span className="text-muted-foreground text-sm">Total Gasto</span>
-                                    <span className="text-2xl font-bold">
-                                        {totalCategoryExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-2 text-sm">
-                                {categoryExpenses.map((entry) => (
-                                    <div key={entry.name} className="flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                                            <span>{entry.name}</span>
-                                        </div>
-                                        <span className="font-semibold">{entry.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="p-6 text-center text-muted-foreground">Nenhuma despesa registrada no período.</div>
-                    )}
-                </CardContent>
-            </Card>
         </div>
-      </div>
+
     </div>
   );
 }
+
+    

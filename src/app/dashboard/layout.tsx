@@ -57,8 +57,8 @@ function SidebarContent({ onLinkClick }: { onLinkClick: () => void }) {
     };
 
     return (
-        <div className="flex flex-col h-full">
-            <div className="flex h-[60px] items-center border-b px-6 justify-between">
+        <div className="flex flex-col h-full bg-background text-foreground">
+            <div className="flex h-[60px] items-center border-b border-border px-6 justify-between">
                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold" onClick={onLinkClick}>
                     <CategoryIcon category="Economias" className="h-6 w-6 text-amber-500" />
                     <span className="">Granor</span>
@@ -84,7 +84,7 @@ function SidebarContent({ onLinkClick }: { onLinkClick: () => void }) {
                 </nav>
             </div>
              {user && (
-                <div className="mt-auto border-t p-4">
+                <div className="mt-auto border-t border-border p-4">
                     <div className="flex items-center gap-2">
                         <Avatar className="h-9 w-9">
                             <AvatarImage src={user.photoURL || undefined} alt="Avatar" />
@@ -127,20 +127,20 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background">
-      <aside className="fixed inset-y-0 left-0 z-10 hidden w-56 flex-col border-r bg-background sm:flex">
+    <div className="flex min-h-screen w-full flex-col bg-[#18181b]">
+      <aside className="fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r border-border bg-background sm:flex">
         <SidebarContent onLinkClick={() => {}} />
       </aside>
-      <div className="flex flex-col sm:pl-56">
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+      <div className="flex flex-col sm:pl-60">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-border bg-[#18181b] px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 text-white">
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button size="icon" variant="outline" className="sm:hidden">
+              <Button size="icon" variant="outline" className="sm:hidden bg-transparent border-0 hover:bg-gray-700">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Alternar Menu</span>
               </Button>
             </SheetTrigger>
-             <SheetContent side="left" className="sm:max-w-xs p-0">
+             <SheetContent side="left" className="sm:max-w-xs p-0 bg-background border-r-border">
                 <SheetHeader>
                     <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
                 </SheetHeader>
@@ -149,16 +149,16 @@ export default function DashboardLayout({
           </Sheet>
           
            <div className="flex w-full items-center justify-center gap-2">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hover:bg-gray-700">
               <ChevronLeft className="h-5 w-5" />
             </Button>
             <span className="text-lg font-semibold">Julho</span>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hover:bg-gray-700">
               <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
 
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="hover:bg-gray-700">
             <MoreVertical className="h-5 w-5" />
           </Button>
         </header>
@@ -171,8 +171,8 @@ export default function DashboardLayout({
                 children
             )}
         </main>
-        <div className="fixed bottom-4 right-4">
-            <Button className="rounded-full h-16 w-16 shadow-lg">
+        <div className="fixed bottom-6 right-6 z-40">
+            <Button className="rounded-full h-16 w-16 shadow-lg bg-blue-600 hover:bg-blue-700">
                 <Plus className="h-8 w-8" />
             </Button>
         </div>
@@ -180,3 +180,5 @@ export default function DashboardLayout({
     </div>
   );
 }
+
+    
