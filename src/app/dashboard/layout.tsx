@@ -221,7 +221,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                         <MoreVertical className="h-5 w-5" />
                     </Button>
                 </header>
-                <main className="flex-1 p-4 sm:px-6 sm:py-0">
+                <main className="flex-1">
                     <TransactionDialog />
                     {isLoading ? (
                         <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
@@ -388,8 +388,8 @@ function TransactionForm({
             date,
             type,
             category,
-            ...(source === 'account' && { accountId: sourceId }),
-            ...(source === 'creditCard' && { creditCardId: sourceId }),
+            ...(source === 'account' ? { accountId: sourceId } : {}),
+            ...(source === 'creditCard' ? { creditCardId: sourceId } : {}),
         };
 
         await onSubmit(transactionData);
@@ -518,3 +518,5 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </DateProvider>
     );
 }
+
+    

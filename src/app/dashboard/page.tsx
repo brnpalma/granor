@@ -69,9 +69,8 @@ export default function DashboardPage() {
       return;
     }
 
-    setIsLoading(true);
-
     const fetchData = () => {
+      setIsLoading(true);
       const { startDate, endDate } = getMonthDateRange(selectedDate);
       const prevMonthDate = subMonths(selectedDate, 1);
       const { startDate: prevStartDate, endDate: prevEndDate } = getMonthDateRange(prevMonthDate);
@@ -109,7 +108,11 @@ export default function DashboardPage() {
         checkLoading();
       }, { startDate: prevStartDate, endDate: prevEndDate }));
 
-      const timer = setTimeout(() => setIsLoading(false), 3000);
+      const timer = setTimeout(() => {
+        if (Object.values(dataLoaded).some(v => !v)) {
+            setIsLoading(false)
+        }
+      }, 3000);
       unsubscribers.push(() => clearTimeout(timer));
 
       return () => unsubscribers.forEach(unsub => unsub());
@@ -136,10 +139,10 @@ export default function DashboardPage() {
 
   const previousMonthLeftover = useMemo(() => {
     const income = previousMonthTransactions
-        .filter(t => t.type === 'income' && t.accountId)
+        .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + t.amount, 0);
     const expenses = previousMonthTransactions
-        .filter(t => t.type === 'expense' && t.accountId)
+        .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
     return income - expenses;
   }, [previousMonthTransactions]);
@@ -204,7 +207,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-        <div className="space-y-4 pb-6">
+        <div className="space-y-4 pb-6 px-2">
              <div className="grid gap-4 md:grid-cols-3">
                 <Skeleton className="h-24" />
                 <Skeleton className="h-24" />
@@ -220,7 +223,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6 pb-6 text-white">
+    <div className="space-y-6 pb-6 text-white px-2">
         <div className="flex justify-around items-center text-center p-2">
             <div className="flex-1 text-center">
                 <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
@@ -292,7 +295,7 @@ export default function DashboardPage() {
         </div>
         
         <div>
-            <div className="relative mx-4">
+            <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input placeholder="Pesquisar no Minhas Finanças" className="bg-[#27272a] border-[#3f3f46] pl-10 h-12 rounded-lg" />
             </div>
@@ -306,7 +309,7 @@ export default function DashboardPage() {
                     <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-gray-400" /></Button>
                 </div>
             </div>
-            <div className="bg-[#27272a] rounded-lg p-4 space-y-4 mx-2">
+            <div className="bg-[#27272a] rounded-lg p-4 space-y-4">
                 {accounts.map(account => (
                     <div key={account.id} className="flex items-center gap-4">
                         <BankIcon name={account.name} />
@@ -341,7 +344,7 @@ export default function DashboardPage() {
                     <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-gray-400" /></Button>
                 </div>
             </div>
-            <div className="bg-[#27272a] rounded-lg p-4 space-y-4 mx-2">
+            <div className="bg-[#27272a] rounded-lg p-4 space-y-4">
                 {creditCardInvoices.map(card => {
                     const dueDate = new Date();
                     dueDate.setDate(card.dueDay);
@@ -375,5 +378,7 @@ export default function DashboardPage() {
     
 
 
+
+    
 
     
