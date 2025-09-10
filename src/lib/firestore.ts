@@ -221,6 +221,26 @@ export const addCreditCard = (userId: string | null, card: Omit<CreditCard, "id"
     return addDataItem<CreditCard>(userId, "credit_cards", card);
 };
 
+export const updateCreditCard = async (userId: string | null, cardId: string, cardData: Omit<CreditCard, "id">) => {
+    const path = getCollectionPath(userId, "credit_cards");
+    if (path) {
+        try {
+            await updateDoc(doc(db, path, cardId), cardData);
+        } catch (error) {
+            console.error(`Error updating credit card: `, error);
+            showToast({ title: "Erro", description: "Não foi possível atualizar o cartão.", variant: "destructive" });
+        }
+    } else {
+        const localData = getLocalData<CreditCard>("credit_cards");
+        const index = localData.findIndex(c => c.id === cardId);
+        if (index !== -1) {
+            localData[index] = { ...localData[index], ...cardData };
+            setLocalData("credit_cards", localData);
+        }
+    }
+};
+
+
 export const deleteCreditCard = async (userId: string | null, cardId: string) => {
     const cardPath = getCollectionPath(userId, "credit_cards");
     const transactionsPath = getCollectionPath(userId, "transactions");
@@ -474,3 +494,5 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
     }
 };
+
+    

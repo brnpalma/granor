@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { PlusCircle, CreditCard, Banknote, Trash2, MoreVertical } from "lucide-react";
+import { PlusCircle, CreditCard, Banknote, Trash2, MoreVertical, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,7 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { addCreditCard, getCreditCards, getAccounts, deleteCreditCard, getTransactions } from "@/lib/firestore";
+import { addCreditCard, getCreditCards, getAccounts, deleteCreditCard, getTransactions, updateCreditCard } from "@/lib/firestore";
 import type { CreditCard as CreditCardType, Account, Transaction } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -59,6 +59,7 @@ export default function CreditCardsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingCard, setEditingCard] = useState<CreditCardType | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedDate, getMonthDateRange } = useDate();
@@ -104,9 +105,29 @@ export default function CreditCardsPage() {
     };
   }, [user, selectedDate, getMonthDateRange]);
 
-  const handleAddCreditCard = async (card: Omit<CreditCardType, "id">) => {
-    await addCreditCard(user?.uid || null, card);
-    toast({ title: "Cartão de Crédito Adicionado", description: "Seu novo cartão foi salvo." });
+  const handleOpenDialogForEdit = (card: CreditCardType) => {
+    setEditingCard(card);
+    setDialogOpen(true);
+  };
+
+  const handleOpenDialogForAdd = () => {
+    setEditingCard(null);
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditingCard(null);
+  };
+  
+  const handleFormSubmit = async (cardData: Omit<CreditCardType, "id">, cardId?: string) => {
+    if (cardId) {
+      await updateCreditCard(user?.uid || null, cardId, cardData);
+      toast({ title: "Cartão atualizado!" });
+    } else {
+      await addCreditCard(user?.uid || null, cardData);
+      toast({ title: "Cartão adicionado!" });
+    }
   };
   
   const handleDeleteCreditCard = async (cardId: string) => {
@@ -141,11 +162,16 @@ export default function CreditCardsPage() {
         <h1 className="text-2xl font-bold">Cartões de Crédito</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-                <Button disabled={accounts.length === 0}>
+                <Button onClick={handleOpenDialogForAdd} disabled={accounts.length === 0}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
                 </Button>
             </DialogTrigger>
-            <CreditCardForm onSubmit={handleAddCreditCard} onSubmitted={() => setDialogOpen(false)} accounts={accounts} />
+            <CreditCardForm 
+                onSubmit={handleFormSubmit} 
+                onSubmitted={handleCloseDialog} 
+                card={editingCard}
+                accounts={accounts} 
+            />
         </Dialog>
       </div>
        {accounts.length === 0 && (
@@ -177,6 +203,10 @@ export default function CreditCardsPage() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
+                            <DropdownMenuItem onClick={() => handleOpenDialogForEdit(card)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Editar</span>
+                            </DropdownMenuItem>
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -246,10 +276,12 @@ function CreditCardForm({
     onSubmit,
     onSubmitted,
     accounts,
+    card,
 }: {
-    onSubmit: (card: Omit<CreditCardType, "id">) => Promise<void>;
+    onSubmit: (card: Omit<CreditCardType, "id">, cardId?: string) => Promise<void>;
     onSubmitted: () => void;
     accounts: Account[];
+    card: CreditCardType | null;
 }) {
     const [name, setName] = useState("");
     const [limit, setLimit] = useState("");
@@ -257,6 +289,24 @@ function CreditCardForm({
     const [closingDay, setClosingDay] = useState("");
     const [defaultAccountId, setDefaultAccountId] = useState("");
     const { toast } = useToast();
+
+    const isEditing = !!card;
+
+    useEffect(() => {
+        if (isEditing) {
+            setName(card.name);
+            setLimit(String(card.limit));
+            setDueDay(String(card.dueDay));
+            setClosingDay(String(card.closingDay));
+            setDefaultAccountId(card.defaultAccountId);
+        } else {
+            setName("");
+            setLimit("");
+            setDueDay("");
+            setClosingDay("");
+            setDefaultAccountId("");
+        }
+    }, [card, isEditing]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -271,20 +321,22 @@ function CreditCardForm({
             dueDay: parseInt(dueDay),
             closingDay: parseInt(closingDay),
             defaultAccountId,
-        });
+        }, card?.id);
 
-        setName("");
-        setLimit("");
-        setDueDay("");
-        setClosingDay("");
-        setDefaultAccountId("");
+        if (!isEditing) {
+            setName("");
+            setLimit("");
+            setDueDay("");
+            setClosingDay("");
+            setDefaultAccountId("");
+        }
         onSubmitted();
     };
 
     return (
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Adicionar Novo Cartão de Crédito</DialogTitle>
+                <DialogTitle>{isEditing ? "Editar Cartão" : "Adicionar Cartão"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -319,11 +371,13 @@ function CreditCardForm({
                     <Input id="closingDay" type="number" min="1" max="31" value={closingDay} onChange={(e) => setClosingDay(e.target.value)} placeholder="ex: 3" />
                 </div>
                 <DialogFooter>
-                    <Button type="submit">Adicionar Cartão</Button>
+                    <Button type="submit">{isEditing ? "Salvar Alterações" : "Adicionar"}</Button>
                 </DialogFooter>
             </form>
         </DialogContent>
     );
 }
+
+    
 
     
