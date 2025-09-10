@@ -118,7 +118,6 @@ export default function DashboardPage() {
     }, { startDate, endDate }));
 
     unsubscribers.push(getTransactions(user.uid, (data) => {
-        // Calculate previous month's FORECASTED balance, which is all income - all expenses
         const prevTotalIncome = data.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
         const prevTotalExpenses = data.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
         const prevForecast = prevTotalIncome - prevTotalExpenses;
@@ -227,7 +226,7 @@ export default function DashboardPage() {
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Inicial</span>
                 </div>
-                <p className="text-base md:text-lg">
+                <p className="text-sm md:text-base">
                     {previousMonthLeftover.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
@@ -238,7 +237,7 @@ export default function DashboardPage() {
                     </div>
                     <span>Saldo</span>
                 </div>
-                <p className="text-xl md:text-2xl font-bold">
+                <p className="text-lg md:text-xl font-bold">
                     {monthlyNetBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
@@ -247,7 +246,7 @@ export default function DashboardPage() {
                     <Clock className="h-4 w-4"/>
                     <span>Previsto *</span>
                 </div>
-                <p className="text-base md:text-lg">
+                <p className="text-sm md:text-base">
                     {forecastedBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
@@ -376,6 +375,8 @@ export default function DashboardPage() {
     
 
 
+
+    
 
     
 
