@@ -49,13 +49,17 @@ import { useAuth } from "@/hooks/use-auth";
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const unsubscribe = getTransactions(user?.uid || null, setTransactions);
+    const unsubscribe = getTransactions(user?.uid || null, (data) => {
+        setTransactions(data);
+        setIsLoading(false);
+    });
     return () => unsubscribe();
   }, [user]);
 
@@ -63,6 +67,14 @@ export default function TransactionsPage() {
   const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
     await addTransaction(user?.uid || null, transaction);
   };
+  
+  if (isLoading) {
+    return (
+      <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

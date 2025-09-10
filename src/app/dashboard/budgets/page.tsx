@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/use-auth";
 export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addBudgetDialogOpen, setAddBudgetDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -25,11 +26,23 @@ export default function BudgetsPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const unsubscribeBudgets = getBudgets(user?.uid || null, setBudgets);
-    const unsubscribeTransactions = getTransactions(user?.uid || null, setTransactions);
+
+    const handleData = <T,>(setter: React.Dispatch<React.SetStateAction<T[]>>) => (data: T[]) => {
+        setter(data);
+        setIsLoading(false);
+    };
+
+    const unsubscribeBudgets = getBudgets(user?.uid || null, handleData(setBudgets));
+    const unsubscribeTransactions = getTransactions(user?.uid || null, handleData(setTransactions));
+    
+    // In case one of them returns empty and the other has data
+    const timeout = setTimeout(() => setIsLoading(false), 2000);
+
+
     return () => {
       unsubscribeBudgets();
       unsubscribeTransactions();
+      clearTimeout(timeout);
     };
   }, [user]);
 
@@ -43,6 +56,14 @@ export default function BudgetsPage() {
       .filter((t) => t.type === 'expense' && t.category === category && !t.isBudget)
       .reduce((sum, t) => sum + t.amount, 0);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

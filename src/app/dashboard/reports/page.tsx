@@ -23,11 +23,15 @@ import { useAuth } from "@/hooks/use-auth";
 
 export default function ReportsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const unsubscribe = getTransactions(user?.uid || null, setTransactions);
+    const unsubscribe = getTransactions(user?.uid || null, (data) => {
+        setTransactions(data);
+        setIsLoading(false);
+    });
     return () => unsubscribe();
   }, [user]);
 
@@ -48,6 +52,14 @@ export default function ReportsPage() {
       color: "hsl(var(--primary))",
     },
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

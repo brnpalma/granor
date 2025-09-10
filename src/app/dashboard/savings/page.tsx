@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 export default function SavingsPage() {
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addGoalDialogOpen, setAddGoalDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -22,7 +23,10 @@ export default function SavingsPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const unsubscribe = getSavingsGoals(user?.uid || null, setSavingsGoals);
+    const unsubscribe = getSavingsGoals(user?.uid || null, (data) => {
+        setSavingsGoals(data);
+        setIsLoading(false);
+    });
     return () => unsubscribe();
   }, [user]);
 
@@ -31,6 +35,14 @@ export default function SavingsPage() {
     await addSavingsGoal(user?.uid || null, goal);
     toast({ title: "Meta de economia adicionada!" });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
