@@ -353,8 +353,6 @@ function TransactionForm({
     const [category, setCategory] = useState<string>("");
     const [source, setSource] = useState<"account" | "creditCard">("account");
     const [sourceId, setSourceId] = useState<string>("");
-    const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
-    const [isSuggesting, setIsSuggesting] = useState(false);
     const { toast } = useToast();
     
     useEffect(() => {
@@ -377,40 +375,6 @@ function TransactionForm({
         setSource('account');
       }
     }, [type]);
-
-
-    const handleSuggestCategory = async () => {
-        if (!description) {
-            toast({ title: "Por favor, insira uma descrição primeiro.", variant: 'destructive' });
-            return;
-        }
-        setIsSuggesting(true);
-        try {
-            const transactionHistory = transactions
-                .slice(0, 10)
-                .map(t => `${t.date.toLocaleDateString('pt-BR')}: ${t.description} -> ${t.category} (R$${t.amount})`)
-                .join('\n');
-
-            const result = await categorizeTransaction({
-                transactionDescription: description,
-                transactionHistory: transactionHistory,
-            });
-            
-            const categoryExists = categories.some(c => c.name === result.suggestedCategory);
-            if (result.suggestedCategory && categoryExists) {
-                setSuggestedCategory(result.suggestedCategory);
-                setCategory(result.suggestedCategory);
-                toast({ title: `Categoria sugerida: ${result.suggestedCategory}`, description: `Confiança: ${(result.confidence * 100).toFixed(0)}%` });
-            } else {
-                 toast({ title: "Não foi possível sugerir uma categoria.", description: "A categoria sugerida não existe ou a IA não pôde determinar uma. Por favor, selecione uma manualmente.", variant: 'destructive' });
-            }
-        } catch (error) {
-            console.error("Falha na categorização por IA:", error);
-            toast({ title: "Falha na sugestão da IA.", description: "Ocorreu um erro ao obter uma sugestão.", variant: 'destructive' });
-        } finally {
-            setIsSuggesting(false);
-        }
-    };
 
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -440,7 +404,6 @@ function TransactionForm({
         setCategory("");
         setSource("account");
         setSourceId("");
-        setSuggestedCategory(null);
         onSubmitted();
     };
 
@@ -487,12 +450,7 @@ function TransactionForm({
 
                 <div className="space-y-2">
                     <Label htmlFor="description">Descrição</Label>
-                    <div className="flex items-center gap-2">
-                         <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="ex: Café com amigos" />
-                         <Button type="button" size="icon" variant="outline" onClick={handleSuggestCategory} disabled={isSuggesting}>
-                            <Wand2 className={cn("h-4 w-4", isSuggesting && "animate-spin")} />
-                         </Button>
-                    </div>
+                    <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="ex: Café com amigos" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -507,7 +465,7 @@ function TransactionForm({
                                     {date ? date.toLocaleDateString('pt-BR') : <span>Escolha uma data</span>}
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
+                            <PopoverContent className="w-auto p-0" onInteractOutside={(e) => e.preventDefault()}>
                                 <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
                             </PopoverContent>
                         </Popover>
@@ -557,9 +515,3 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </DateProvider>
     );
 }
-
-    
-
-    
-
-    
