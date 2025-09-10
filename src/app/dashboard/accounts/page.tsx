@@ -72,9 +72,6 @@ export default function AccountsPage() {
     toast({ title: "Conta removida!"});
   }
   
-  const totalBalance = useMemo(() => {
-    return accounts.reduce((sum, acc) => sum + acc.balance, 0);
-  }, [accounts]);
 
   if (isLoading) {
     return (
@@ -132,17 +129,6 @@ export default function AccountsPage() {
                         </div>
                     </div>
                 ))}
-                 <div className="border-t border-border my-2"></div>
-                 <div className="flex items-center gap-4 p-2">
-                    <div className="w-8 h-8"></div>
-                    <div className="flex-1">
-                        <p className="font-bold">Total</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="font-bold">{totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                    </div>
-                    <div className="w-10"></div>
-                </div>
               </CardContent>
             </Card>
         </div>
