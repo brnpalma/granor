@@ -235,8 +235,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 <div className="fixed bottom-6 right-6 z-40">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button className="rounded-full h-16 w-16 shadow-lg bg-blue-600 hover:bg-blue-700">
-                                <Plus className="h-8 w-8" />
+                            <Button className="rounded-full h-14 w-14 shadow-lg bg-primary hover:bg-primary/90">
+                                <Plus className="h-7 w-7" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-56 mb-2" side="top" align="end">
