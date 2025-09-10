@@ -29,7 +29,6 @@ export default function SavingsPage() {
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [addGoalDialogOpen, setAddGoalDialogOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -117,19 +116,6 @@ export default function SavingsPage() {
             </Card>
           );
         })}
-        <Card className="border-dashed flex flex-col items-center justify-center">
-             <Dialog open={addGoalDialogOpen} onOpenChange={setAddGoalDialogOpen}>
-            <DialogTrigger asChild>
-                <Button variant="ghost" className="h-full w-full">
-                    <div className="flex flex-col items-center gap-2">
-                        <PlusCircle className="h-8 w-8 text-muted-foreground" />
-                        <span className="text-muted-foreground">Adicionar Nova Meta</span>
-                    </div>
-                </Button>
-            </DialogTrigger>
-            <SavingsGoalForm onSubmit={handleAddSavingsGoal} onSubmitted={() => setAddGoalDialogOpen(false)} />
-        </Dialog>
-        </Card>
       </div>
     </div>
   );
