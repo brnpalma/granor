@@ -206,6 +206,35 @@ export const addCreditCard = (userId: string | null, card: Omit<CreditCard, "id"
     return addDataItem<CreditCard>(userId, "credit_cards", card);
 };
 
+export const deleteCreditCard = async (userId: string | null, cardId: string) => {
+    const cardPath = getCollectionPath(userId, "credit_cards");
+    const transactionsPath = getCollectionPath(userId, "transactions");
+    if (cardPath && transactionsPath) {
+        try {
+            const batch = writeBatch(db);
+            
+            const cardRef = doc(db, cardPath, cardId);
+            batch.delete(cardRef);
+
+            const transactionsQuery = query(collection(db, transactionsPath), where("creditCardId", "==", cardId));
+            const transactionsSnapshot = await getDocs(transactionsQuery);
+            transactionsSnapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            await batch.commit();
+        } catch (error) {
+             console.error("Error deleting credit card and its transactions: ", error);
+             showToast({ title: "Erro", description: "Não foi possível remover o cartão e suas transações.", variant: "destructive" });
+        }
+    } else {
+       deleteDataItem(userId, "credit_cards", cardId);
+       let transactions = getLocalData<Transaction>("transactions");
+       transactions = transactions.filter(t => t.creditCardId !== cardId);
+       setLocalData("transactions", transactions);
+    }
+};
+
 export const getCreditCards = (userId: string | null, callback: (cards: CreditCard[]) => void) => {
     return getDataSubscription<CreditCard>(userId, "credit_cards", callback, 'name');
 };
@@ -338,3 +367,5 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
     }
     showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
 };
+
+    

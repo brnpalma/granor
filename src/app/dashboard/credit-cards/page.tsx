@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
-import { PlusCircle, CreditCard, Banknote } from "lucide-react";
+import { PlusCircle, CreditCard, Banknote, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,6 +27,17 @@ import {
   DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -35,7 +47,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { addCreditCard, getCreditCards, getAccounts } from "@/lib/firestore";
+import { addCreditCard, getCreditCards, getAccounts, deleteCreditCard } from "@/lib/firestore";
 import type { CreditCard as CreditCardType, Account } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -70,6 +82,11 @@ export default function CreditCardsPage() {
     await addCreditCard(user?.uid || null, card);
     toast({ title: "Cartão de Crédito Adicionado", description: "Seu novo cartão foi salvo." });
   };
+  
+  const handleDeleteCreditCard = async (cardId: string) => {
+    await deleteCreditCard(user?.uid || null, cardId);
+    toast({ title: "Cartão de crédito removido!" });
+  }
   
   const getAccountName = (accountId: string) => {
     return accounts.find(a => a.id === accountId)?.name || "Desconhecida";
@@ -115,7 +132,8 @@ export default function CreditCardsPage() {
                 <TableHead>Vencimento (Dia)</TableHead>
                 <TableHead>Fechamento (Dia)</TableHead>
                 <TableHead>Conta Padrão</TableHead>
-                <TableHead className="text-right">Limite</TableHead>
+                <TableHead>Limite</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -125,8 +143,29 @@ export default function CreditCardsPage() {
                   <TableCell>{card.dueDay}</TableCell>
                   <TableCell>{card.closingDay}</TableCell>
                   <TableCell>{getAccountName(card.defaultAccountId)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell>
                     {card.limit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso removerá permanentemente o cartão e todas as transações associadas a ele.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteCreditCard(card.id)}>Remover</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))}
@@ -222,3 +261,5 @@ function CreditCardForm({
         </DialogContent>
     );
 }
+
+    
