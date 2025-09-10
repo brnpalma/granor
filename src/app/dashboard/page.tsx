@@ -66,6 +66,7 @@ export default function DashboardPage() {
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
   const [previousMonthLeftover, setPreviousMonthLeftover] = useState(0);
+  const [forecastedBalance, setForecastedBalance] = useState(0);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -101,10 +102,16 @@ export default function DashboardPage() {
 
     unsubscribers.push(getTransactions(user.uid, (data) => {
       setTransactions(data);
-      const income = data.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-      const expenses = data.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-      setMonthlyIncome(income);
-      setMonthlyExpenses(expenses);
+      
+      const effectiveIncome = data.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+      const effectiveExpenses = data.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+      setMonthlyIncome(effectiveIncome);
+      setMonthlyExpenses(effectiveExpenses);
+      
+      const totalIncome = data.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+      const totalExpenses = data.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+      setForecastedBalance(totalIncome - totalExpenses);
+
       dataLoaded.transactions = true;
       checkLoading();
     }, { startDate, endDate }));
@@ -237,7 +244,7 @@ export default function DashboardPage() {
                     <span>Previsto *</span>
                 </div>
                 <p className="text-base md:text-lg font-bold">
-                    {monthlyExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {forecastedBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
         </div>
@@ -359,4 +366,5 @@ export default function DashboardPage() {
 
     </div>
   );
-}
+
+    
