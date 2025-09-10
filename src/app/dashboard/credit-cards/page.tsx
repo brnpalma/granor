@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { PlusCircle, CreditCard, Banknote, Trash2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { PlusCircle, CreditCard, Banknote, Trash2, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,14 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -27,6 +19,12 @@ import {
   DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,36 +45,64 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { addCreditCard, getCreditCards, getAccounts, deleteCreditCard } from "@/lib/firestore";
-import type { CreditCard as CreditCardType, Account } from "@/lib/types";
+import { Progress } from "@/components/ui/progress";
+import { addCreditCard, getCreditCards, getAccounts, deleteCreditCard, getTransactions } from "@/lib/firestore";
+import type { CreditCard as CreditCardType, Account, Transaction } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useDate } from "@/hooks/use-date";
+import { BankIcon } from "@/components/icons";
 
 export default function CreditCardsPage() {
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { selectedDate, getMonthDateRange } = useDate();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !user?.uid) return;
+    
+    setIsLoading(true);
+    const { startDate, endDate } = getMonthDateRange(selectedDate);
 
-    const unsubscribeCards = getCreditCards(user?.uid || null, (data) => {
+    let dataLoaded = { cards: false, accounts: false, transactions: false };
+    const checkLoading = () => {
+        if(Object.values(dataLoaded).every(Boolean)) {
+            setIsLoading(false);
+        }
+    }
+
+    const unsubscribeCards = getCreditCards(user.uid, (data) => {
         setCreditCards(data);
-        setIsLoading(false);
+        dataLoaded.cards = true;
+        checkLoading();
     });
 
-    const unsubscribeAccounts = getAccounts(user?.uid || null, (data) => {
+    const unsubscribeAccounts = getAccounts(user.uid, (data) => {
         setAccounts(data);
+        dataLoaded.accounts = true;
+        checkLoading();
     });
+
+    const unsubscribeTransactions = getTransactions(user.uid, (data) => {
+        setTransactions(data);
+        dataLoaded.transactions = true;
+        checkLoading();
+    }, { startDate, endDate });
+
+    const timeout = setTimeout(() => setIsLoading(false), 2500);
 
     return () => {
         unsubscribeCards();
         unsubscribeAccounts();
+        unsubscribeTransactions();
+        clearTimeout(timeout);
     };
-  }, [user]);
+  }, [user, selectedDate, getMonthDateRange]);
 
   const handleAddCreditCard = async (card: Omit<CreditCardType, "id">) => {
     await addCreditCard(user?.uid || null, card);
@@ -91,6 +117,15 @@ export default function CreditCardsPage() {
   const getAccountName = (accountId: string) => {
     return accounts.find(a => a.id === accountId)?.name || "Desconhecida";
   }
+
+  const creditCardInvoices = useMemo(() => {
+    return creditCards.map(card => {
+        const invoiceTotal = transactions
+            .filter(t => t.creditCardId === card.id && t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+        return { ...card, invoiceTotal };
+    });
+  }, [creditCards, transactions]);
 
   if (isLoading) {
     return (
@@ -119,60 +154,89 @@ export default function CreditCardsPage() {
             <CardDescription>É necessário ter pelo menos uma conta para vincular ao pagamento do cartão de crédito.</CardDescription>
           </Card>
         )}
-      <Card>
-        <CardHeader>
-          <CardTitle>Seus Cartões</CardTitle>
-          <CardDescription>Uma lista de todos os seus cartões de crédito.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Vencimento (Dia)</TableHead>
-                <TableHead>Fechamento (Dia)</TableHead>
-                <TableHead>Conta Padrão</TableHead>
-                <TableHead>Limite</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {creditCards.map((card) => (
-                <TableRow key={card.id}>
-                  <TableCell className="font-medium">{card.name}</TableCell>
-                  <TableCell>{card.dueDay}</TableCell>
-                  <TableCell>{card.closingDay}</TableCell>
-                  <TableCell>{getAccountName(card.defaultAccountId)}</TableCell>
-                  <TableCell>
-                    {card.limit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Esta ação não pode ser desfeita. Isso removerá permanentemente o cartão e todas as transações associadas a ele.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDeleteCreditCard(card.id)}>Remover</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      
+      <div className="space-y-4">
+        {creditCardInvoices.map(card => {
+          const availableLimit = card.limit - card.invoiceTotal;
+          const progress = card.limit > 0 ? (card.invoiceTotal / card.limit) * 100 : 0;
+          return (
+            <Card key={card.id}>
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                        <BankIcon name={card.name} />
+                        <div>
+                            <p className="font-bold">{card.name}</p>
+                            <p className="text-sm text-muted-foreground">MasterCard</p>
+                        </div>
+                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="shrink-0 -mr-2 -mt-2">
+                                <MoreVertical className="h-5 w-5" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                                        <span className="text-destructive">Remover</span>
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                           Esta ação não pode ser desfeita. Isso removerá permanentemente o cartão e todas as transações associadas a ele.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteCreditCard(card.id)}>Remover</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                        <p className="text-muted-foreground">Limite</p>
+                        <p className="font-semibold">{card.limit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
+                    </div>
+                    <div>
+                        <p className="text-muted-foreground">Em aberto</p>
+                        <p className="font-semibold">{card.invoiceTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-muted-foreground">Lim. disponível</p>
+                        <p className="font-semibold text-green-500">{availableLimit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
+                    </div>
+                </div>
+
+                <Progress value={progress} className="h-2" />
+
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                        <p className="text-muted-foreground">Conta</p>
+                        <p className="font-semibold">{getAccountName(card.defaultAccountId)}</p>
+                    </div>
+                     <div>
+                        <p className="text-muted-foreground">Fechamento</p>
+                        <p className="font-semibold">{card.closingDay}/{new Date(selectedDate).toLocaleDateString('pt-BR', { month: 'short' }).replace('.','').toUpperCase()}</p>
+                    </div>
+                     <div className="text-right">
+                        <p className="text-muted-foreground">Vencimento</p>
+                        <p className="font-semibold">{card.dueDay}/{new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.','').toUpperCase()}</p>
+                    </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }
