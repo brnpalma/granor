@@ -20,6 +20,8 @@ import {
   Target,
   CreditCard,
   Shapes,
+  ArrowUpDown,
+  Minus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +31,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
@@ -196,9 +206,42 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     )}
                 </main>
                 <div className="fixed bottom-6 right-6 z-40">
-                    <Button className="rounded-full h-16 w-16 shadow-lg bg-blue-600 hover:bg-blue-700">
-                        <Plus className="h-8 w-8" />
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button className="rounded-full h-16 w-16 shadow-lg bg-blue-600 hover:bg-blue-700">
+                                <Plus className="h-8 w-8" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56 mb-2" side="top" align="end">
+                            <DropdownMenuItem>
+                                <div className="bg-yellow-500/20 p-2 rounded-full mr-3">
+                                    <ArrowUpDown className="h-5 w-5 text-yellow-500" />
+                                </div>
+                                <span>Transferência</span>
+                            </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                            <DropdownMenuItem>
+                                <div className="bg-green-500/20 p-2 rounded-full mr-3">
+                                    <Plus className="h-5 w-5 text-green-500" />
+                                </div>
+                                <span>Receita</span>
+                            </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                            <DropdownMenuItem>
+                                 <div className="bg-red-500/20 p-2 rounded-full mr-3">
+                                    <Minus className="h-5 w-5 text-red-500" />
+                                </div>
+                                <span>Despesa</span>
+                            </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                            <DropdownMenuItem>
+                                <div className="bg-blue-500/20 p-2 rounded-full mr-3">
+                                    <CreditCard className="h-5 w-5 text-blue-500" />
+                                </div>
+                                <span>Despesa cartão</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
         </div>
