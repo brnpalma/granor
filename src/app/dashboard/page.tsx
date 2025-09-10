@@ -101,8 +101,8 @@ export default function DashboardPage() {
 
     unsubscribers.push(getTransactions(user.uid, (data) => {
       setTransactions(data);
-      const income = data.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-      const expenses = data.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+      const income = data.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+      const expenses = data.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
       setMonthlyIncome(income);
       setMonthlyExpenses(expenses);
       dataLoaded.transactions = true;
@@ -111,8 +111,8 @@ export default function DashboardPage() {
 
     unsubscribers.push(getTransactions(user.uid, (data) => {
       setPreviousMonthTransactions(data);
-      const prevIncome = data.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-      const prevExpenses = data.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+      const prevIncome = data.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+      const prevExpenses = data.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
       setPreviousMonthLeftover(prevIncome - prevExpenses);
       dataLoaded.prevTransactions = true;
       checkLoading();
@@ -153,7 +153,7 @@ export default function DashboardPage() {
     const daysInMonth = eachDayOfInterval({ start: startDate, end: endDate });
   
     const monthTransactions = transactions
-      .filter(t => t.accountId)
+      .filter(t => t.accountId && t.efetivado)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
     
     let cumulativeBalance = previousMonthLeftover;
