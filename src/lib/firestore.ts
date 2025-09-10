@@ -363,6 +363,18 @@ export const addBudget = async (userId: string | null, budget: Omit<Budget, "id"
     await addDataItem<Budget>(userId, "budgets", budget);
 };
 
+export const deleteBudget = async (userId: string | null, budgetId: string) => {
+    const budgetPath = getCollectionPath(userId, 'budgets');
+    if (!budgetPath) return;
+
+    try {
+        await deleteDataItem(userId, "budgets", budgetId);
+    } catch (error) {
+        console.error("Error deleting budget: ", error);
+        showToast({ title: "Erro", description: "Não foi possível remover o orçamento.", variant: "destructive" });
+    }
+};
+
 
 export const getBudgets = (userId: string | null, callback: (budgets: Budget[]) => void) => {
     return getDataSubscription<Budget>(userId, "budgets", callback, 'category');
@@ -414,5 +426,7 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
     }
     showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
 };
+
+    
 
     

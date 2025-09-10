@@ -1,13 +1,25 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { addBudget, getBudgets, getTransactions, getCategories } from "@/lib/firestore";
+import { addBudget, getBudgets, getTransactions, getCategories, deleteBudget } from "@/lib/firestore";
 import type { Budget, Transaction, Category } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -69,6 +81,11 @@ export default function BudgetsPage() {
     await addBudget(user?.uid || null, budget);
     toast({ title: "Orçamento adicionado", description: "Seu novo orçamento foi salvo." });
   };
+  
+  const handleDeleteBudget = async (budgetId: string) => {
+    await deleteBudget(user?.uid || null, budgetId);
+    toast({ title: "Orçamento removido!"});
+  }
 
   const getSpentAmount = (category: string) => {
     return transactions
@@ -107,7 +124,28 @@ export default function BudgetsPage() {
           return (
             <Card key={budget.id}>
               <CardHeader>
-                <CardTitle>{budget.category}</CardTitle>
+                <div className="flex items-center justify-between">
+                    <CardTitle>{budget.category}</CardTitle>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso removerá permanentemente o orçamento.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteBudget(budget.id)}>Remover</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                </div>
                 <CardDescription>
                   {`${spent.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} de ${budget.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}
                 </CardDescription>
@@ -200,3 +238,5 @@ function BudgetForm({
         </DialogContent>
     )
 }
+
+    
