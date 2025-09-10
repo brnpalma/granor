@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useDate } from "@/hooks/use-date";
 
 export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -35,37 +36,37 @@ export default function BudgetsPage() {
   const [addBudgetDialogOpen, setAddBudgetDialogOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { selectedDate, getMonthDateRange } = useDate();
 
   useEffect(() => {
     if (typeof window === 'undefined' || !user?.uid) return;
 
-    let budgetsLoaded = false;
-    let transactionsLoaded = false;
-    let categoriesLoaded = false;
+    setIsLoading(true);
+    const { startDate, endDate } = getMonthDateRange(selectedDate);
+    let dataLoaded = { budgets: false, transactions: false, categories: false };
 
     const checkLoading = () => {
-        if(budgetsLoaded && transactionsLoaded && categoriesLoaded) {
+        if(Object.values(dataLoaded).every(Boolean)) {
             setIsLoading(false);
         }
     }
 
     const unsubscribeBudgets = getBudgets(user.uid, (data) => {
         setBudgets(data);
-        budgetsLoaded = true;
+        dataLoaded.budgets = true;
         checkLoading();
     });
     const unsubscribeTransactions = getTransactions(user.uid, (data) => {
         setTransactions(data);
-        transactionsLoaded = true;
+        dataLoaded.transactions = true;
         checkLoading();
-    });
+    }, { startDate, endDate });
     const unsubscribeCategories = getCategories(user.uid, (data) => {
         setCategories(data);
-        categoriesLoaded = true;
+        dataLoaded.categories = true;
         checkLoading();
     });
     
-    // In case one of them returns empty and the other has data
     const timeout = setTimeout(() => setIsLoading(false), 2000);
 
 
@@ -75,7 +76,7 @@ export default function BudgetsPage() {
       unsubscribeCategories();
       clearTimeout(timeout);
     };
-  }, [user]);
+  }, [user, selectedDate, getMonthDateRange]);
 
   const handleAddBudget = async (budget: Omit<Budget, "id">) => {
     await addBudget(user?.uid || null, budget);
@@ -238,5 +239,3 @@ function BudgetForm({
         </DialogContent>
     )
 }
-
-    

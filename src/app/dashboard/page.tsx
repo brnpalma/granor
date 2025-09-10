@@ -24,12 +24,14 @@ import { ExternalLink, MoreVertical, Search, CheckCircle, Clock, Lock } from 'lu
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { getAccounts, getCreditCards, getBudgets, getTransactions } from "@/lib/firestore";
-import type { Account, CreditCard, Budget, Transaction, Category } from "@/lib/types";
+import type { Account, CreditCard as CreditCardType, Budget, Transaction, Category } from "@/lib/types";
 import { CategoryIcon, ItauLogo, NubankLogo, PicpayLogo, MercadoPagoLogo, BradescoLogo } from "@/components/icons";
 import { categories } from "@/lib/types";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { useDate } from "@/hooks/use-date";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format } from 'date-fns';
 
 
 const BankIcon = ({ name }: { name: string }) => {
@@ -55,6 +57,7 @@ const BankIcon = ({ name }: { name: string }) => {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { selectedDate, getMonthDateRange } = useDate();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -66,6 +69,9 @@ export default function DashboardPage() {
         return;
     };
 
+    setIsLoading(true);
+    const { startDate, endDate } = getMonthDateRange(selectedDate);
+
     let dataLoaded = { accounts: false, creditCards: false, transactions: false };
     const checkLoading = () => {
         if(Object.values(dataLoaded).every(Boolean)) {
@@ -73,27 +79,31 @@ export default function DashboardPage() {
         }
     }
 
-    const createUnsubscriber = <T,>(name: keyof typeof dataLoaded, getter: (uid: string, cb: (data: T[]) => void) => () => void, setter: React.Dispatch<React.SetStateAction<T[]>>) => {
-        return getter(user.uid, (data) => {
-            setter(data);
-            dataLoaded[name] = true;
-            checkLoading();
-        });
-    }
-
-    const unsubscribeAccounts = createUnsubscriber('accounts', getAccounts, setAccounts);
-    const unsubscribeCreditCards = createUnsubscriber('creditCards', getCreditCards, setCreditCards);
-    const unsubscribeTransactions = createUnsubscriber('transactions', getTransactions, setTransactions);
+    const unsubAccounts = getAccounts(user.uid, (data) => {
+      setAccounts(data);
+      dataLoaded.accounts = true;
+      checkLoading();
+    });
+    const unsubCreditCards = getCreditCards(user.uid, (data) => {
+      setCreditCards(data);
+      dataLoaded.creditCards = true;
+      checkLoading();
+    });
+    const unsubTransactions = getTransactions(user.uid, (data) => {
+      setTransactions(data);
+      dataLoaded.transactions = true;
+      checkLoading();
+    }, { startDate, endDate });
 
     const timer = setTimeout(() => setIsLoading(false), 3000);
 
     return () => {
-        unsubscribeAccounts();
-        unsubscribeCreditCards();
-        unsubscribeTransactions();
+        unsubAccounts();
+        unsubCreditCards();
+        unsubTransactions();
         clearTimeout(timer);
     };
-  }, [user?.uid]);
+  }, [user?.uid, selectedDate, getMonthDateRange]);
 
   const totalBalance = useMemo(() => {
     return accounts.reduce((sum, acc) => sum + acc.balance, 0);
@@ -110,60 +120,59 @@ export default function DashboardPage() {
 
   
   const balanceChartData = useMemo(() => {
-    if (transactions.length === 0 && accounts.length === 0) return [];
+    const { startDate, endDate } = getMonthDateRange(selectedDate);
+    if (transactions.length === 0) return [];
+  
+    const daysInMonth = eachDayOfInterval({ start: startDate, end: endDate });
+  
+    // This is a simplification. A real implementation would need to fetch
+    // the balance at the start of the month from a snapshot or calculate it from all-time transactions.
+    // For now, we'll work backwards from the current balance.
+    const endOfMonthBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+    const monthTransactions = transactions
+      .filter(t => t.accountId && t.date >= startDate && t.date <= endDate)
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
     
-    const sortedTransactions = [...transactions].sort((a, b) => a.date.getTime() - b.date.getTime());
-    const initialBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0) - sortedTransactions.reduce((sum, t) => {
-        if(t.accountId) {
-             return t.type === 'income' ? sum - t.amount : sum + t.amount;
-        }
-        return sum;
+    const changes = monthTransactions.reduce((sum, t) => {
+        return t.type === 'income' ? sum - t.amount : sum + t.amount;
     }, 0);
 
-    const data: { date: string; Saldo: number }[] = [];
-    const dailyBalances: { [date: string]: number } = {};
-    const today = new Date();
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
-    let currentBalance = initialBalance;
-    
-    // Initialize all days of the month
-    for (let d = new Date(firstDayOfMonth); d <= lastDayOfMonth; d.setDate(d.getDate() + 1)) {
-        const dateString = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-        dailyBalances[dateString] = -1; // Use -1 to indicate not yet calculated
-    }
-    
-    // Set initial balance for the first day
-    const firstDayString = firstDayOfMonth.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-    dailyBalances[firstDayString] = initialBalance;
+    const startOfMonthBalance = endOfMonthBalance - monthTransactions.reduce((sum, t) => {
+        return t.type === 'income' ? sum + t.amount : sum - t.amount;
+    }, 0);
 
 
-    // Process transactions to get daily final balances
-    sortedTransactions.forEach(t => {
-         if (t.accountId) {
-            const dateString = t.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-            currentBalance = t.type === 'income' ? currentBalance + t.amount : currentBalance - t.amount;
-            if(dailyBalances[dateString] !== undefined) {
-                 dailyBalances[dateString] = currentBalance;
-            }
-         }
+    let currentBalance = startOfMonthBalance;
+    const dailyBalances: { [key: string]: number } = {};
+
+    monthTransactions.forEach(t => {
+      const day = format(t.date, 'dd/MM');
+      const change = t.type === 'income' ? t.amount : -t.amount;
+      if (!dailyBalances[day]) {
+         dailyBalances[day] = currentBalance;
+      }
+      dailyBalances[day] += change;
+      currentBalance += change;
     });
-    
-    // Fill in the gaps
-    let lastKnownBalance = initialBalance;
-    for (const dateString in dailyBalances) {
-        if (dailyBalances[dateString] === -1) {
-            dailyBalances[dateString] = lastKnownBalance;
-        } else {
-            lastKnownBalance = dailyBalances[dateString];
-        }
-        data.push({ date: dateString, Saldo: dailyBalances[dateString] });
-    }
-    
-    return data.slice(0, today.getDate());
 
-  }, [transactions, accounts]);
+    let lastBalance = startOfMonthBalance;
+    return daysInMonth.map(day => {
+        const dayKey = format(day, 'dd/MM');
+        if (dailyBalances[dayKey] !== undefined) {
+            lastBalance = dailyBalances[dayKey];
+        }
+        // Only show data up to today if it's the current month
+        if (selectedDate.getMonth() === new Date().getMonth() && day > new Date()) {
+            return null;
+        }
+        return {
+            date: dayKey,
+            Saldo: lastBalance,
+        };
+    }).filter(Boolean);
+
+  }, [transactions, accounts, selectedDate, getMonthDateRange]);
+  
 
   if (isLoading) {
     return (
@@ -184,7 +193,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-20 text-white">
-        {/* Balance Info */}
         <div className="flex justify-between items-center text-center p-4">
             <div className="flex-1">
                 <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
@@ -192,7 +200,7 @@ export default function DashboardPage() {
                     <span>Inicial</span>
                 </div>
                 <p className="text-lg font-bold">
-                    {balanceChartData[0]?.Saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
+                    {(balanceChartData[0]?.Saldo || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
             <div className="flex-1">
@@ -210,7 +218,6 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        {/* Balance Chart */}
         <div className="h-40 -mt-4">
              <ResponsiveContainer width="100%" height="100%">
                 <AreaChart 
@@ -249,7 +256,6 @@ export default function DashboardPage() {
             </ResponsiveContainer>
         </div>
         
-        {/* Search Bar */}
         <div className="px-4">
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -257,7 +263,6 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        {/* Accounts List */}
         <div className="px-4 space-y-2">
             <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold">Contas</h2>
@@ -293,7 +298,6 @@ export default function DashboardPage() {
             </div>
         </div>
         
-        {/* Credit Cards List */}
         <div className="px-4 space-y-2">
              <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold">Cartões de crédito</h2>
@@ -332,5 +336,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

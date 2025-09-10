@@ -109,22 +109,28 @@ const getDataSubscription = <T extends DataType>(
     userId: string | null,
     collectionName: string,
     callback: (data: T[]) => void,
-    orderField: string = "date",
-    postProcess: (data: any) => any = (d) => d
+    { orderField = "date", dateRange, postProcess = (d) => d }: { orderField?: string; dateRange?: { startDate: Date; endDate: Date }; postProcess?: (data: any) => any }
 ) => {
     const path = getCollectionPath(userId, collectionName);
+
     if (path) {
-        const q = query(collection(db, path), orderBy(orderField, "desc"));
+        let q = query(collection(db, path), orderBy(orderField, "desc"));
+
+        if (dateRange) {
+            q = query(q, 
+                where(orderField, ">=", Timestamp.fromDate(dateRange.startDate)),
+                where(orderField, "<=", Timestamp.fromDate(dateRange.endDate))
+            );
+        }
+
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             if (querySnapshot.empty && collectionName === 'categories') {
-                // If firestore is empty for categories, populate with defaults
                 const batch = writeBatch(db);
                 defaultCategories.forEach(name => {
                     const docRef = doc(collection(db, path));
                     batch.set(docRef, { name, isDefault: true });
                 });
                 batch.commit();
-                // Snapshot will re-trigger with the new data
             } else {
                 const data: T[] = [];
                 querySnapshot.forEach((doc) => {
@@ -135,14 +141,20 @@ const getDataSubscription = <T extends DataType>(
                 });
                 callback(data);
             }
+        }, (error) => {
+            console.error(`Error fetching ${collectionName}:`, error);
+            callback([]); // Return empty array on error
         });
         return unsubscribe;
     } else {
-        // For local storage, we can't use real-time subscriptions.
-        // We'll call the callback once with the current data.
-        const data = getLocalData<T>(collectionName);
+        let data = getLocalData<T>(collectionName);
+        if (dateRange && 'date' in data[0]) {
+           data = data.filter(item => {
+               const itemDate = new Date((item as any).date);
+               return itemDate >= dateRange.startDate && itemDate <= dateRange.endDate;
+           })
+        }
         callback(data);
-        // Return a no-op unsubscribe function
         return () => {};
     }
 };
@@ -157,7 +169,7 @@ export const deleteCategory = (userId: string | null, categoryId: string) => {
 };
 
 export const getCategories = (userId: string | null, callback: (categories: Category[]) => void) => {
-    return getDataSubscription<Category>(userId, "categories", callback, 'name');
+    return getDataSubscription<Category>(userId, "categories", callback, { orderField: 'name' });
 };
 
 // Accounts
@@ -172,11 +184,9 @@ export const deleteAccount = async (userId: string | null, accountId: string) =>
         try {
             const batch = writeBatch(db);
             
-            // 1. Delete the account document
             const accountRef = doc(db, accountPath, accountId);
             batch.delete(accountRef);
 
-            // 2. Find and delete all transactions linked to this account
             const transactionsQuery = query(collection(db, transactionsPath), where("accountId", "==", accountId));
             const transactionsSnapshot = await getDocs(transactionsQuery);
             transactionsSnapshot.forEach(doc => {
@@ -189,7 +199,6 @@ export const deleteAccount = async (userId: string | null, accountId: string) =>
              showToast({ title: "Erro", description: "Não foi possível remover a conta e suas transações.", variant: "destructive" });
         }
     } else {
-       // Local storage logic
        deleteDataItem(userId, "accounts", accountId);
        let transactions = getLocalData<Transaction>("transactions");
        transactions = transactions.filter(t => t.accountId !== accountId);
@@ -199,7 +208,7 @@ export const deleteAccount = async (userId: string | null, accountId: string) =>
 
 
 export const getAccounts = (userId: string | null, callback: (accounts: Account[]) => void) => {
-    return getDataSubscription<Account>(userId, "accounts", callback, 'name');
+    return getDataSubscription<Account>(userId, "accounts", callback, { orderField: 'name' });
 };
 
 // Credit Cards
@@ -237,13 +246,12 @@ export const deleteCreditCard = async (userId: string | null, cardId: string) =>
 };
 
 export const getCreditCards = (userId: string | null, callback: (cards: CreditCard[]) => void) => {
-    return getDataSubscription<CreditCard>(userId, "credit_cards", callback, 'name');
+    return getDataSubscription<CreditCard>(userId, "credit_cards", callback, { orderField: 'name' });
 };
 
 
 // Transactions
 export const addTransaction = async (userId: string | null, transaction: Omit<Transaction, "id">) => {
-    // Only update account balance if it's a direct account transaction
     if (transaction.accountId) {
         const path = getCollectionPath(userId, "transactions");
         const accountPath = getCollectionPath(userId, "accounts");
@@ -275,7 +283,6 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
                 showToast({ title: "Erro", description: "Não foi possível adicionar a transação.", variant: "destructive" });
             }
         } else {
-            // Local storage logic for account transactions
             await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
                 ...item,
                 date: item.date, 
@@ -293,7 +300,6 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
             }
         }
     } else {
-         // If it's a credit card transaction, just add it without updating any account balance.
          await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
             ...item,
             date: Timestamp.fromDate(item.date),
@@ -304,7 +310,6 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
 export const deleteTransaction = async (userId: string | null, transactionId: string) => {
     const transactionsPath = getCollectionPath(userId, 'transactions');
     if (!transactionsPath) {
-        // Handle local storage deletion if needed
         return;
     }
     const transactionRef = doc(db, transactionsPath, transactionId);
@@ -318,7 +323,6 @@ export const deleteTransaction = async (userId: string | null, transactionId: st
 
             const transactionData = transactionDoc.data() as Transaction;
 
-            // If it's an account transaction, revert the balance
             if (transactionData.accountId) {
                 const accountPath = getCollectionPath(userId, 'accounts');
                 if (!accountPath) return;
@@ -329,7 +333,6 @@ export const deleteTransaction = async (userId: string | null, transactionId: st
                 if (accountDoc.exists()) {
                     const currentBalance = accountDoc.data().balance;
                     const amountToRevert = transactionData.amount;
-                    // Reverse the operation: add if it was an expense, subtract if it was an income
                     const newBalance = transactionData.type === 'expense'
                         ? currentBalance + amountToRevert
                         : currentBalance - amountToRevert;
@@ -337,8 +340,6 @@ export const deleteTransaction = async (userId: string | null, transactionId: st
                     t.update(accountRef, { balance: newBalance });
                 }
             }
-
-            // Finally, delete the transaction
             t.delete(transactionRef);
         });
     } catch (error) {
@@ -348,25 +349,28 @@ export const deleteTransaction = async (userId: string | null, transactionId: st
 };
 
 
-export const getTransactions = (userId: string | null, callback: (transactions: Transaction[]) => void) => {
-    return getDataSubscription<Transaction>(userId, "transactions", callback, "date", (data) => ({
-        ...data,
-        date: (data.date as Timestamp).toDate(),
-    }));
+export const getTransactions = (
+    userId: string | null,
+    callback: (transactions: Transaction[]) => void,
+    dateRange?: { startDate: Date; endDate: Date }
+) => {
+    return getDataSubscription<Transaction>(userId, "transactions", callback, {
+        orderField: "date",
+        dateRange,
+        postProcess: (data) => ({
+            ...data,
+            date: (data.date as Timestamp).toDate(),
+        }),
+    });
 };
 
 
 // Budgets
 export const addBudget = async (userId: string | null, budget: Omit<Budget, "id">) => {
-    // Budget creation does not create a transaction anymore. 
-    // It's just a goal.
     await addDataItem<Budget>(userId, "budgets", budget);
 };
 
 export const deleteBudget = async (userId: string | null, budgetId: string) => {
-    const budgetPath = getCollectionPath(userId, 'budgets');
-    if (!budgetPath) return;
-
     try {
         await deleteDataItem(userId, "budgets", budgetId);
     } catch (error) {
@@ -376,8 +380,11 @@ export const deleteBudget = async (userId: string | null, budgetId: string) => {
 };
 
 
-export const getBudgets = (userId: string | null, callback: (budgets: Budget[]) => void) => {
-    return getDataSubscription<Budget>(userId, "budgets", callback, 'category');
+export const getBudgets = (
+    userId: string | null,
+    callback: (budgets: Budget[]) => void,
+) => {
+    return getDataSubscription<Budget>(userId, "budgets", callback, { orderField: 'category' });
 };
 
 
@@ -391,7 +398,7 @@ export const deleteSavingsGoal = (userId: string | null, goalId: string) => {
 };
 
 export const getSavingsGoals = (userId: string | null, callback: (goals: SavingsGoal[]) => void) => {
-    return getDataSubscription<SavingsGoal>(userId, "savings_goals", callback, 'name');
+    return getDataSubscription<SavingsGoal>(userId, "savings_goals", callback, { orderField: 'name' });
 };
 
 // Function to migrate local data to Firestore
@@ -405,7 +412,6 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         if (localData.length > 0) {
             const firestorePath = getCollectionPath(userId, collectionName);
             if (firestorePath) {
-                 // Check if firestore already has data to avoid duplicates
                 const firestoreDocs = await getDocs(collection(db, firestorePath));
                 if (firestoreDocs.size > 0) {
                     console.log(`Firestore already has data for ${collectionName}. Skipping migration.`);
@@ -416,21 +422,15 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
                 localData.forEach(item => {
                     const { id, ...data } = item;
                     let processedData = data;
-                    if (collectionName === 'transactions') {
+                    if (collectionName === 'transactions' && data.date) {
                         processedData = {...data, date: Timestamp.fromDate(new Date(data.date))};
                     }
                     const docRef = doc(collection(db, firestorePath));
                     batch.set(docRef, processedData);
                 });
                 await batch.commit();
-                // Optional: Clear local data after successful migration
-                // window.localStorage.removeItem(collectionName);
             }
         }
     }
     showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
 };
-
-    
-
-    

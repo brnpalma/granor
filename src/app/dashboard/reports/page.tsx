@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -18,6 +19,7 @@ import { Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 
 import { getTransactions, getCategories } from "@/lib/firestore";
 import type { Transaction, Category } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
+import { useDate } from "@/hooks/use-date";
 
 
 export default function ReportsPage() {
@@ -25,25 +27,35 @@ export default function ReportsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
+  const { selectedDate, getMonthDateRange } = useDate();
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !user?.uid) return;
+    if (typeof window === 'undefined' || !user?.uid) {
+        setIsLoading(false);
+        return;
+    }
 
-    const unsubscribeTransactions = getTransactions(user.uid, (data) => {
-        setTransactions(data);
-        checkLoading();
-    });
-    const unsubscribeCategories = getCategories(user.uid, (data) => {
-        setCategories(data);
-        checkLoading();
-    })
-    
+    setIsLoading(true);
+    const { startDate, endDate } = getMonthDateRange(selectedDate);
+    let dataLoaded = { transactions: false, categories: false };
+
     const checkLoading = () => {
-        // A simple check, assumes categories load after or at same time as transactions
-        if (categories.length > 0) {
+        if(Object.values(dataLoaded).every(Boolean)) {
             setIsLoading(false);
         }
     }
+
+    const unsubscribeTransactions = getTransactions(user.uid, (data) => {
+        setTransactions(data);
+        dataLoaded.transactions = true;
+        checkLoading();
+    }, { startDate, endDate });
+
+    const unsubscribeCategories = getCategories(user.uid, (data) => {
+        setCategories(data);
+        dataLoaded.categories = true;
+        checkLoading();
+    })
 
     const timeout = setTimeout(() => setIsLoading(false), 2500);
 
@@ -52,7 +64,7 @@ export default function ReportsPage() {
         unsubscribeCategories();
         clearTimeout(timeout);
     };
-  }, [user, categories.length]);
+  }, [user, selectedDate, getMonthDateRange]);
 
   const spendingByCategory = useMemo(() => {
     const expenseCategories = categories.filter(c => c.name !== 'Salário' && c.name !== 'Economias');

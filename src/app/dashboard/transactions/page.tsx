@@ -57,6 +57,7 @@ import { categorizeTransaction } from "@/ai/flows/categorize-transaction";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useDate } from "@/hooks/use-date";
 
 
 export default function TransactionsPage() {
@@ -68,10 +69,17 @@ export default function TransactionsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { selectedDate, getMonthDateRange } = useDate();
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !user?.uid) return;
+    if (typeof window === 'undefined' || !user?.uid) {
+        setIsLoading(false);
+        return;
+    };
 
+    setIsLoading(true);
+    const { startDate, endDate } = getMonthDateRange(selectedDate);
+    
     let dataLoaded = { transactions: false, accounts: false, creditCards: false, categories: false };
     const checkLoading = () => {
         if(Object.values(dataLoaded).every(Boolean)) {
@@ -79,30 +87,36 @@ export default function TransactionsPage() {
         }
     }
 
-    const createUnsubscriber = <T,>(name: keyof typeof dataLoaded, getter: (uid: string, cb: (data: T[]) => void) => () => void) => {
-        return getter(user.uid, (data) => {
-            if(name === 'transactions') setTransactions(data as Transaction[]);
-            if(name === 'accounts') setAccounts(data as Account[]);
-            if(name === 'creditCards') setCreditCards(data as CreditCardType[]);
-            if(name === 'categories') setCategories(data as Category[]);
-            dataLoaded[name] = true;
-            checkLoading();
-        });
-    }
+    const unsubTransactions = getTransactions(user.uid, (data) => {
+      setTransactions(data);
+      dataLoaded.transactions = true;
+      checkLoading();
+    }, { startDate, endDate });
 
-    const unsubscribeTransactions = createUnsubscriber('transactions', getTransactions);
-    const unsubscribeAccounts = createUnsubscriber('accounts', getAccounts);
-    const unsubscribeCreditCards = createUnsubscriber('creditCards', getCreditCards);
-    const unsubscribeCategories = createUnsubscriber('categories', getCategories);
+    const unsubAccounts = getAccounts(user.uid, (data) => {
+        setAccounts(data);
+        dataLoaded.accounts = true;
+        checkLoading();
+    });
+    const unsubCreditCards = getCreditCards(user.uid, (data) => {
+        setCreditCards(data);
+        dataLoaded.creditCards = true;
+        checkLoading();
+    });
+    const unsubCategories = getCategories(user.uid, (data) => {
+        setCategories(data);
+        dataLoaded.categories = true;
+        checkLoading();
+    });
 
 
     return () => {
-        unsubscribeTransactions();
-        unsubscribeAccounts();
-        unsubscribeCreditCards();
-        unsubscribeCategories();
+        unsubTransactions();
+        unsubAccounts();
+        unsubCreditCards();
+        unsubCategories();
     };
-  }, [user]);
+  }, [user, selectedDate, getMonthDateRange]);
 
 
   const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
@@ -441,7 +455,3 @@ function TransactionForm({
         </DialogContent>
     );
 }
-
-    
-
-    
