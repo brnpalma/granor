@@ -44,12 +44,12 @@ export default function SavingsPage() {
 
   const handleAddSavingsGoal = async (goal: Omit<SavingsGoal, "id">) => {
     await addSavingsGoal(user?.uid || null, goal);
-    toast({ title: "Meta de economia adicionada!" });
+    toast({ title: "Meta adicionada!" });
   };
   
   const handleDeleteSavingsGoal = async (goalId: string) => {
     await deleteSavingsGoal(user?.uid || null, goalId);
-    toast({ title: "Meta de economia removida!" });
+    toast({ title: "Meta removida!" });
   }
 
   if (isLoading) {
@@ -63,7 +63,7 @@ export default function SavingsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Metas de Economia</h1>
+        <h1 className="text-2xl font-bold">Metas</h1>
          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
                 <Button>
@@ -93,7 +93,7 @@ export default function SavingsPage() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Esta ação não pode ser desfeita. Isso removerá permanentemente a meta de economia.
+                            Esta ação não pode ser desfeita. Isso removerá permanentemente a meta.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -154,7 +154,7 @@ function SavingsGoalForm({
     return (
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Adicionar Nova Meta de Economia</DialogTitle>
+                <DialogTitle>Adicionar Nova Meta</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
