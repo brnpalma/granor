@@ -386,6 +386,10 @@ export const addSavingsGoal = (userId: string | null, goal: Omit<SavingsGoal, "i
   return addDataItem<SavingsGoal>(userId, "savings_goals", goal);
 };
 
+export const deleteSavingsGoal = (userId: string | null, goalId: string) => {
+    return deleteDataItem(userId, "savings_goals", goalId);
+};
+
 export const getSavingsGoals = (userId: string | null, callback: (goals: SavingsGoal[]) => void) => {
     return getDataSubscription<SavingsGoal>(userId, "savings_goals", callback, 'name');
 };

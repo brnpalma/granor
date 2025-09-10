@@ -1,13 +1,25 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
-import { PlusCircle, Target } from "lucide-react";
+import { PlusCircle, Target, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { addSavingsGoal, getSavingsGoals } from "@/lib/firestore";
+import { addSavingsGoal, getSavingsGoals, deleteSavingsGoal } from "@/lib/firestore";
 import type { SavingsGoal } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +47,11 @@ export default function SavingsPage() {
     await addSavingsGoal(user?.uid || null, goal);
     toast({ title: "Meta de economia adicionada!" });
   };
+  
+  const handleDeleteSavingsGoal = async (goalId: string) => {
+    await deleteSavingsGoal(user?.uid || null, goalId);
+    toast({ title: "Meta de economia removida!" });
+  }
 
   if (isLoading) {
     return (
@@ -65,7 +82,28 @@ export default function SavingsPage() {
             <Card key={goal.id}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">{goal.name}</CardTitle>
-                <Target className="h-5 w-5 text-muted-foreground" />
+                 <div className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-muted-foreground" />
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso removerá permanentemente a meta de economia.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteSavingsGoal(goal.id)}>Remover</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
