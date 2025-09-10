@@ -189,7 +189,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-        <div className="space-y-4 pb-16">
+        <div className="space-y-4 pb-6">
              <div className="grid gap-4 md:grid-cols-3">
                 <Skeleton className="h-24" />
                 <Skeleton className="h-24" />
@@ -205,7 +205,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6 pb-20 text-white">
+    <div className="space-y-6 pb-6 text-white">
         <div className="flex justify-between items-center text-center p-4">
             <div className="flex-1">
                 <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
@@ -276,22 +276,22 @@ export default function DashboardPage() {
             </ResponsiveContainer>
         </div>
         
-        <div className="px-4">
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+        <div>
+            <div className="relative px-4">
+                <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input placeholder="Pesquisar no Minhas Finanças" className="bg-[#27272a] border-[#3f3f46] pl-10 h-12 rounded-lg" />
             </div>
         </div>
 
-        <div className="px-4 space-y-2">
-            <div className="flex justify-between items-center">
+        <div className="space-y-2">
+            <div className="flex justify-between items-center px-4">
                 <h2 className="text-xl font-bold">Contas</h2>
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-gray-400" /></Button>
                     <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-gray-400" /></Button>
                 </div>
             </div>
-            <div className="bg-[#27272a] rounded-lg p-4 space-y-4">
+            <div className="bg-[#27272a] rounded-lg p-4 space-y-4 mx-4">
                 {accounts.map(account => (
                     <div key={account.id} className="flex items-center gap-4">
                         <BankIcon name={account.name} />
@@ -318,15 +318,15 @@ export default function DashboardPage() {
             </div>
         </div>
         
-        <div className="px-4 space-y-2">
-             <div className="flex justify-between items-center">
+        <div className="space-y-2">
+             <div className="flex justify-between items-center px-4">
                 <h2 className="text-xl font-bold">Cartões de crédito</h2>
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-gray-400" /></Button>
                     <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-gray-400" /></Button>
                 </div>
             </div>
-            <div className="bg-[#27272a] rounded-lg p-4 space-y-4">
+            <div className="bg-[#27272a] rounded-lg p-4 space-y-4 mx-4">
                 {creditCardInvoices.map(card => {
                     const dueDate = new Date();
                     dueDate.setDate(card.dueDay);
@@ -356,3 +356,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
