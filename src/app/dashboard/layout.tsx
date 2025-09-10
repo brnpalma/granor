@@ -16,6 +16,7 @@ import {
   MoreVertical,
   Plus,
   LogOut,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -119,7 +120,7 @@ export default function DashboardLayout({
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button size="icon" variant="outline" className="sm:hidden">
-                <PanelLeft className="h-5 w-5" />
+                <Menu className="h-5 w-5" />
                 <span className="sr-only">Alternar Menu</span>
               </Button>
             </SheetTrigger>
