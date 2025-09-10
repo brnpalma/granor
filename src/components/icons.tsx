@@ -23,7 +23,7 @@ const iconMap: Record<Category, React.ComponentType<LucideProps>> = {
   Serviços: Bolt,
   Aluguel: Home,
   Salário: Landmark,
-  Economias: PiggyBank,
+  Economias: PiggyBank, // This icon looks like a boar, representing Gullinbursti
   Outros: MoreHorizontal,
 };
 

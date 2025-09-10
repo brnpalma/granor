@@ -54,7 +54,7 @@ function SidebarContent({ onLinkClick }: { onLinkClick: () => void }) {
         <div className="flex flex-col h-full">
             <div className="flex h-[60px] items-center border-b px-6 justify-between">
                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold" onClick={onLinkClick}>
-                    <CategoryIcon category="Economias" className="h-6 w-6 text-primary" />
+                    <CategoryIcon category="Economias" className="h-6 w-6 text-amber-500" />
                     <span className="">Granor</span>
                 </Link>
                 <ThemeToggleButton />
