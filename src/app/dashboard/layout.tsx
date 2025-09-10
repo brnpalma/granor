@@ -22,6 +22,7 @@ import {
   Shapes,
   ArrowUpDown,
   Minus,
+  Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,12 +40,36 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter
+} from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DateProvider, useDate } from "@/hooks/use-date";
+import { useTransactionDialog } from "@/hooks/use-transaction-dialog";
+import { useToast } from "@/hooks/use-toast";
+import type { Transaction, Account, Category, CreditCard as CreditCardType } from "@/lib/types";
+import { getAccounts, getCategories, getCreditCards, getTransactions, addTransaction } from "@/lib/firestore";
+import { categorizeTransaction } from "@/ai/flows/categorize-transaction";
 
 const navItems = [
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
@@ -155,6 +180,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const pathname = usePathname();
+    const { openDialog } = useTransactionDialog();
 
     useEffect(() => {
         setIsLoading(true);
@@ -197,6 +223,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     </Button>
                 </header>
                 <main className="flex-1 p-4 sm:px-6 sm:py-0">
+                    <TransactionDialog />
                     {isLoading ? (
                         <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -213,28 +240,28 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-56 mb-2" side="top" align="end">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem disabled>
                                 <div className="bg-yellow-500/20 p-2 rounded-full mr-3">
                                     <ArrowUpDown className="h-5 w-5 text-yellow-500" />
                                 </div>
                                 <span>Transferência</span>
                             </DropdownMenuItem>
                              <DropdownMenuSeparator />
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openDialog({ type: 'income' })}>
                                 <div className="bg-green-500/20 p-2 rounded-full mr-3">
                                     <Plus className="h-5 w-5 text-green-500" />
                                 </div>
                                 <span>Receita</span>
                             </DropdownMenuItem>
                              <DropdownMenuSeparator />
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openDialog({ type: 'expense' })}>
                                  <div className="bg-red-500/20 p-2 rounded-full mr-3">
                                     <Minus className="h-5 w-5 text-red-500" />
                                 </div>
                                 <span>Despesa</span>
                             </DropdownMenuItem>
                              <DropdownMenuSeparator />
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openDialog({ type: 'expense', isCreditCard: true })}>
                                 <div className="bg-blue-500/20 p-2 rounded-full mr-3">
                                     <CreditCard className="h-5 w-5 text-blue-500" />
                                 </div>
@@ -248,10 +275,315 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     );
 }
 
+function TransactionDialog() {
+    const { isOpen, closeDialog, initialType, initialIsCreditCard } = useTransactionDialog();
+    const { user } = useAuth();
+    const { toast } = useToast();
+    const { selectedDate, getMonthDateRange } = useDate();
+    
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [accounts, setAccounts] = useState<Account[]>([]);
+    const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+
+    useEffect(() => {
+        if (!user?.uid) return;
+        const { startDate, endDate } = getMonthDateRange(selectedDate);
+        const unsubTransactions = getTransactions(user.uid, setTransactions, { startDate, endDate });
+        const unsubAccounts = getAccounts(user.uid, setAccounts);
+        const unsubCreditCards = getCreditCards(user.uid, setCreditCards);
+        const unsubCategories = getCategories(user.uid, setCategories);
+
+        return () => {
+            unsubTransactions();
+            unsubAccounts();
+            unsubCreditCards();
+            unsubCategories();
+        };
+    }, [user, selectedDate, getMonthDateRange]);
+
+    const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
+        if (!user?.uid) return;
+        await addTransaction(user.uid, transaction);
+        toast({ title: "Transação adicionada", description: "Sua nova transação foi salva." });
+    };
+
+    if (!isOpen) return null;
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={closeDialog}>
+             <TransactionForm 
+                onSubmit={handleAddTransaction} 
+                onSubmitted={closeDialog} 
+                transactions={transactions}
+                accounts={accounts}
+                creditCards={creditCards}
+                categories={categories}
+                initialType={initialType}
+                initialIsCreditCard={initialIsCreditCard}
+            />
+        </Dialog>
+    );
+}
+
+function TransactionForm({
+    onSubmit,
+    onSubmitted,
+    transactions,
+    accounts,
+    creditCards,
+    categories,
+    initialType,
+    initialIsCreditCard,
+}: {
+    onSubmit: (transaction: Omit<Transaction, "id">) => Promise<void>;
+    onSubmitted: () => void;
+    transactions: Transaction[];
+    accounts: Account[];
+    creditCards: CreditCardType[];
+    categories: Category[];
+    initialType?: "income" | "expense";
+    initialIsCreditCard?: boolean;
+}) {
+    const [description, setDescription] = useState("");
+    const [amount, setAmount] = useState("");
+    const [date, setDate] = useState<Date | undefined>(new Date());
+    const [type, setType] = useState<"income" | "expense">("expense");
+    const [category, setCategory] = useState<string>("");
+    const [source, setSource] = useState<"account" | "creditCard">("account");
+    const [sourceId, setSourceId] = useState<string>("");
+    const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
+    const [isSuggesting, setIsSuggesting] = useState(false);
+    const { toast } = useToast();
+    
+    useEffect(() => {
+        if (initialType) {
+            setType(initialType);
+        }
+        if (initialIsCreditCard) {
+            setSource("creditCard");
+        }
+    }, [initialType, initialIsCreditCard]);
+
+    useEffect(() => {
+        // Reset sourceId when source type changes
+        setSourceId("");
+    }, [source]);
+
+    useEffect(() => {
+      // If income is selected, force source to be account
+      if (type === 'income') {
+        setSource('account');
+      }
+    }, [type]);
+
+
+    const handleSuggestCategory = async () => {
+        if (!description) {
+            toast({ title: "Por favor, insira uma descrição primeiro.", variant: 'destructive' });
+            return;
+        }
+        setIsSuggesting(true);
+        try {
+            const transactionHistory = transactions
+                .slice(0, 10)
+                .map(t => `${t.date.toLocaleDateString('pt-BR')}: ${t.description} -> ${t.category} (R$${t.amount})`)
+                .join('\n');
+
+            const result = await categorizeTransaction({
+                transactionDescription: description,
+                transactionHistory: transactionHistory,
+            });
+            
+            const categoryExists = categories.some(c => c.name === result.suggestedCategory);
+            if (result.suggestedCategory && categoryExists) {
+                setSuggestedCategory(result.suggestedCategory);
+                setCategory(result.suggestedCategory);
+                toast({ title: `Categoria sugerida: ${result.suggestedCategory}`, description: `Confiança: ${(result.confidence * 100).toFixed(0)}%` });
+            } else {
+                 toast({ title: "Não foi possível sugerir uma categoria.", description: "A categoria sugerida não existe ou a IA não pôde determinar uma. Por favor, selecione uma manualmente.", variant: 'destructive' });
+            }
+        } catch (error) {
+            console.error("Falha na categorização por IA:", error);
+            toast({ title: "Falha na sugestão da IA.", description: "Ocorreu um erro ao obter uma sugestão.", variant: 'destructive' });
+        } finally {
+            setIsSuggesting(false);
+        }
+    };
+
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!description || !amount || !date || !category || !sourceId) {
+            toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
+            return;
+        }
+
+        const transactionData: Omit<Transaction, "id"> = {
+            description,
+            amount: parseFloat(amount),
+            date,
+            type,
+            category,
+            accountId: source === 'account' ? sourceId : undefined,
+            creditCardId: source === 'creditCard' ? sourceId : undefined,
+        };
+
+        await onSubmit(transactionData);
+
+        // Reset form
+        setDescription("");
+        setAmount("");
+        setDate(new Date());
+        setType("expense");
+        setCategory("");
+        setSource("account");
+        setSourceId("");
+        setSuggestedCategory(null);
+        onSubmitted();
+    };
+
+    return (
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Adicionar Nova Transação</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                    <Label>Fonte da Transação</Label>
+                    <RadioGroup value={source} onValueChange={(value) => setSource(value as "account" | "creditCard")} className="flex gap-4">
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="account" id="account" />
+                            <Label htmlFor="account">Conta</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="creditCard" id="creditCard" disabled={type === 'income'}/>
+                            <Label htmlFor="creditCard">Cartão de Crédito</Label>
+                        </div>
+                    </RadioGroup>
+                </div>
+                
+                <div className="space-y-2">
+                    <Label htmlFor="sourceId">
+                      {source === 'account' ? 'Conta' : 'Cartão de Crédito'}
+                    </Label>
+                    <Select onValueChange={setSourceId} value={sourceId}>
+                        <SelectTrigger id="sourceId">
+                            <SelectValue placeholder={`Selecione ${source === 'account' ? 'a conta' : 'o cartão'}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {source === 'account' ? 
+                              accounts.map(acc => (
+                                  <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</SelectItem>
+                              )) :
+                              creditCards.map(card => (
+                                <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>
+                              ))
+                            }
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="description">Descrição</Label>
+                    <div className="flex items-center gap-2">
+                         <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="ex: Café com amigos" />
+                         <Button type="button" size="icon" variant="outline" onClick={handleSuggestCategory} disabled={isSuggesting}>
+                            <Wand2 className={cn("h-4 w-4", isSuggesting && "animate-spin")} />
+                         </Button>
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="amount">Valor</Label>
+                        <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="date">Data</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
+                                    {date ? date.toLocaleDateString('pt-BR') : <span>Escolha uma data</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="type">Tipo</Label>
+                        <Select onValueChange={(value: "income" | "expense") => setType(value)} value={type}>
+                            <SelectTrigger id="type">
+                                <SelectValue placeholder="Selecione o tipo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="expense">Despesa</SelectItem>
+                                <SelectItem value="income">Receita</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="category">Categoria</Label>
+                        <Select onValueChange={(value: string) => setCategory(value)} value={category}>
+                            <SelectTrigger id="category">
+                                <SelectValue placeholder="Selecione a categoria" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {categories.filter(c => type === 'income' ? c.name === 'Salário' : c.name !== 'Salário').map(cat => (
+                                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="submit">Adicionar Transação</Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+    );
+}
+
+const TransactionDialogProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [initialState, setInitialState] = useState<{ type?: 'income' | 'expense'; isCreditCard?: boolean }>({});
+
+    const openDialog = (state: { type?: 'income' | 'expense'; isCreditCard?: boolean } = {}) => {
+        setInitialState(state);
+        setIsOpen(true);
+    };
+    
+    const closeDialog = () => {
+        setIsOpen(false);
+        setInitialState({});
+    };
+
+    return (
+        <TransactionDialogContext.Provider value={{ isOpen, openDialog, closeDialog, initialType: initialState.type, initialIsCreditCard: initialState.isCreditCard }}>
+            {children}
+        </TransactionDialogContext.Provider>
+    );
+};
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
         <DateProvider>
-            <DashboardLayoutContent>{children}</DashboardLayoutContent>
+            <TransactionDialogProvider>
+                <DashboardLayoutContent>{children}</DashboardLayoutContent>
+            </TransactionDialogProvider>
         </DateProvider>
     );
 }
+
+const TransactionDialogContext = createContext<{
+    isOpen: boolean;
+    openDialog: (state?: { type?: 'income' | 'expense'; isCreditCard?: boolean }) => void;
+    closeDialog: () => void;
+    initialType?: 'income' | 'expense';
+    initialIsCreditCard?: boolean;
+} | undefined>(undefined);
+
+    
