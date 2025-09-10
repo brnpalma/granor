@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
-import { PlusCircle, Wand2, Target, CreditCard } from "lucide-react";
+import { PlusCircle, Wand2, Target, CreditCard, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,6 +27,17 @@ import {
   DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -37,7 +49,7 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { addTransaction, getTransactions, getAccounts, getCreditCards, getCategories } from "@/lib/firestore";
+import { addTransaction, deleteTransaction, getTransactions, getAccounts, getCreditCards, getCategories } from "@/lib/firestore";
 import type { Transaction, Category, Account, CreditCard as CreditCardType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
@@ -98,6 +110,11 @@ export default function TransactionsPage() {
     toast({ title: "Transação adicionada", description: "Sua nova transação foi salva." });
   };
   
+  const handleDeleteTransaction = async (transactionId: string) => {
+    await deleteTransaction(user?.uid || null, transactionId);
+    toast({ title: "Transação removida!" });
+  }
+  
   const getSourceName = (t: Transaction) => {
     if (t.accountId) {
         return accounts.find(a => a.id === t.accountId)?.name || "Conta Desconhecida";
@@ -156,6 +173,7 @@ export default function TransactionsPage() {
                 <TableHead>Categoria</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -181,6 +199,27 @@ export default function TransactionsPage() {
                   )}>
                     {t.type === "income" ? "+" : "-"}
                     {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso removerá permanentemente a transação. Se for uma transação de conta, o saldo será ajustado.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteTransaction(t.id)}>Remover</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))}
@@ -400,3 +439,4 @@ function TransactionForm({
         </DialogContent>
     );
 }
+

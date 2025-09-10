@@ -16,6 +16,7 @@ import {
   runTransaction,
   deleteDoc,
   where,
+  getDoc,
 } from "firebase/firestore";
 import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, DefaultCategory } from "./types";
 import { defaultCategories } from "./types";
@@ -297,6 +298,52 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
             ...item,
             date: Timestamp.fromDate(item.date),
         }));
+    }
+};
+
+export const deleteTransaction = async (userId: string | null, transactionId: string) => {
+    const transactionsPath = getCollectionPath(userId, 'transactions');
+    if (!transactionsPath) {
+        // Handle local storage deletion if needed
+        return;
+    }
+    const transactionRef = doc(db, transactionsPath, transactionId);
+
+    try {
+        await runTransaction(db, async (t) => {
+            const transactionDoc = await t.get(transactionRef);
+            if (!transactionDoc.exists()) {
+                throw "Transaction does not exist!";
+            }
+
+            const transactionData = transactionDoc.data() as Transaction;
+
+            // If it's an account transaction, revert the balance
+            if (transactionData.accountId) {
+                const accountPath = getCollectionPath(userId, 'accounts');
+                if (!accountPath) return;
+
+                const accountRef = doc(db, accountPath, transactionData.accountId);
+                const accountDoc = await t.get(accountRef);
+
+                if (accountDoc.exists()) {
+                    const currentBalance = accountDoc.data().balance;
+                    const amountToRevert = transactionData.amount;
+                    // Reverse the operation: add if it was an expense, subtract if it was an income
+                    const newBalance = transactionData.type === 'expense'
+                        ? currentBalance + amountToRevert
+                        : currentBalance - amountToRevert;
+                    
+                    t.update(accountRef, { balance: newBalance });
+                }
+            }
+
+            // Finally, delete the transaction
+            t.delete(transactionRef);
+        });
+    } catch (error) {
+        console.error("Error deleting transaction: ", error);
+        showToast({ title: "Erro", description: "Não foi possível deletar a transação.", variant: "destructive" });
     }
 };
 
