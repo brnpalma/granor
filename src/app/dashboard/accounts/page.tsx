@@ -109,27 +109,27 @@ export default function AccountsPage() {
                             <p className="font-bold uppercase">{account.name}</p>
                         </div>
                         <div className="text-right">
-                           <p className="font-bold">{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                           <AlertDialog>
+                             <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="shrink-0">
+                                   <MoreVertical className="h-5 w-5" />
+                               </Button>
+                             </AlertDialogTrigger>
+                             <AlertDialogContent>
+                               <AlertDialogHeader>
+                                 <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                 <AlertDialogDescription>
+                                   Esta ação não pode ser desfeita. Isso removerá permanentemente a conta e todas as transações associadas a ela.
+                                 </AlertDialogDescription>
+                               </AlertDialogHeader>
+                               <AlertDialogFooter>
+                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                 <AlertDialogAction onClick={() => handleDeleteAccount(account.id)}>Remover</AlertDialogAction>
+                               </AlertDialogFooter>
+                             </AlertDialogContent>
+                           </AlertDialog>
+                           <p className="font-bold text-sm mt-1">{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                         </div>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                             <Button variant="ghost" size="icon" className="shrink-0">
-                                <MoreVertical className="h-5 w-5" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta ação não pode ser desfeita. Isso removerá permanentemente a conta e todas as transações associadas a ela.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteAccount(account.id)}>Remover</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
                     </div>
                 ))}
                  <div className="border-t border-border my-2"></div>
