@@ -192,22 +192,10 @@ export default function TransactionsPage() {
                                 <p className="font-medium">{t.description}</p>
                                 <p className="text-sm text-muted-foreground">{getSourceName(t)}</p>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <div className="text-right">
-                                    <p className={cn(
-                                        "font-bold",
-                                        t.type === "income" ? "text-green-500" : "text-foreground"
-                                    )}>
-                                        {t.type === "income" ? "+" : "-"}
-                                        {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                                    </p>
-                                    {!t.efetivado && (
-                                        <Button size="sm" variant="outline" className="mt-1 h-7 text-xs" onClick={() => handleToggleEfetivado(t)}>Efetivar</Button>
-                                    )}
-                                </div>
+                            <div className="flex flex-col items-end">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="shrink-0 -mr-2">
+                                        <Button variant="ghost" size="icon" className="shrink-0 -mr-2 h-7 w-7">
                                             <MoreVertical className="h-5 w-5 text-muted-foreground" />
                                         </Button>
                                     </DropdownMenuTrigger>
@@ -240,6 +228,16 @@ export default function TransactionsPage() {
                                          )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
+                                <p className={cn(
+                                    "font-bold",
+                                    t.type === "income" ? "text-green-500" : "text-foreground"
+                                )}>
+                                    {t.type === "income" ? "+" : "-"}
+                                    {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                                </p>
+                                {!t.efetivado && (
+                                    <Button size="sm" variant="outline" className="mt-1 h-7 text-xs" onClick={() => handleToggleEfetivado(t)}>Efetivar</Button>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -250,7 +248,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-
-
-    
