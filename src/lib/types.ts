@@ -1,21 +1,8 @@
 
-export const defaultCategories = [
-  "Alimentação",
-  "Transporte",
-  "Compras",
-  "Entretenimento",
-  "Serviços",
-  "Aluguel",
-  "Salário",
-  "Economias",
-  "Outros",
-] as const;
-
-export type DefaultCategory = (typeof defaultCategories)[number];
 
 export interface Category {
   id: string;
-  name: DefaultCategory | string;
+  name: string;
   type: "income" | "expense";
 }
 
@@ -52,7 +39,7 @@ export interface Transaction {
   description: string;
   amount: number;
   type: "income" | "expense";
-  category: DefaultCategory | string;
+  category: string;
   accountId?: string; // Optional: for bank account transactions
   creditCardId?: string; // Optional: for credit card transactions
   isBudget?: boolean;
@@ -60,7 +47,7 @@ export interface Transaction {
 
 export interface Budget {
   id: string;
-  category: DefaultCategory | string;
+  category: string;
   amount: number;
 }
 

@@ -1,6 +1,5 @@
 "use client";
 
-import type { DefaultCategory } from "@/lib/types";
 import {
   Utensils,
   Car,
@@ -16,7 +15,7 @@ import {
 } from "lucide-react";
 import Image from 'next/image';
 
-const iconMap: Record<DefaultCategory | 'Categorias', React.ComponentType<LucideProps>> = {
+const iconMap: Record<string, React.ComponentType<LucideProps>> = {
   Alimentação: Utensils,
   Transporte: Car,
   Compras: ShoppingBag,
@@ -30,7 +29,7 @@ const iconMap: Record<DefaultCategory | 'Categorias', React.ComponentType<Lucide
 };
 
 interface CategoryIconProps extends LucideProps {
-  category: DefaultCategory | string;
+  category: string;
 }
 
 export function CategoryIcon({ category, ...props }: CategoryIconProps) {
@@ -102,5 +101,3 @@ export const NubankLogo = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
   </div>
 );
-
-    

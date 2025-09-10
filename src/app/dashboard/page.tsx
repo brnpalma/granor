@@ -26,7 +26,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { getAccounts, getCreditCards, getBudgets, getTransactions } from "@/lib/firestore";
 import type { Account, CreditCard as CreditCardType, Budget, Transaction, Category } from "@/lib/types";
 import { CategoryIcon, ItauLogo, NubankLogo, PicpayLogo, MercadoPagoLogo, BradescoLogo } from "@/components/icons";
-import { categories } from "@/lib/types";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";

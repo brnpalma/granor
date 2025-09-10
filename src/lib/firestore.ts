@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { db } from "./firebase";
@@ -18,8 +19,7 @@ import {
   where,
   getDoc,
 } from "firebase/firestore";
-import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, DefaultCategory } from "./types";
-import { defaultCategories } from "./types";
+import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard } from "./types";
 import { useToast } from "@/hooks/use-toast";
 
 // Toast hook must be called from a component
@@ -38,12 +38,6 @@ const getLocalData = <T>(key: string): T[] => {
     if (typeof window === 'undefined') return [];
     const data = window.localStorage.getItem(key);
     if (!data) return [];
-    
-    if (key === 'categories' && !data) {
-        const defaultData = defaultCategories.map(name => ({ id: name.toLowerCase(), name, type: name === 'Salário' ? 'income' : 'expense' }));
-        setLocalData('categories', defaultData);
-        return defaultData as T[];
-    }
 
     return JSON.parse(data, (key, value) => {
         if (key === 'date' && typeof value === 'string') {
@@ -152,7 +146,7 @@ const getDataSubscription = <T extends DataType>(
 
 // Categories
 export const addCategory = (userId: string | null, category: Omit<Category, "id">) => {
-    return addDataItem<Category>(userId, "categories", category, (item) => ({ ...item, isDefault: false }));
+    return addDataItem<Category>(userId, "categories", category);
 };
 
 export const deleteCategory = (userId: string | null, categoryId: string) => {
@@ -414,23 +408,6 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
     if (!userId) return;
     let didMigrate = false;
     
-    // First, ensure default categories exist if no categories are present at all.
-    const categoriesPath = getCollectionPath(userId, 'categories');
-    if (categoriesPath) {
-        const categoriesSnapshot = await getDocs(query(collection(db, categoriesPath)));
-        if (categoriesSnapshot.empty) {
-            didMigrate = true;
-            const batch = writeBatch(db);
-            defaultCategories.forEach(name => {
-                const docRef = doc(collection(db, categoriesPath));
-                const type = name === 'Salário' ? 'income' : 'expense';
-                batch.set(docRef, { name, isDefault: true, type });
-            });
-            await batch.commit();
-        }
-    }
-
-
     const collections = ["transactions", "budgets", "savings_goals", "accounts", "credit_cards", "categories"];
 
     for (const collectionName of collections) {
@@ -440,7 +417,7 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
             if (firestorePath) {
                 // To prevent duplicates, we check if Firestore is already populated.
                 const firestoreDocs = await getDocs(collection(db, firestorePath));
-                if (firestoreDocs.size > 0 && collectionName !== 'categories') {
+                if (firestoreDocs.size > 0) {
                     console.log(`Firestore already has data for ${collectionName}. Skipping migration.`);
                     continue;
                 }
