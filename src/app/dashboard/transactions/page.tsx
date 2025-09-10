@@ -122,14 +122,15 @@ export default function TransactionsPage() {
   const groupedTransactions = useMemo(() => {
     const groups: { [key: string]: Transaction[] } = {};
     transactions.forEach(t => {
-      const dateKey = t.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', weekday: 'long' });
+      const dateKey = t.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
       groups[dateKey].push(t);
     });
     return Object.entries(groups).map(([date, transactions]) => {
-      const [day, , , weekday] = date.split(/[\s,]+/);
+      const day = date.split('/')[0];
+      const weekday = transactions[0].date.toLocaleDateString('pt-BR', { weekday: 'long' });
       return {
         date: `${day} • ${weekday}`,
         transactions,
@@ -248,3 +249,6 @@ export default function TransactionsPage() {
   );
 }
 
+
+
+    
