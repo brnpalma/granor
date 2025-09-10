@@ -8,13 +8,13 @@ import { getAuth } from "firebase/auth";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  projectId: "studio-5298964458-59092",
-  appId: "1:237167401407:web:3e002c7fb64a33a159690a",
-  storageBucket: "studio-5298964458-59092.firebasestorage.app",
-  apiKey: "AIzaSyA5psAculLeGhGdFDK-TMckzFu2lPGyQjM",
-  authDomain: "studio-5298964458-59092.firebaseapp.com",
-  measurementId: "",
-  messagingSenderId: "237167401407",
+  apiKey: "AIzaSyCZD0UT-1BSboulpZUOQikZFakRGgPBnFQ",
+  authDomain: "granor-financas.firebaseapp.com",
+  projectId: "granor-financas",
+  storageBucket: "granor-financas.firebasestorage.app",
+  messagingSenderId: "321962799532",
+  appId: "1:321962799532:web:9f4fcd61d62c6df7848a09",
+  measurementId: "G-QWBLRJS6KT"
 };
 
 
