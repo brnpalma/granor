@@ -124,24 +124,14 @@ const getDataSubscription = <T extends DataType>(
         }
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            if (querySnapshot.empty && collectionName === 'categories') {
-                const batch = writeBatch(db);
-                defaultCategories.forEach(name => {
-                    const docRef = doc(collection(db, path));
-                    const type = name === 'Salário' ? 'income' : 'expense';
-                    batch.set(docRef, { name, isDefault: true, type });
-                });
-                batch.commit();
-            } else {
-                const data: T[] = [];
-                querySnapshot.forEach((doc) => {
-                    data.push({
-                        id: doc.id,
-                        ...postProcess(doc.data()),
-                    } as T);
-                });
-                callback(data);
-            }
+            const data: T[] = [];
+            querySnapshot.forEach((doc) => {
+                data.push({
+                    id: doc.id,
+                    ...postProcess(doc.data()),
+                } as T);
+            });
+            callback(data);
         }, (error) => {
             console.error(`Error fetching ${collectionName}:`, error);
             callback([]); // Return empty array on error
@@ -149,7 +139,7 @@ const getDataSubscription = <T extends DataType>(
         return unsubscribe;
     } else {
         let data = getLocalData<T>(collectionName);
-        if (dateRange && 'date' in data[0]) {
+        if (dateRange && data.length > 0 && 'date' in data[0]) {
            data = data.filter(item => {
                const itemDate = new Date((item as any).date);
                return itemDate >= dateRange.startDate && itemDate <= dateRange.endDate;
@@ -422,6 +412,24 @@ export const getSavingsGoals = (userId: string | null, callback: (goals: Savings
 // Function to migrate local data to Firestore
 export const migrateLocalDataToFirestore = async (userId: string) => {
     if (!userId) return;
+    let didMigrate = false;
+    
+    // First, ensure default categories exist if no categories are present at all.
+    const categoriesPath = getCollectionPath(userId, 'categories');
+    if (categoriesPath) {
+        const categoriesSnapshot = await getDocs(query(collection(db, categoriesPath)));
+        if (categoriesSnapshot.empty) {
+            didMigrate = true;
+            const batch = writeBatch(db);
+            defaultCategories.forEach(name => {
+                const docRef = doc(collection(db, categoriesPath));
+                const type = name === 'Salário' ? 'income' : 'expense';
+                batch.set(docRef, { name, isDefault: true, type });
+            });
+            await batch.commit();
+        }
+    }
+
 
     const collections = ["transactions", "budgets", "savings_goals", "accounts", "credit_cards", "categories"];
 
@@ -430,11 +438,14 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         if (localData.length > 0) {
             const firestorePath = getCollectionPath(userId, collectionName);
             if (firestorePath) {
+                // To prevent duplicates, we check if Firestore is already populated.
                 const firestoreDocs = await getDocs(collection(db, firestorePath));
-                if (firestoreDocs.size > 0) {
+                if (firestoreDocs.size > 0 && collectionName !== 'categories') {
                     console.log(`Firestore already has data for ${collectionName}. Skipping migration.`);
                     continue;
                 }
+                
+                didMigrate = true;
 
                 const batch = writeBatch(db);
                 localData.forEach(item => {
@@ -450,5 +461,7 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
             }
         }
     }
-    showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
+    if(didMigrate) {
+        showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
+    }
 };
