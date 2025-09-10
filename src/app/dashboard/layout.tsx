@@ -222,7 +222,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                         <MoreVertical className="h-5 w-5" />
                     </Button>
                 </header>
-                <main className="flex-1 p-4 sm:p-6">
+                <main className="flex-1 p-4 sm:p-6 pb-24">
                     <TransactionDialog />
                     {isLoading ? (
                         <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
@@ -531,5 +531,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     
 
     
+
 
 
