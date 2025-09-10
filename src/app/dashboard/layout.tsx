@@ -404,6 +404,11 @@ function TransactionForm({
         setSourceId("");
         onSubmitted();
     };
+    
+    const handleTypeChange = (value: "income" | "expense") => {
+        setType(value);
+        setCategory(""); // Reset category when type changes
+    }
 
     return (
         <DialogContent onInteractOutside={(e) => e.preventDefault()}>
@@ -433,7 +438,7 @@ function TransactionForm({
                         <SelectTrigger id="sourceId">
                             <SelectValue placeholder={`Selecione ${source === 'account' ? 'a conta' : 'o cartão'}`} />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent onInteractOutside={(e) => e.preventDefault()}>
                             {source === 'account' ? 
                               accounts.map(acc => (
                                   <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</SelectItem>
@@ -472,11 +477,11 @@ function TransactionForm({
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="type">Tipo</Label>
-                        <Select onValueChange={(value: "income" | "expense") => setType(value)} value={type}>
+                        <Select onValueChange={handleTypeChange} value={type}>
                             <SelectTrigger id="type">
                                 <SelectValue placeholder="Selecione o tipo" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent onInteractOutside={(e) => e.preventDefault()}>
                                 <SelectItem value="expense">Despesa</SelectItem>
                                 <SelectItem value="income">Receita</SelectItem>
                             </SelectContent>
@@ -488,7 +493,7 @@ function TransactionForm({
                             <SelectTrigger id="category">
                                 <SelectValue placeholder="Selecione a categoria" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent onInteractOutside={(e) => e.preventDefault()}>
                                 {categories.filter(c => c.type === type).map(cat => (
                                     <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                                 ))}
