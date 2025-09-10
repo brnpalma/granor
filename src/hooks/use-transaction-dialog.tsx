@@ -2,15 +2,19 @@
 "use client";
 
 import React, { createContext, useContext, useState } from 'react';
+import type { Transaction } from '@/lib/types';
 
-// This file is safe to be edited, it's not a standard file from the template.
+type DialogInitialState = {
+    type?: 'income' | 'expense';
+    isCreditCard?: boolean;
+    transaction?: Transaction;
+};
 
 type TransactionDialogContextType = {
     isOpen: boolean;
-    openDialog: (state?: { type?: 'income' | 'expense'; isCreditCard?: boolean }) => void;
+    openDialog: (initialState?: DialogInitialState) => void;
     closeDialog: () => void;
-    initialType?: 'income' | 'expense';
-    initialIsCreditCard?: boolean;
+    initialData: DialogInitialState;
 }
 
 const TransactionDialogContext = createContext<TransactionDialogContextType | undefined>(undefined);
@@ -18,20 +22,20 @@ const TransactionDialogContext = createContext<TransactionDialogContextType | un
 
 export const TransactionDialogProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [initialState, setInitialState] = useState<{ type?: 'income' | 'expense'; isCreditCard?: boolean }>({});
+    const [initialData, setInitialData] = useState<DialogInitialState>({});
 
-    const openDialog = (state: { type?: 'income' | 'expense'; isCreditCard?: boolean } = {}) => {
-        setInitialState(state);
+    const openDialog = (initialState: DialogInitialState = {}) => {
+        setInitialData(initialState);
         setIsOpen(true);
     };
     
     const closeDialog = () => {
         setIsOpen(false);
-        setInitialState({});
+        setInitialData({}); // Reset initial data on close
     };
 
     return (
-        <TransactionDialogContext.Provider value={{ isOpen, openDialog, closeDialog, initialType: initialState.type, initialIsCreditCard: initialState.isCreditCard }}>
+        <TransactionDialogContext.Provider value={{ isOpen, openDialog, closeDialog, initialData }}>
             {children}
         </TransactionDialogContext.Provider>
     );
@@ -45,5 +49,3 @@ export const useTransactionDialog = () => {
     }
     return context;
 };
-
-    

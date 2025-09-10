@@ -69,7 +69,7 @@ import { DateProvider, useDate } from "@/hooks/use-date";
 import { TransactionDialogProvider, useTransactionDialog } from "@/hooks/use-transaction-dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { Transaction, Account, Category, CreditCard as CreditCardType } from "@/lib/types";
-import { getAccounts, getCategories, getCreditCards, getTransactions, addTransaction } from "@/lib/firestore";
+import { getAccounts, getCategories, getCreditCards, getTransactions, addTransaction, updateTransaction } from "@/lib/firestore";
 
 const navItems = [
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
@@ -276,36 +276,38 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 }
 
 function TransactionDialog() {
-    const { isOpen, closeDialog, initialType, initialIsCreditCard } = useTransactionDialog();
+    const { isOpen, closeDialog, initialData } = useTransactionDialog();
     const { user } = useAuth();
     const { toast } = useToast();
     const { selectedDate, getMonthDateRange } = useDate();
     
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
 
     useEffect(() => {
         if (!user?.uid) return;
-        const { startDate, endDate } = getMonthDateRange(selectedDate);
-        const unsubTransactions = getTransactions(user.uid, setTransactions, { startDate, endDate });
         const unsubAccounts = getAccounts(user.uid, setAccounts);
         const unsubCreditCards = getCreditCards(user.uid, setCreditCards);
         const unsubCategories = getCategories(user.uid, setCategories);
 
         return () => {
-            unsubTransactions();
             unsubAccounts();
             unsubCreditCards();
             unsubCategories();
         };
-    }, [user, selectedDate, getMonthDateRange]);
+    }, [user]);
 
-    const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
+    const handleFormSubmit = async (transaction: Omit<Transaction, "id">, transactionId?: string) => {
         if (!user?.uid) return;
-        await addTransaction(user.uid, transaction);
-        toast({ title: "Transação adicionada", description: "Sua nova transação foi salva." });
+
+        if (transactionId) {
+            await updateTransaction(user.uid, transactionId, transaction);
+            toast({ title: "Transação atualizada!" });
+        } else {
+            await addTransaction(user.uid, transaction);
+            toast({ title: "Transação adicionada!" });
+        }
     };
 
     if (!isOpen) return null;
@@ -313,14 +315,12 @@ function TransactionDialog() {
     return (
         <Dialog open={isOpen} onOpenChange={closeDialog}>
              <TransactionForm 
-                onSubmit={handleAddTransaction} 
+                onSubmit={handleFormSubmit} 
                 onSubmitted={closeDialog} 
-                transactions={transactions}
                 accounts={accounts}
                 creditCards={creditCards}
                 categories={categories}
-                initialType={initialType}
-                initialIsCreditCard={initialIsCreditCard}
+                initialData={initialData}
             />
         </Dialog>
     );
@@ -329,21 +329,17 @@ function TransactionDialog() {
 function TransactionForm({
     onSubmit,
     onSubmitted,
-    transactions,
     accounts,
     creditCards,
     categories,
-    initialType,
-    initialIsCreditCard,
+    initialData,
 }: {
-    onSubmit: (transaction: Omit<Transaction, "id">) => Promise<void>;
+    onSubmit: (transaction: Omit<Transaction, "id">, transactionId?: string) => Promise<void>;
     onSubmitted: () => void;
-    transactions: Transaction[];
     accounts: Account[];
     creditCards: CreditCardType[];
     categories: Category[];
-    initialType?: "income" | "expense";
-    initialIsCreditCard?: boolean;
+    initialData: { type?: 'income' | 'expense'; isCreditCard?: boolean, transaction?: Transaction };
 }) {
     const [description, setDescription] = useState("");
     const [amount, setAmount] = useState("");
@@ -354,20 +350,35 @@ function TransactionForm({
     const [sourceId, setSourceId] = useState<string>("");
     const [efetivado, setEfetivado] = useState(true);
     const { toast } = useToast();
-    
-    useEffect(() => {
-        if (initialType) {
-            setType(initialType);
-        }
-        if (initialIsCreditCard) {
-            setSource("creditCard");
-        }
-    }, [initialType, initialIsCreditCard]);
+
+    const isEditing = !!initialData?.transaction;
 
     useEffect(() => {
-        // Reset sourceId when source type changes
-        setSourceId("");
-    }, [source]);
+        if (isEditing && initialData.transaction) {
+            const t = initialData.transaction;
+            setDescription(t.description);
+            setAmount(String(t.amount));
+            setDate(t.date);
+            setType(t.type);
+            setCategory(t.category);
+            setEfetivado(t.efetivado);
+            if(t.accountId) {
+                setSource("account");
+                setSourceId(t.accountId);
+            } else if (t.creditCardId) {
+                setSource("creditCard");
+                setSourceId(t.creditCardId);
+            }
+        } else {
+            if (initialData.type) setType(initialData.type);
+            if (initialData.isCreditCard) setSource("creditCard");
+        }
+    }, [initialData, isEditing]);
+
+    useEffect(() => {
+        // Reset sourceId when source type changes, unless we are editing
+        if(!isEditing) setSourceId("");
+    }, [source, isEditing]);
 
     useEffect(() => {
       // If income is selected, force source to be account
@@ -395,17 +406,7 @@ function TransactionForm({
             ...(source === 'creditCard' ? { creditCardId: sourceId } : {}),
         };
 
-        await onSubmit(transactionData);
-
-        // Reset form
-        setDescription("");
-        setAmount("");
-        setDate(new Date());
-        setType("expense");
-        setCategory("");
-        setSource("account");
-        setSourceId("");
-        setEfetivado(true);
+        await onSubmit(transactionData, initialData.transaction?.id);
         onSubmitted();
     };
     
@@ -417,7 +418,7 @@ function TransactionForm({
     return (
         <DialogContent onInteractOutside={(e) => e.preventDefault()}>
             <DialogHeader>
-                <DialogTitle>Adicionar Nova Transação</DialogTitle>
+                <DialogTitle>{isEditing ? "Editar Transação" : "Adicionar Nova Transação"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -510,7 +511,7 @@ function TransactionForm({
                     <Label htmlFor="efetivado">Efetivado</Label>
                 </div>
                 <DialogFooter>
-                    <Button type="submit">Adicionar Transação</Button>
+                    <Button type="submit">{isEditing ? "Salvar Alterações" : "Adicionar"}</Button>
                 </DialogFooter>
             </form>
         </DialogContent>
@@ -530,4 +531,5 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     
 
     
+
 

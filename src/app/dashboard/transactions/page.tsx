@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { PlusCircle, Trash2, Target, CreditCard, Check, Clock, MoreVertical } from "lucide-react";
+import { PlusCircle, Trash2, CreditCard, Edit, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,8 +28,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { addTransaction, deleteTransaction, getTransactions, getAccounts, getCreditCards, getCategories, updateTransaction } from "@/lib/firestore";
-import type { Transaction, Category, Account, CreditCard as CreditCardType } from "@/lib/types";
+import { deleteTransaction, getTransactions, getAccounts, getCreditCards, updateTransaction } from "@/lib/firestore";
+import type { Transaction, Account, CreditCard as CreditCardType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
@@ -105,8 +105,13 @@ export default function TransactionsPage() {
 
   const handleToggleEfetivado = async (transaction: Transaction) => {
       if (!user?.uid) return;
+      // We pass the original transaction data but toggle the 'efetivado' state
       await updateTransaction(user.uid, transaction.id, { ...transaction, efetivado: !transaction.efetivado });
       toast({ title: `Transação ${!transaction.efetivado ? 'efetivada' : 'marcada como pendente'}.` });
+  }
+
+  const handleEditTransaction = (transaction: Transaction) => {
+      openDialog({ transaction });
   }
   
   const getSourceName = (t: Transaction) => {
@@ -192,7 +197,7 @@ export default function TransactionsPage() {
                                 <p className="font-medium">{t.description}</p>
                                 <p className="text-sm text-muted-foreground">{getSourceName(t)}</p>
                             </div>
-                            <div className="flex flex-col items-end">
+                            <div className="flex flex-col items-end gap-1">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button variant="ghost" size="icon" className="shrink-0 -mr-2 h-7 w-7">
@@ -200,9 +205,9 @@ export default function TransactionsPage() {
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent>
-                                        <DropdownMenuItem onClick={() => handleToggleEfetivado(t)}>
-                                            {t.efetivado ? <Clock className="mr-2 h-4 w-4" /> : <Check className="mr-2 h-4 w-4" />}
-                                            <span>{t.efetivado ? 'Pendente' : 'Efetivada'}</span>
+                                        <DropdownMenuItem onClick={() => handleEditTransaction(t)} disabled={!!t.isBudget}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            <span>Editar</span>
                                         </DropdownMenuItem>
                                          {!t.isBudget && (
                                          <AlertDialog>
@@ -236,7 +241,7 @@ export default function TransactionsPage() {
                                     {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                                 </p>
                                 {!t.efetivado && (
-                                    <Button size="sm" variant="outline" className="mt-1 h-7 text-xs" onClick={() => handleToggleEfetivado(t)}>Efetivar</Button>
+                                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleToggleEfetivado(t)}>Efetivar</Button>
                                 )}
                             </div>
                         </div>
