@@ -438,7 +438,7 @@ function TransactionForm({
                         <SelectTrigger id="sourceId">
                             <SelectValue placeholder={`Selecione ${source === 'account' ? 'a conta' : 'o cartão'}`} />
                         </SelectTrigger>
-                        <SelectContent onInteractOutside={(e) => e.preventDefault()}>
+                        <SelectContent>
                             {source === 'account' ? 
                               accounts.map(acc => (
                                   <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</SelectItem>
@@ -468,7 +468,7 @@ function TransactionForm({
                                     {date ? date.toLocaleDateString('pt-BR') : <span>Escolha uma data</span>}
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" onInteractOutside={(e) => e.preventDefault()}>
+                            <PopoverContent className="w-auto p-0">
                                 <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
                             </PopoverContent>
                         </Popover>
@@ -481,7 +481,7 @@ function TransactionForm({
                             <SelectTrigger id="type">
                                 <SelectValue placeholder="Selecione o tipo" />
                             </SelectTrigger>
-                            <SelectContent onInteractOutside={(e) => e.preventDefault()}>
+                            <SelectContent>
                                 <SelectItem value="expense">Despesa</SelectItem>
                                 <SelectItem value="income">Receita</SelectItem>
                             </SelectContent>
@@ -493,7 +493,7 @@ function TransactionForm({
                             <SelectTrigger id="category">
                                 <SelectValue placeholder="Selecione a categoria" />
                             </SelectTrigger>
-                            <SelectContent onInteractOutside={(e) => e.preventDefault()}>
+                            <SelectContent>
                                 {categories.filter(c => c.type === type).map(cat => (
                                     <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                                 ))}
