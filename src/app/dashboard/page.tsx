@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, MoreVertical, Search, CheckCircle, Clock, Lock } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
-import { getAccounts, getCreditCards, getBudgets, getTransactions } from "@/lib/firestore";
+import { getAccounts, getCreditCards, getBudgets, getTransactions, addCategory, getCategories } from "@/lib/firestore";
 import type { Account, CreditCard as CreditCardType, Budget, Transaction, Category } from "@/lib/types";
 import { CategoryIcon, ItauLogo, NubankLogo, PicpayLogo, MercadoPagoLogo, BradescoLogo } from "@/components/icons";
 import Link from "next/link";
@@ -206,8 +206,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-6 text-white">
-        <div className="flex justify-between items-center text-center p-4">
-            <div className="flex-1">
+        <div className="flex justify-around items-center text-center p-4">
+            <div className="text-center">
                 <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Inicial</span>
@@ -227,7 +227,7 @@ export default function DashboardPage() {
                     {totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
-            <div className="flex-1">
+            <div className="text-center">
                  <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
                     <Clock className="h-4 w-4"/>
                     <span>Previsto *</span>
