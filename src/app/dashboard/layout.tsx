@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -38,7 +39,7 @@ const navItems = [
   { href: "/dashboard/savings", label: "Economias", icon: PiggyBank },
 ];
 
-function SidebarContent() {
+function SidebarContent({ onLinkClick }: { onLinkClick: () => void }) {
     const pathname = usePathname();
     const { user, logout } = useAuth();
     const router = useRouter();
@@ -51,7 +52,7 @@ function SidebarContent() {
     return (
         <div className="flex flex-col h-full">
             <div className="flex h-[60px] items-center border-b px-6 justify-between">
-                <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+                <Link href="/dashboard" className="flex items-center gap-2 font-semibold" onClick={onLinkClick}>
                     <CategoryIcon category="Economias" className="h-6 w-6 text-primary" />
                     <span className="">Granor</span>
                 </Link>
@@ -63,6 +64,7 @@ function SidebarContent() {
                     <Link
                         key={item.href}
                         href={item.href}
+                        onClick={onLinkClick}
                         className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
                         pathname === item.href && "bg-muted text-primary"
@@ -101,15 +103,20 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleLinkClick = () => {
+    setMobileMenuOpen(false);
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
-      <aside className="fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r bg-background sm:flex">
-        <SidebarContent />
+      <aside className="fixed inset-y-0 left-0 z-10 hidden w-56 flex-col border-r bg-background sm:flex">
+        <SidebarContent onLinkClick={() => {}} />
       </aside>
-      <div className="flex flex-col sm:pl-60">
+      <div className="flex flex-col sm:pl-56">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-          <Sheet>
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button size="icon" variant="outline" className="sm:hidden">
                 <PanelLeft className="h-5 w-5" />
@@ -120,7 +127,7 @@ export default function DashboardLayout({
                  <SheetHeader>
                     <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
                  </SheetHeader>
-                 <SidebarContent />
+                 <SidebarContent onLinkClick={handleLinkClick} />
             </SheetContent>
           </Sheet>
           
