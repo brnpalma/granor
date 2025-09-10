@@ -1,3 +1,4 @@
+
 "use client";
 
 import { db } from "./firebase";
@@ -14,6 +15,7 @@ import {
   updateDoc,
   runTransaction,
   deleteDoc,
+  where,
 } from "firebase/firestore";
 import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, DefaultCategory } from "./types";
 import { defaultCategories } from "./types";
@@ -161,6 +163,39 @@ export const getCategories = (userId: string | null, callback: (categories: Cate
 export const addAccount = (userId: string | null, account: Omit<Account, "id">) => {
     return addDataItem<Account>(userId, "accounts", account);
 };
+
+export const deleteAccount = async (userId: string | null, accountId: string) => {
+    const accountPath = getCollectionPath(userId, "accounts");
+    const transactionsPath = getCollectionPath(userId, "transactions");
+    if (accountPath && transactionsPath) {
+        try {
+            const batch = writeBatch(db);
+            
+            // 1. Delete the account document
+            const accountRef = doc(db, accountPath, accountId);
+            batch.delete(accountRef);
+
+            // 2. Find and delete all transactions linked to this account
+            const transactionsQuery = query(collection(db, transactionsPath), where("accountId", "==", accountId));
+            const transactionsSnapshot = await getDocs(transactionsQuery);
+            transactionsSnapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            await batch.commit();
+        } catch (error) {
+             console.error("Error deleting account and its transactions: ", error);
+             showToast({ title: "Erro", description: "Não foi possível remover a conta e suas transações.", variant: "destructive" });
+        }
+    } else {
+       // Local storage logic
+       deleteDataItem(userId, "accounts", accountId);
+       let transactions = getLocalData<Transaction>("transactions");
+       transactions = transactions.filter(t => t.accountId !== accountId);
+       setLocalData("transactions", transactions);
+    }
+};
+
 
 export const getAccounts = (userId: string | null, callback: (accounts: Account[]) => void) => {
     return getDataSubscription<Account>(userId, "accounts", callback, 'name');
