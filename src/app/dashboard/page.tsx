@@ -213,7 +213,7 @@ export default function DashboardPage() {
 
   if (isLoading || previousMonthLeftover === null) {
     return (
-        <div className="space-y-4 pb-6 px-2">
+        <div className="space-y-4">
              <div className="grid gap-4 md:grid-cols-3">
                 <Skeleton className="h-24" />
                 <Skeleton className="h-24" />
@@ -229,10 +229,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6 pb-6 text-white px-2">
+    <div className="space-y-6">
         <div className="flex w-full items-center justify-center text-center p-2 gap-4">
             <div className="flex-1 flex flex-col items-center gap-1">
-                <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
+                <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Inicial</span>
                 </div>
@@ -241,9 +241,9 @@ export default function DashboardPage() {
                 </p>
             </div>
             <div className="flex-shrink-0 flex flex-col items-center gap-1">
-                 <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
-                     <div className="h-4 w-4 rounded-full border-2 border-gray-400 flex items-center justify-center">
-                        <div className="h-1.5 w-1.5 rounded-full bg-gray-400"></div>
+                 <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                     <div className="h-4 w-4 rounded-full border-2 border-muted-foreground flex items-center justify-center">
+                        <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground"></div>
                     </div>
                     <span>Saldo</span>
                 </div>
@@ -252,7 +252,7 @@ export default function DashboardPage() {
                 </p>
             </div>
             <div className="flex-1 flex flex-col items-center gap-1">
-                 <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
+                 <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4"/>
                     <span>Previsto *</span>
                 </div>
@@ -276,14 +276,14 @@ export default function DashboardPage() {
                 </defs>
                 <XAxis 
                     dataKey="date" 
-                    stroke="#6b7280" 
+                    stroke="hsl(var(--muted-foreground))" 
                     fontSize={12} 
                     tickLine={false} 
                     axisLine={false}
                     interval="preserveStartEnd"
                 />
                 <YAxis 
-                    stroke="#6b7280" 
+                    stroke="hsl(var(--muted-foreground))"
                     fontSize={12} 
                     tickLine={false} 
                     axisLine={false}
@@ -291,19 +291,19 @@ export default function DashboardPage() {
                     domain={['dataMin - 500', 'dataMax + 500']}
                 />
                 <Tooltip
-                    contentStyle={{ backgroundColor: '#27272a', border: '1px solid #3f3f46', color: '#fff' }}
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}
                     formatter={(value: number) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), "Saldo"]}
                     labelStyle={{ fontWeight: 'bold' }}
                  />
-                <Area type="monotone" dataKey="Saldo" stroke={chartColors.stroke} fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={2} dot={{ stroke: chartColors.stroke, strokeWidth: 2, r: 4, fill: '#18181b' }} activeDot={{ r: 6 }}/>
+                <Area type="monotone" dataKey="Saldo" stroke={chartColors.stroke} fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={2} dot={{ stroke: chartColors.stroke, strokeWidth: 2, r: 4, fill: 'hsl(var(--background))' }} activeDot={{ r: 6 }}/>
                 </AreaChart>
             </ResponsiveContainer>
         </div>
         
         <div>
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input placeholder="Pesquisar Transações" className="bg-[#27272a] border-[#3f3f46] pl-10 h-12 rounded-lg" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input placeholder="Pesquisar Transações" className="bg-background border-border pl-10 h-12 rounded-lg" />
             </div>
         </div>
 
@@ -311,11 +311,12 @@ export default function DashboardPage() {
             <div className="flex justify-between items-center px-4">
                 <h2 className="text-xl font-bold">Contas</h2>
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-gray-400" /></Button>
-                    <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-gray-400" /></Button>
+                    <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
+                    <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-muted-foreground" /></Button>
                 </div>
             </div>
-            <div className="bg-[#27272a] rounded-lg p-2 space-y-4">
+            <Card>
+              <CardContent className="p-2 space-y-4">
                 {accounts.map(account => (
                     <div key={account.id} className="flex items-center gap-4">
                         <BankIcon name={account.name} />
@@ -323,34 +324,36 @@ export default function DashboardPage() {
                             <p className="font-bold uppercase">{account.name}</p>
                         </div>
                         <p className="font-bold">{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                         <Button variant="ghost" size="icon" className="text-gray-400"><MoreVertical className="h-5 w-5" /></Button>
+                         <Button variant="ghost" size="icon" className="text-muted-foreground"><MoreVertical className="h-5 w-5" /></Button>
                     </div>
                 ))}
-                 <div className="border-t border-gray-700 my-2"></div>
+                 <div className="border-t border-border my-2"></div>
                  <div className="flex items-center gap-4">
                     <div className="w-8 h-8"></div>
                     <div className="flex-1">
                         <p className="font-bold">Total</p>
-                         <p className="text-sm text-gray-400">Previsto</p>
+                         <p className="text-sm text-muted-foreground">Previsto</p>
                     </div>
                     <div>
                         <p className="font-bold text-right">{totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                         <p className="text-sm text-gray-400 text-right">R$ 0,00</p>
+                         <p className="text-sm text-muted-foreground text-right">R$ 0,00</p>
                     </div>
                     <div className="w-10"></div>
                 </div>
-            </div>
+              </CardContent>
+            </Card>
         </div>
         
         <div className="space-y-2">
              <div className="flex justify-between items-center px-4">
                 <h2 className="text-xl font-bold">Cartões de crédito</h2>
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-gray-400" /></Button>
-                    <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-gray-400" /></Button>
+                    <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
+                    <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-muted-foreground" /></Button>
                 </div>
             </div>
-            <div className="bg-[#27272a] rounded-lg p-2 space-y-4">
+            <Card>
+              <CardContent className="p-2 space-y-4">
                 {creditCardInvoices.map(card => {
                     const dueDate = new Date();
                     dueDate.setDate(card.dueDay);
@@ -361,23 +364,26 @@ export default function DashboardPage() {
                             <BankIcon name={card.name} />
                             <div className="flex-1">
                                 <p className="font-bold uppercase">{card.name}</p>
-                                <p className="text-sm text-gray-400">Vencimento</p>
+                                <p className="text-sm text-muted-foreground">Vencimento</p>
                             </div>
                             <div className="text-right">
                                 <div className="flex items-center justify-end gap-2 font-bold">
                                     {isClosed ? <Lock className="h-4 w-4 text-red-500" /> : <CheckCircle className="h-4 w-4 text-green-500" />}
                                     <span>{card.invoiceTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                                 </div>
-                                <p className="text-sm text-gray-400">{dueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}</p>
+                                <p className="text-sm text-muted-foreground">{dueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}</p>
                             </div>
-                            <Button variant="ghost" size="icon" className="text-gray-400"><MoreVertical className="h-5 w-5" /></Button>
+                            <Button variant="ghost" size="icon" className="text-muted-foreground"><MoreVertical className="h-5 w-5" /></Button>
                         </div>
                     )
                 })}
-            </div>
+              </CardContent>
+            </Card>
         </div>
 
     </div>
   );
 
 }
+
+    
