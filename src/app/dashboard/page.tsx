@@ -212,13 +212,13 @@ export default function DashboardPage() {
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Inicial</span>
                 </div>
-                <p className="text-lg font-bold">
+                <p className="text-base md:text-lg font-bold">
                     {previousMonthLeftover.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
             <div className="flex-1">
                 <p className="text-sm text-gray-400">Saldo</p>
-                <p className="text-4xl font-bold">
+                <p className="text-2xl md:text-4xl font-bold">
                     {totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
@@ -227,7 +227,7 @@ export default function DashboardPage() {
                     <Clock className="h-4 w-4"/>
                     <span>Previsto *</span>
                 </div>
-                <p className="text-lg font-bold">
+                <p className="text-base md:text-lg font-bold">
                     {(totalBalance + previousMonthLeftover).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
