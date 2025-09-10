@@ -174,13 +174,13 @@ export default function TransactionsPage() {
         </Card>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {groupedTransactions.map((group, groupIndex) => (
             <div key={group.date}>
                 <h2 className="text-sm font-semibold text-muted-foreground mb-2 p-2 rounded-md bg-muted/50">{group.date}</h2>
                 <div className="space-y-1">
                     {group.transactions.map((t, transIndex) => (
-                        <div key={t.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50">
+                        <div key={t.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                             <div className="relative flex flex-col items-center">
                                 {groupIndex > 0 || transIndex > 0 ? <div className="absolute top-0 h-1/2 w-0.5 bg-border -translate-y-1/2"></div> : null}
                                 <div className="z-10 bg-background">
@@ -234,14 +234,14 @@ export default function TransactionsPage() {
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                                 <p className={cn(
-                                    "font-bold",
+                                    "font-bold text-sm",
                                     t.type === "income" ? "text-green-500" : "text-foreground"
                                 )}>
                                     {t.type === "income" ? "+" : "-"}
                                     {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                                 </p>
                                 {!t.efetivado && (
-                                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleToggleEfetivado(t)}>Efetivar</Button>
+                                    <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => handleToggleEfetivado(t)}>Efetivar</Button>
                                 )}
                             </div>
                         </div>
@@ -253,5 +253,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    
