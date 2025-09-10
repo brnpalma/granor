@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -62,57 +62,64 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [previousMonthTransactions, setPreviousMonthTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   useEffect(() => {
     if (!user?.uid) {
-        setIsLoading(false);
-        return;
-    };
-
-    setIsLoading(true);
-    const { startDate, endDate } = getMonthDateRange(selectedDate);
-    const prevMonthDate = subMonths(selectedDate, 1);
-    const { startDate: prevStartDate, endDate: prevEndDate } = getMonthDateRange(prevMonthDate);
-
-    let dataLoaded = { accounts: false, creditCards: false, transactions: false, prevTransactions: false };
-    const checkLoading = () => {
-        if(Object.values(dataLoaded).every(Boolean)) {
-            setIsLoading(false);
-        }
+      setIsLoading(false);
+      return;
     }
 
-    const unsubAccounts = getAccounts(user.uid, (data) => {
-      setAccounts(data);
-      dataLoaded.accounts = true;
-      checkLoading();
-    });
-    const unsubCreditCards = getCreditCards(user.uid, (data) => {
-      setCreditCards(data);
-      dataLoaded.creditCards = true;
-      checkLoading();
-    });
-    const unsubTransactions = getTransactions(user.uid, (data) => {
-      setTransactions(data);
-      dataLoaded.transactions = true;
-      checkLoading();
-    }, { startDate, endDate });
+    setIsLoading(true);
 
-    const unsubPrevTransactions = getTransactions(user.uid, (data) => {
-        setPreviousMonthTransactions(data)
+    const fetchData = () => {
+      const { startDate, endDate } = getMonthDateRange(selectedDate);
+      const prevMonthDate = subMonths(selectedDate, 1);
+      const { startDate: prevStartDate, endDate: prevEndDate } = getMonthDateRange(prevMonthDate);
+
+      let dataLoaded = { accounts: false, creditCards: false, transactions: false, prevTransactions: false };
+      const checkLoading = () => {
+        if (Object.values(dataLoaded).every(Boolean)) {
+          setIsLoading(false);
+        }
+      };
+
+      const unsubscribers: (() => void)[] = [];
+
+      unsubscribers.push(getAccounts(user.uid, (data) => {
+        setAccounts(data);
+        dataLoaded.accounts = true;
+        checkLoading();
+      }));
+
+      unsubscribers.push(getCreditCards(user.uid, (data) => {
+        setCreditCards(data);
+        dataLoaded.creditCards = true;
+        checkLoading();
+      }));
+
+      unsubscribers.push(getTransactions(user.uid, (data) => {
+        setTransactions(data);
+        dataLoaded.transactions = true;
+        checkLoading();
+      }, { startDate, endDate }));
+
+      unsubscribers.push(getTransactions(user.uid, (data) => {
+        setPreviousMonthTransactions(data);
         dataLoaded.prevTransactions = true;
         checkLoading();
-    }, { startDate: prevStartDate, endDate: prevEndDate });
+      }, { startDate: prevStartDate, endDate: prevEndDate }));
 
-    const timer = setTimeout(() => setIsLoading(false), 3000);
+      const timer = setTimeout(() => setIsLoading(false), 3000);
+      unsubscribers.push(() => clearTimeout(timer));
 
-    return () => {
-        unsubAccounts();
-        unsubCreditCards();
-        unsubTransactions();
-        unsubPrevTransactions();
-        clearTimeout(timer);
+      return () => unsubscribers.forEach(unsub => unsub());
     };
-  }, [user?.uid, selectedDate, getMonthDateRange]);
+
+    const cleanup = fetchData();
+
+    return cleanup;
+  }, [user, selectedDate, getMonthDateRange]);
+  
 
   const totalBalance = useMemo(() => {
     return accounts.reduce((sum, acc) => sum + acc.balance, 0);
@@ -184,7 +191,7 @@ export default function DashboardPage() {
         };
     }).filter(Boolean);
 
-  }, [transactions, totalBalance, selectedDate, getMonthDateRange]);
+  }, [transactions, totalBalance, selectedDate, getMonthDateRange, previousMonthLeftover]);
 
   const chartColors = useMemo(() => {
     const isPositive = totalBalance >= 0;
@@ -366,3 +373,4 @@ export default function DashboardPage() {
 }
 
     
+
