@@ -14,7 +14,7 @@ import {
   updateDoc,
   runTransaction,
 } from "firebase/firestore";
-import type { Transaction, Budget, SavingsGoal, Category, Account } from "./types";
+import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard } from "./types";
 import { useToast } from "@/hooks/use-toast";
 
 // Toast hook must be called from a component
@@ -48,7 +48,7 @@ const setLocalData = <T>(key: string, data: T[]) => {
 
 // --- Generic Data Operations ---
 
-type DataType = Transaction | Budget | SavingsGoal | Account;
+type DataType = Transaction | Budget | SavingsGoal | Account | CreditCard;
 type DataTypeOmitId<T> = Omit<T, "id">;
 
 const addDataItem = async <T extends DataType>(
@@ -113,56 +113,73 @@ export const getAccounts = (userId: string | null, callback: (accounts: Account[
     return getDataSubscription<Account>(userId, "accounts", callback, 'name');
 };
 
+// Credit Cards
+export const addCreditCard = (userId: string | null, card: Omit<CreditCard, "id">) => {
+    return addDataItem<CreditCard>(userId, "credit_cards", card);
+};
+
+export const getCreditCards = (userId: string | null, callback: (cards: CreditCard[]) => void) => {
+    return getDataSubscription<CreditCard>(userId, "credit_cards", callback, 'name');
+};
+
 
 // Transactions
 export const addTransaction = async (userId: string | null, transaction: Omit<Transaction, "id">) => {
-    const path = getCollectionPath(userId, "transactions");
-    const accountPath = getCollectionPath(userId, "accounts");
+    // Only update account balance if it's a direct account transaction
+    if (transaction.accountId) {
+        const path = getCollectionPath(userId, "transactions");
+        const accountPath = getCollectionPath(userId, "accounts");
 
-    if (path && accountPath) {
-         try {
-            await runTransaction(db, async (t) => {
-                const accountRef = doc(db, accountPath, transaction.accountId);
-                const accountDoc = await t.get(accountRef);
-                if (!accountDoc.exists()) {
-                    throw new Error("Conta não encontrada!");
-                }
+        if (path && accountPath) {
+             try {
+                await runTransaction(db, async (t) => {
+                    const accountRef = doc(db, accountPath, transaction.accountId!);
+                    const accountDoc = await t.get(accountRef);
+                    if (!accountDoc.exists()) {
+                        throw new Error("Conta não encontrada!");
+                    }
 
-                const currentBalance = accountDoc.data().balance;
-                const newBalance = transaction.type === 'income' 
-                    ? currentBalance + transaction.amount 
-                    : currentBalance - transaction.amount;
-                
-                t.update(accountRef, { balance: newBalance });
+                    const currentBalance = accountDoc.data().balance;
+                    const newBalance = transaction.type === 'income' 
+                        ? currentBalance + transaction.amount 
+                        : currentBalance - transaction.amount;
+                    
+                    t.update(accountRef, { balance: newBalance });
 
-                const transactionRef = doc(collection(db, path));
-                t.set(transactionRef, {
-                     ...transaction,
-                    date: Timestamp.fromDate(transaction.date),
+                    const transactionRef = doc(collection(db, path));
+                    t.set(transactionRef, {
+                         ...transaction,
+                        date: Timestamp.fromDate(transaction.date),
+                    });
                 });
-            });
-        } catch (error) {
-            console.error("Error adding transaction: ", error);
-            showToast({ title: "Erro", description: "Não foi possível adicionar a transação.", variant: "destructive" });
+            } catch (error) {
+                console.error("Error adding transaction: ", error);
+                showToast({ title: "Erro", description: "Não foi possível adicionar a transação.", variant: "destructive" });
+            }
+        } else {
+            // Local storage logic for account transactions
+            await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
+                ...item,
+                date: item.date, 
+            }));
+            
+            const accounts = getLocalData<Account>('accounts');
+            const accountIndex = accounts.findIndex(a => a.id === transaction.accountId);
+            if (accountIndex > -1) {
+                const account = accounts[accountIndex];
+                const newBalance = transaction.type === 'income'
+                    ? account.balance + transaction.amount
+                    : account.balance - transaction.amount;
+                accounts[accountIndex] = { ...account, balance: newBalance };
+                setLocalData('accounts', accounts);
+            }
         }
     } else {
-        // Local storage logic
-        await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
+         // If it's a credit card transaction, just add it without updating any account balance.
+         await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
             ...item,
-            date: item.date, 
+            date: Timestamp.fromDate(item.date),
         }));
-        
-        // Update local account balance
-        const accounts = getLocalData<Account>('accounts');
-        const accountIndex = accounts.findIndex(a => a.id === transaction.accountId);
-        if (accountIndex > -1) {
-            const account = accounts[accountIndex];
-            const newBalance = transaction.type === 'income'
-                ? account.balance + transaction.amount
-                : account.balance - transaction.amount;
-            accounts[accountIndex] = { ...account, balance: newBalance };
-            setLocalData('accounts', accounts);
-        }
     }
 };
 
@@ -201,7 +218,7 @@ export const getSavingsGoals = (userId: string | null, callback: (goals: Savings
 export const migrateLocalDataToFirestore = async (userId: string) => {
     if (!userId) return;
 
-    const collections = ["transactions", "budgets", "savings_goals", "accounts"];
+    const collections = ["transactions", "budgets", "savings_goals", "accounts", "credit_cards"];
 
     for (const collectionName of collections) {
         const localData = getLocalData<any>(collectionName);

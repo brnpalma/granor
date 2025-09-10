@@ -18,6 +18,7 @@ import {
   LogOut,
   Menu,
   Target,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const navItems = [
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
   { href: "/dashboard/accounts", label: "Contas", icon: Wallet },
+  { href: "/dashboard/credit-cards", label: "Cartões de Crédito", icon: CreditCard },
   { href: "/dashboard/transactions", label: "Transações", icon: ArrowRightLeft },
   { href: "/dashboard/budgets", label: "Orçamentos", icon: Target },
   { href: "/dashboard/reports", label: "Relatórios", icon: AreaChart },

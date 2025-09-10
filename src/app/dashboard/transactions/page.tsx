@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PlusCircle, Wand2, Target } from "lucide-react";
+import { PlusCircle, Wand2, Target, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -37,19 +37,21 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { addTransaction, getTransactions, getAccounts } from "@/lib/firestore";
-import type { Transaction, Category, Account } from "@/lib/types";
+import { addTransaction, getTransactions, getAccounts, getCreditCards } from "@/lib/firestore";
+import type { Transaction, Category, Account, CreditCard as CreditCardType } from "@/lib/types";
 import { categories } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
 import { categorizeTransaction } from "@/ai/flows/categorize-transaction";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { user } = useAuth();
@@ -63,25 +65,30 @@ export default function TransactionsPage() {
         setIsLoading(false);
     });
     
-    const unsubscribeAccounts = getAccounts(user?.uid || null, (data) => {
-        setAccounts(data);
-    });
+    const unsubscribeAccounts = getAccounts(user?.uid || null, setAccounts);
+    const unsubscribeCreditCards = getCreditCards(user?.uid || null, setCreditCards);
 
     return () => {
         unsubscribeTransactions();
         unsubscribeAccounts();
+        unsubscribeCreditCards();
     };
   }, [user]);
 
 
   const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
     await addTransaction(user?.uid || null, transaction);
-    toast({ title: "Transação adicionada", description: "O saldo da sua conta foi atualizado." });
+    toast({ title: "Transação adicionada", description: "Sua nova transação foi salva." });
   };
   
-  const getAccountName = (accountId: string) => {
-    const account = accounts.find(a => a.id === accountId);
-    return account ? account.name : "Desconhecida";
+  const getSourceName = (t: Transaction) => {
+    if (t.accountId) {
+        return accounts.find(a => a.id === t.accountId)?.name || "Conta Desconhecida";
+    }
+    if (t.creditCardId) {
+        return creditCards.find(c => c.id === t.creditCardId)?.name || "Cartão Desconhecido";
+    }
+    return "N/A";
   }
 
   if (isLoading) {
@@ -98,7 +105,7 @@ export default function TransactionsPage() {
         <h1 className="text-2xl font-bold">Transações</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-                <Button disabled={accounts.length === 0}>
+                <Button disabled={accounts.length === 0 && creditCards.length === 0}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Transação
                 </Button>
             </DialogTrigger>
@@ -107,13 +114,14 @@ export default function TransactionsPage() {
                 onSubmitted={() => setDialogOpen(false)} 
                 transactions={transactions}
                 accounts={accounts}
+                creditCards={creditCards}
             />
         </Dialog>
       </div>
-       {accounts.length === 0 && (
+       {(accounts.length === 0 && creditCards.length === 0) && (
           <Card className="text-center p-6">
-            <CardTitle>Nenhuma conta encontrada</CardTitle>
-            <CardDescription>Por favor, adicione uma conta primeiro para poder registrar transações.</CardDescription>
+            <CardTitle>Nenhuma conta ou cartão encontrado</CardTitle>
+            <CardDescription>Por favor, adicione uma conta ou cartão primeiro para registrar transações.</CardDescription>
           </Card>
         )}
       <Card>
@@ -126,7 +134,7 @@ export default function TransactionsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Descrição</TableHead>
-                <TableHead>Conta</TableHead>
+                <TableHead>Fonte</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
@@ -136,7 +144,12 @@ export default function TransactionsPage() {
               {transactions.map((t) => (
                 <TableRow key={t.id} className={cn(t.isBudget && "bg-muted/50")}>
                   <TableCell className="font-medium">{t.description}</TableCell>
-                   <TableCell>{getAccountName(t.accountId)}</TableCell>
+                   <TableCell>
+                     <div className="flex items-center gap-2">
+                       {t.creditCardId && <CreditCard className="h-4 w-4 text-muted-foreground" />}
+                       {getSourceName(t)}
+                     </div>
+                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                         {t.isBudget ? <Target className="h-4 w-4 text-muted-foreground" /> : <CategoryIcon category={t.category} className="h-4 w-4 text-muted-foreground" />}
@@ -166,22 +179,38 @@ function TransactionForm({
     onSubmit,
     onSubmitted,
     transactions,
-    accounts
+    accounts,
+    creditCards
 }: {
     onSubmit: (transaction: Omit<Transaction, "id">) => Promise<void>;
     onSubmitted: () => void;
     transactions: Transaction[];
     accounts: Account[];
+    creditCards: CreditCardType[];
 }) {
     const [description, setDescription] = useState("");
     const [amount, setAmount] = useState("");
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [type, setType] = useState<"income" | "expense">("expense");
     const [category, setCategory] = useState<Category | "">("");
-    const [accountId, setAccountId] = useState<string>("");
+    const [source, setSource] = useState<"account" | "creditCard">("account");
+    const [sourceId, setSourceId] = useState<string>("");
     const [suggestedCategory, setSuggestedCategory] = useState<Category | null>(null);
     const [isSuggesting, setIsSuggesting] = useState(false);
     const { toast } = useToast();
+
+    useEffect(() => {
+        // Reset sourceId when source type changes
+        setSourceId("");
+    }, [source]);
+
+    useEffect(() => {
+      // If income is selected, force source to be account
+      if (type === 'income') {
+        setSource('account');
+      }
+    }, [type]);
+
 
     const handleSuggestCategory = async () => {
         if (!description) {
@@ -218,19 +247,22 @@ function TransactionForm({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!description || !amount || !date || !category || !accountId) {
+        if (!description || !amount || !date || !category || !sourceId) {
             toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
             return;
         }
 
-        await onSubmit({
+        const transactionData: Omit<Transaction, "id"> = {
             description,
             amount: parseFloat(amount),
             date,
             type,
             category,
-            accountId,
-        });
+            accountId: source === 'account' ? sourceId : undefined,
+            creditCardId: source === 'creditCard' ? sourceId : undefined,
+        };
+
+        await onSubmit(transactionData);
 
         // Reset form
         setDescription("");
@@ -238,7 +270,8 @@ function TransactionForm({
         setDate(new Date());
         setType("expense");
         setCategory("");
-        setAccountId("");
+        setSource("account");
+        setSourceId("");
         setSuggestedCategory(null);
         onSubmitted();
     };
@@ -250,18 +283,40 @@ function TransactionForm({
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="accountId">Conta</Label>
-                    <Select onValueChange={setAccountId} value={accountId}>
-                        <SelectTrigger id="accountId">
-                            <SelectValue placeholder="Selecione a conta" />
+                    <Label>Fonte da Transação</Label>
+                    <RadioGroup value={source} onValueChange={(value) => setSource(value as "account" | "creditCard")} className="flex gap-4">
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="account" id="account" />
+                            <Label htmlFor="account">Conta</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="creditCard" id="creditCard" disabled={type === 'income'}/>
+                            <Label htmlFor="creditCard">Cartão de Crédito</Label>
+                        </div>
+                    </RadioGroup>
+                </div>
+                
+                <div className="space-y-2">
+                    <Label htmlFor="sourceId">
+                      {source === 'account' ? 'Conta' : 'Cartão de Crédito'}
+                    </Label>
+                    <Select onValueChange={setSourceId} value={sourceId}>
+                        <SelectTrigger id="sourceId">
+                            <SelectValue placeholder={`Selecione ${source === 'account' ? 'a conta' : 'o cartão'}`} />
                         </SelectTrigger>
                         <SelectContent>
-                            {accounts.map(acc => (
-                                <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</SelectItem>
-                            ))}
+                            {source === 'account' ? 
+                              accounts.map(acc => (
+                                  <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</SelectItem>
+                              )) :
+                              creditCards.map(card => (
+                                <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>
+                              ))
+                            }
                         </SelectContent>
                     </Select>
                 </div>
+
                 <div className="space-y-2">
                     <Label htmlFor="description">Descrição</Label>
                     <div className="flex items-center gap-2">
@@ -310,7 +365,7 @@ function TransactionForm({
                                 <SelectValue placeholder="Selecione a categoria" />
                             </SelectTrigger>
                             <SelectContent>
-                                {categories.map(cat => (
+                                {categories.filter(c => type === 'income' ? c === 'Salário' : c !== 'Salário').map(cat => (
                                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                                 ))}
                             </SelectContent>

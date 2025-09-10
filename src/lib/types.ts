@@ -29,6 +29,15 @@ export interface Account {
   balance: number;
 }
 
+export interface CreditCard {
+  id: string;
+  name: string;
+  limit: number;
+  closingDay: number;
+  dueDay: number;
+  defaultAccountId: string;
+}
+
 export interface Transaction {
   id: string;
   date: Date;
@@ -36,7 +45,8 @@ export interface Transaction {
   amount: number;
   type: "income" | "expense";
   category: Category;
-  accountId: string;
+  accountId?: string; // Optional: for bank account transactions
+  creditCardId?: string; // Optional: for credit card transactions
   isBudget?: boolean;
 }
 
