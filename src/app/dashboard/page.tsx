@@ -30,7 +30,7 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { useDate } from "@/hooks/use-date";
-import { startOfMonth, endOfMonth, eachDayOfInterval, format } from 'date-fns';
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, subMonths } from 'date-fns';
 
 
 const BankIcon = ({ name }: { name: string }) => {
@@ -60,6 +60,7 @@ export default function DashboardPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [previousMonthTransactions, setPreviousMonthTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
@@ -70,8 +71,10 @@ export default function DashboardPage() {
 
     setIsLoading(true);
     const { startDate, endDate } = getMonthDateRange(selectedDate);
+    const prevMonthDate = subMonths(selectedDate, 1);
+    const { startDate: prevStartDate, endDate: prevEndDate } = getMonthDateRange(prevMonthDate);
 
-    let dataLoaded = { accounts: false, creditCards: false, transactions: false };
+    let dataLoaded = { accounts: false, creditCards: false, transactions: false, prevTransactions: false };
     const checkLoading = () => {
         if(Object.values(dataLoaded).every(Boolean)) {
             setIsLoading(false);
@@ -94,12 +97,19 @@ export default function DashboardPage() {
       checkLoading();
     }, { startDate, endDate });
 
+    const unsubPrevTransactions = getTransactions(user.uid, (data) => {
+        setPreviousMonthTransactions(data)
+        dataLoaded.prevTransactions = true;
+        checkLoading();
+    }, { startDate: prevStartDate, endDate: prevEndDate });
+
     const timer = setTimeout(() => setIsLoading(false), 3000);
 
     return () => {
         unsubAccounts();
         unsubCreditCards();
         unsubTransactions();
+        unsubPrevTransactions();
         clearTimeout(timer);
     };
   }, [user?.uid, selectedDate, getMonthDateRange]);
@@ -117,29 +127,30 @@ export default function DashboardPage() {
     });
   }, [creditCards, transactions]);
 
+  const previousMonthLeftover = useMemo(() => {
+    const income = previousMonthTransactions
+        .filter(t => t.type === 'income' && t.accountId)
+        .reduce((sum, t) => sum + t.amount, 0);
+    const expenses = previousMonthTransactions
+        .filter(t => t.type === 'expense' && t.accountId)
+        .reduce((sum, t) => sum + t.amount, 0);
+    return income - expenses;
+  }, [previousMonthTransactions]);
+
   
   const balanceChartData = useMemo(() => {
     const { startDate, endDate } = getMonthDateRange(selectedDate);
-    if (transactions.length === 0) return [];
+    if (transactions.length === 0 && previousMonthLeftover === 0) return [];
   
     const daysInMonth = eachDayOfInterval({ start: startDate, end: endDate });
   
-    // This is a simplification. A real implementation would need to fetch
-    // the balance at the start of the month from a snapshot or calculate it from all-time transactions.
-    // For now, we'll work backwards from the current balance.
-    const endOfMonthBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
     const monthTransactions = transactions
       .filter(t => t.accountId && t.date >= startDate && t.date <= endDate)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
     
-    const changes = monthTransactions.reduce((sum, t) => {
-        return t.type === 'income' ? sum - t.amount : sum + t.amount;
-    }, 0);
-
-    const startOfMonthBalance = endOfMonthBalance - monthTransactions.reduce((sum, t) => {
+    const startOfMonthBalance = totalBalance - monthTransactions.reduce((sum, t) => {
         return t.type === 'income' ? sum + t.amount : sum - t.amount;
     }, 0);
-
 
     let currentBalance = startOfMonthBalance;
     const dailyBalances: { [key: string]: number } = {};
@@ -147,10 +158,13 @@ export default function DashboardPage() {
     monthTransactions.forEach(t => {
       const day = format(t.date, 'dd/MM');
       const change = t.type === 'income' ? t.amount : -t.amount;
-      if (!dailyBalances[day]) {
-         dailyBalances[day] = currentBalance;
+      if (dailyBalances[day] === undefined) {
+         // Use the balance before this day's first transaction
+         const dayStartBalance = Object.values(dailyBalances).pop() ?? currentBalance;
+         dailyBalances[day] = dayStartBalance + change;
+      } else {
+        dailyBalances[day] += change;
       }
-      dailyBalances[day] += change;
       currentBalance += change;
     });
 
@@ -170,7 +184,7 @@ export default function DashboardPage() {
         };
     }).filter(Boolean);
 
-  }, [transactions, accounts, selectedDate, getMonthDateRange]);
+  }, [transactions, totalBalance, selectedDate, getMonthDateRange]);
   
 
   if (isLoading) {
@@ -199,7 +213,7 @@ export default function DashboardPage() {
                     <span>Inicial</span>
                 </div>
                 <p className="text-lg font-bold">
-                    {(balanceChartData[0]?.Saldo || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {previousMonthLeftover.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
             <div className="flex-1">
@@ -213,7 +227,9 @@ export default function DashboardPage() {
                     <Clock className="h-4 w-4"/>
                     <span>Previsto *</span>
                 </div>
-                <p className="text-lg font-bold">R$ 0,00</p>
+                <p className="text-lg font-bold">
+                    {(totalBalance + previousMonthLeftover).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </p>
             </div>
         </div>
 
@@ -335,3 +351,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
