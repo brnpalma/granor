@@ -107,7 +107,7 @@ export default function CreditCardsPage() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
                 <Button disabled={accounts.length === 0}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Cartão
+                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
                 </Button>
             </DialogTrigger>
             <CreditCardForm onSubmit={handleAddCreditCard} onSubmitted={() => setDialogOpen(false)} accounts={accounts} />

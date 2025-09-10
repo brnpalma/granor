@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -120,7 +119,7 @@ export default function TransactionsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Transações</h1>
         <Button onClick={() => openDialog()} disabled={accounts.length === 0 && creditCards.length === 0}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Transação
+            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
         </Button>
       </div>
        {(accounts.length === 0 && creditCards.length === 0) && (

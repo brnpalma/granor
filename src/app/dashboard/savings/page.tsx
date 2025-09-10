@@ -67,7 +67,7 @@ export default function SavingsPage() {
          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
                 <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Meta
+                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
                 </Button>
             </DialogTrigger>
             <SavingsGoalForm onSubmit={handleAddSavingsGoal} onSubmitted={() => setDialogOpen(false)} />

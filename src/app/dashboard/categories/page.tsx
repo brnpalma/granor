@@ -92,7 +92,7 @@ export default function CategoriesPage() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
                 <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Categoria
+                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
                 </Button>
             </DialogTrigger>
             <CategoryForm onSubmit={handleAddCategory} onSubmitted={() => setDialogOpen(false)} />

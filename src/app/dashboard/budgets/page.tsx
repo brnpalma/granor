@@ -108,7 +108,7 @@ export default function BudgetsPage() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
                 <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Orçamento
+                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
                 </Button>
             </DialogTrigger>
             <BudgetForm onSubmit={handleAddBudget} onSubmitted={() => setDialogOpen(false)} categories={categories} />

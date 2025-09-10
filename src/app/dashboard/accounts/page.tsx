@@ -94,7 +94,7 @@ export default function AccountsPage() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
                 <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Conta
+                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
                 </Button>
             </DialogTrigger>
             <AccountForm onSubmit={handleAddAccount} onSubmitted={() => setDialogOpen(false)} />
