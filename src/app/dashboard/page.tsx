@@ -99,7 +99,8 @@ export default function DashboardPage() {
       dataLoaded.creditCards = true;
       checkLoading();
     }));
-
+    
+    // This needs to be recreated when previousMonthLeftover changes as well
     unsubscribers.push(getTransactions(user.uid, (data) => {
       setTransactions(data);
       
@@ -110,19 +111,26 @@ export default function DashboardPage() {
       
       const totalIncome = data.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
       const totalExpenses = data.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-      setForecastedBalance(totalIncome - totalExpenses);
+      
+      // Calculate forecasted balance based on all transactions for the month
+      // We need previousMonthLeftover here, which is set in the other subscription.
+      // This might cause a race condition, but useEffect dependency array should handle it.
+      setForecastedBalance(totalIncome - totalExpenses + previousMonthLeftover);
 
       dataLoaded.transactions = true;
       checkLoading();
     }, { startDate, endDate }));
 
     unsubscribers.push(getTransactions(user.uid, (data) => {
-      setPreviousMonthTransactions(data);
-      const prevTotalIncome = data.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-      const prevTotalExpenses = data.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-      setPreviousMonthLeftover(prevTotalIncome - prevTotalExpenses);
-      dataLoaded.prevTransactions = true;
-      checkLoading();
+        setPreviousMonthTransactions(data);
+        const prevTotalIncome = data.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+        const prevTotalExpenses = data.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+        
+        const prevForecast = prevTotalIncome - prevTotalExpenses;
+        setPreviousMonthLeftover(prevForecast);
+
+        dataLoaded.prevTransactions = true;
+        checkLoading();
     }, { startDate: prevStartDate, endDate: prevEndDate }));
 
     const timer = setTimeout(() => {
@@ -133,7 +141,7 @@ export default function DashboardPage() {
     unsubscribers.push(() => clearTimeout(timer));
 
     return () => unsubscribers.forEach(unsub => unsub());
-  }, [user, selectedDate, getMonthDateRange]);
+  }, [user, selectedDate, getMonthDateRange, previousMonthLeftover]); // Added previousMonthLeftover
 
   const monthlyNetBalance = useMemo(() => {
     return previousMonthLeftover + monthlyIncome - monthlyExpenses;
@@ -223,7 +231,7 @@ export default function DashboardPage() {
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Inicial</span>
                 </div>
-                <p className="text-sm md:text-base">
+                <p className="text-lg md:text-xl">
                     {previousMonthLeftover.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
@@ -234,7 +242,7 @@ export default function DashboardPage() {
                     </div>
                     <span>Saldo</span>
                 </div>
-                <p className="text-xl md:text-2xl font-bold">
+                <p className="text-2xl md:text-3xl font-bold">
                     {monthlyNetBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
@@ -243,7 +251,7 @@ export default function DashboardPage() {
                     <Clock className="h-4 w-4"/>
                     <span>Previsto *</span>
                 </div>
-                <p className="text-sm md:text-base">
+                <p className="text-lg md:text-xl">
                     {forecastedBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
@@ -371,3 +379,6 @@ export default function DashboardPage() {
 
     
 
+
+
+    
