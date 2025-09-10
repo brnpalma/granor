@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -71,6 +72,14 @@ export default function DashboardPage() {
     return accounts.reduce((sum, acc) => sum + acc.balance, 0);
   }, [accounts]);
   
+  const totalIncome = useMemo(() => {
+    return transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+  }, [transactions]);
+  
+  const totalExpenses = useMemo(() => {
+    return transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  }, [transactions]);
+
   const creditCardInvoices = useMemo(() => {
     return creditCards.map(card => {
         const invoiceTotal = transactions
@@ -87,7 +96,7 @@ export default function DashboardPage() {
   };
   
    const categoryExpenses = useMemo(() => {
-    const expenseData: { [key in Category]?: number } = {};
+    const expenseData: { [key in Category["name"]]?: number } = {};
     transactions
       .filter(t => t.type === 'expense')
       .forEach(t => {
@@ -103,21 +112,51 @@ export default function DashboardPage() {
       .sort((a,b) => b.value - a.value);
   }, [transactions]);
   
-  const totalExpenses = useMemo(() => {
+  const totalCategoryExpenses = useMemo(() => {
       return categoryExpenses.reduce((sum, item) => sum + item.value, 0);
   }, [categoryExpenses])
   
+  const cashFlowData = useMemo(() => {
+    const dailyData: { [date: string]: { income: number, expense: number } } = {};
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    for(let i=0; i < today.getDate(); i++) {
+        const date = new Date(firstDayOfMonth);
+        date.setDate(firstDayOfMonth.getDate() + i);
+        const dateString = date.toLocaleDateString('en-CA'); // YYYY-MM-DD
+        dailyData[dateString] = { income: 0, expense: 0 };
+    }
+
+    transactions.forEach(t => {
+      const dateString = t.date.toLocaleDateString('en-CA');
+      if (dailyData[dateString]) {
+        if (t.type === 'income') {
+          dailyData[dateString].income += t.amount;
+        } else {
+          dailyData[dateString].expense += t.amount;
+        }
+      }
+    });
+    
+    return Object.entries(dailyData).map(([date, values]) => ({
+      date: new Date(date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}),
+      Receitas: values.income,
+      Despesas: values.expense,
+    })).sort((a, b) => a.date.localeCompare(b.date));
+
+  }, [transactions]);
+
+
   if (isLoading) {
     return (
         <div className="space-y-4 pb-16">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Saldo Total</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-8 w-1/2" />
-                </CardContent>
-            </Card>
+             <div className="grid gap-4 md:grid-cols-3">
+                <Skeleton className="h-24" />
+                <Skeleton className="h-24" />
+                <Skeleton className="h-24" />
+             </div>
+             <Skeleton className="h-80" />
              <div className="grid md:grid-cols-2 gap-4">
                 <Skeleton className="h-64" />
                 <Skeleton className="h-64" />
@@ -128,176 +167,157 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-16">
-       <Card>
-         <CardHeader>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader>
             <CardTitle>Saldo Total</CardTitle>
-            <CardDescription>A soma dos saldos de todas as suas contas.</CardDescription>
-         </CardHeader>
-         <CardContent>
-            <p className="text-3xl font-bold">
-                {totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </p>
-         </CardContent>
-       </Card>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+            <p className="text-xs text-muted-foreground">Soma de todas as suas contas</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Receitas do Mês</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-500">{totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+             <p className="text-xs text-muted-foreground">Total de entradas no período</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Despesas do Mês</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-500">{totalExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+             <p className="text-xs text-muted-foreground">Total de saídas no período</p>
+          </CardContent>
+        </Card>
+      </div>
+
+       <Card>
+        <CardHeader>
+          <CardTitle>Fluxo de Caixa Mensal</CardTitle>
+           <CardDescription>Visão geral de entradas e saídas durante o mês.</CardDescription>
+        </CardHeader>
+        <CardContent className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={cashFlowData}>
+              <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value/1000}k`} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
+                formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              />
+              <Area type="monotone" dataKey="Receitas" stackId="1" stroke="#16a34a" fill="#16a34a" fillOpacity={0.3} />
+              <Area type="monotone" dataKey="Despesas" stackId="1" stroke="#dc2626" fill="#dc2626" fillOpacity={0.3} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
       
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-xl font-semibold">Contas</h2>
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/dashboard/accounts"><ExternalLink className="h-5 w-5" /></Link>
-          </Button>
-        </div>
-        <Card>
-          <CardContent className="p-0">
-            {accounts.length > 0 ? (
-                 <Table>
-                    <TableBody>
-                        {accounts.map((account) => (
-                        <TableRow key={account.id}>
-                            <TableCell className="font-medium">{account.name}</TableCell>
-                            <TableCell>{account.type}</TableCell>
-                            <TableCell className="text-right">{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
-                        </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            ) : (
-                <div className="p-6 text-center text-muted-foreground">Nenhuma conta cadastrada.</div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-       <div>
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-xl font-semibold">Faturas dos Cartões</h2>
-           <Button variant="ghost" size="icon" asChild>
-                <Link href="/dashboard/credit-cards"><ExternalLink className="h-5 w-5" /></Link>
-            </Button>
-        </div>
-        <Card>
-          <CardContent className="p-0">
-             {creditCardInvoices.length > 0 ? (
-                <Table>
-                    <TableBody>
-                        {creditCardInvoices.map((card) => (
-                        <TableRow key={card.id}>
-                            <TableCell className="font-medium">{card.name}</TableCell>
-                            <TableCell>Venc. dia {card.dueDay}</TableCell>
-                            <TableCell className="text-right font-semibold text-red-500">
-                                {card.invoiceTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </TableCell>
-                        </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-             ) : (
-                <div className="p-6 text-center text-muted-foreground">Nenhum cartão de crédito cadastrado.</div>
-             )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-xl font-semibold">Orçamentos</h2>
-           <Button variant="ghost" size="icon" asChild>
-                <Link href="/dashboard/budgets"><ExternalLink className="h-5 w-5" /></Link>
-            </Button>
-        </div>
-        <Card>
-          <CardContent className="p-4 space-y-4">
-             {budgets.length > 0 ? (
-                budgets.map((budget) => {
-                const spent = getSpentAmount(budget.category);
-                const progress = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
-                return (
-                    <div key={budget.id}>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-muted">
-                            <CategoryIcon category={budget.category} className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                        <div className="flex-1">
-                        <div className="flex justify-between items-center">
-                            <span className="font-semibold">{budget.category}</span>
-                            <span className="text-sm font-medium">
-                                {spent.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} / {budget.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </span>
-                        </div>
-                        <Progress value={progress} className="h-2 mt-1" />
-                        </div>
-                    </div>
-                    </div>
-                )
-                })
-             ) : (
-                 <div className="p-6 text-center text-muted-foreground">Nenhum orçamento cadastrado.</div>
-             )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-xl font-semibold">Despesas por categoria</h2>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div>
+            <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl font-semibold">Orçamentos</h2>
             <Button variant="ghost" size="icon" asChild>
-                <Link href="/dashboard/reports"><ExternalLink className="h-5 w-5" /></Link>
-            </Button>
-        </div>
-        <Card>
-            <CardContent className="p-4">
-                {categoryExpenses.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                        <div className="h-48 relative">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie 
-                                        data={categoryExpenses} 
-                                        dataKey="value" 
-                                        nameKey="name" 
-                                        cx="50%" 
-                                        cy="50%" 
-                                        innerRadius="60%" 
-                                        outerRadius="80%"
-                                        paddingAngle={2}
-                                        stroke="none"
-                                    >
-                                        {categoryExpenses.map((entry) => (
-                                            <Cell key={`cell-${entry.name}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                     <Tooltip
-                                        contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
-                                        formatter={(value: number) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), "Total"]}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <span className="text-muted-foreground text-sm">Total Gasto</span>
-                                <span className="text-2xl font-bold">
-                                    {totalExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    <Link href="/dashboard/budgets"><ExternalLink className="h-5 w-5" /></Link>
+                </Button>
+            </div>
+            <Card>
+            <CardContent className="p-4 space-y-4">
+                {budgets.length > 0 ? (
+                    budgets.map((budget) => {
+                    const spent = getSpentAmount(budget.category);
+                    const progress = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
+                    return (
+                        <div key={budget.id}>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-muted">
+                                <CategoryIcon category={budget.category} className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                            <div className="flex-1">
+                            <div className="flex justify-between items-center">
+                                <span className="font-semibold">{budget.category}</span>
+                                <span className="text-sm font-medium">
+                                    {spent.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} / {budget.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                 </span>
                             </div>
+                            <Progress value={progress} className="h-2 mt-1" />
+                            </div>
                         </div>
-                        <div className="flex flex-col gap-2 text-sm">
-                            {categoryExpenses.map((entry) => (
-                                <div key={entry.name} className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                                        <span>{entry.name}</span>
-                                    </div>
-                                    <span className="font-semibold">{entry.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                                </div>
-                            ))}
                         </div>
-                    </div>
+                    )
+                    })
                 ) : (
-                     <div className="p-6 text-center text-muted-foreground">Nenhuma despesa registrada no período.</div>
+                    <div className="p-6 text-center text-muted-foreground">Nenhum orçamento cadastrado.</div>
                 )}
             </CardContent>
-        </Card>
+            </Card>
+        </div>
+        <div>
+            <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl font-semibold">Despesas por categoria</h2>
+                <Button variant="ghost" size="icon" asChild>
+                    <Link href="/dashboard/reports"><ExternalLink className="h-5 w-5" /></Link>
+                </Button>
+            </div>
+            <Card>
+                <CardContent className="p-4">
+                    {categoryExpenses.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                            <div className="h-48 relative">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie 
+                                            data={categoryExpenses} 
+                                            dataKey="value" 
+                                            nameKey="name" 
+                                            cx="50%" 
+                                            cy="50%" 
+                                            innerRadius="60%" 
+                                            outerRadius="80%"
+                                            paddingAngle={2}
+                                            stroke="none"
+                                        >
+                                            {categoryExpenses.map((entry) => (
+                                                <Cell key={`cell-${entry.name}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
+                                            formatter={(value: number) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), "Total"]}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <span className="text-muted-foreground text-sm">Total Gasto</span>
+                                    <span className="text-2xl font-bold">
+                                        {totalCategoryExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-2 text-sm">
+                                {categoryExpenses.map((entry) => (
+                                    <div key={entry.name} className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                                            <span>{entry.name}</span>
+                                        </div>
+                                        <span className="font-semibold">{entry.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="p-6 text-center text-muted-foreground">Nenhuma despesa registrada no período.</div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
       </div>
-
     </div>
   );
 }
