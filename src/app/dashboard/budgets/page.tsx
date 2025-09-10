@@ -48,7 +48,7 @@ export default function BudgetsPage() {
 
   const handleAddBudget = async (budget: Omit<Budget, "id">) => {
     await addBudget(user?.uid || null, budget);
-    toast({ title: "Orçamento adicionado", description: "Uma transação prevista foi criada." });
+    toast({ title: "Orçamento adicionado", description: "Seu novo orçamento foi salvo." });
   };
 
   const getSpentAmount = (category: string) => {

@@ -11,8 +11,10 @@ import {
   doc,
   writeBatch,
   getDocs,
+  updateDoc,
+  runTransaction,
 } from "firebase/firestore";
-import type { Transaction, Budget, SavingsGoal, Category } from "./types";
+import type { Transaction, Budget, SavingsGoal, Category, Account } from "./types";
 import { useToast } from "@/hooks/use-toast";
 
 // Toast hook must be called from a component
@@ -46,7 +48,7 @@ const setLocalData = <T>(key: string, data: T[]) => {
 
 // --- Generic Data Operations ---
 
-type DataType = Transaction | Budget | SavingsGoal;
+type DataType = Transaction | Budget | SavingsGoal | Account;
 type DataTypeOmitId<T> = Omit<T, "id">;
 
 const addDataItem = async <T extends DataType>(
@@ -102,13 +104,68 @@ const getDataSubscription = <T extends DataType>(
 };
 
 
-// Transactions
-export const addTransaction = (userId: string | null, transaction: Omit<Transaction, "id">) => {
-    return addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
-        ...item,
-        date: Timestamp.fromDate(item.date),
-    }));
+// Accounts
+export const addAccount = (userId: string | null, account: Omit<Account, "id">) => {
+    return addDataItem<Account>(userId, "accounts", account);
 };
+
+export const getAccounts = (userId: string | null, callback: (accounts: Account[]) => void) => {
+    return getDataSubscription<Account>(userId, "accounts", callback, 'name');
+};
+
+
+// Transactions
+export const addTransaction = async (userId: string | null, transaction: Omit<Transaction, "id">) => {
+    const path = getCollectionPath(userId, "transactions");
+    const accountPath = getCollectionPath(userId, "accounts");
+
+    if (path && accountPath) {
+         try {
+            await runTransaction(db, async (t) => {
+                const accountRef = doc(db, accountPath, transaction.accountId);
+                const accountDoc = await t.get(accountRef);
+                if (!accountDoc.exists()) {
+                    throw new Error("Conta não encontrada!");
+                }
+
+                const currentBalance = accountDoc.data().balance;
+                const newBalance = transaction.type === 'income' 
+                    ? currentBalance + transaction.amount 
+                    : currentBalance - transaction.amount;
+                
+                t.update(accountRef, { balance: newBalance });
+
+                const transactionRef = doc(collection(db, path));
+                t.set(transactionRef, {
+                     ...transaction,
+                    date: Timestamp.fromDate(transaction.date),
+                });
+            });
+        } catch (error) {
+            console.error("Error adding transaction: ", error);
+            showToast({ title: "Erro", description: "Não foi possível adicionar a transação.", variant: "destructive" });
+        }
+    } else {
+        // Local storage logic
+        await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
+            ...item,
+            date: item.date, 
+        }));
+        
+        // Update local account balance
+        const accounts = getLocalData<Account>('accounts');
+        const accountIndex = accounts.findIndex(a => a.id === transaction.accountId);
+        if (accountIndex > -1) {
+            const account = accounts[accountIndex];
+            const newBalance = transaction.type === 'income'
+                ? account.balance + transaction.amount
+                : account.balance - transaction.amount;
+            accounts[accountIndex] = { ...account, balance: newBalance };
+            setLocalData('accounts', accounts);
+        }
+    }
+};
+
 
 export const getTransactions = (userId: string | null, callback: (transactions: Transaction[]) => void) => {
     return getDataSubscription<Transaction>(userId, "transactions", callback, "date", (data) => ({
@@ -120,47 +177,9 @@ export const getTransactions = (userId: string | null, callback: (transactions: 
 
 // Budgets
 export const addBudget = async (userId: string | null, budget: Omit<Budget, "id">) => {
-    const path = getCollectionPath(userId, "budgets");
-    const transPath = getCollectionPath(userId, "transactions");
-
-    if (path && transPath) {
-        const batch = writeBatch(db);
-        const budgetRef = doc(collection(db, path));
-        batch.set(budgetRef, budget);
-
-        const transactionRef = doc(collection(db, transPath));
-        const budgetTransaction: Omit<Transaction, "id"> = {
-            date: new Date(),
-            description: `Orçamento de ${budget.category}`,
-            amount: budget.amount,
-            type: 'expense',
-            category: budget.category as Category,
-            isBudget: true,
-        };
-        batch.set(transactionRef, {
-            ...budgetTransaction,
-            date: Timestamp.fromDate(budgetTransaction.date),
-        });
-
-        try {
-            await batch.commit();
-        } catch (error) {
-            console.error("Error adding budget and transaction: ", error);
-            showToast({ title: "Erro", description: "Não foi possível adicionar o orçamento.", variant: "destructive" });
-        }
-    } else {
-        // Local storage logic
-        await addDataItem<Budget>(userId, "budgets", budget);
-        const budgetTransaction: Omit<Transaction, "id"> = {
-            date: new Date(),
-            description: `Orçamento de ${budget.category}`,
-            amount: budget.amount,
-            type: 'expense',
-            category: budget.category as Category,
-            isBudget: true,
-        };
-        await addDataItem<Transaction>(userId, "transactions", budgetTransaction);
-    }
+    // Budget creation does not create a transaction anymore. 
+    // It's just a goal.
+    await addDataItem<Budget>(userId, "budgets", budget);
 };
 
 
@@ -182,7 +201,7 @@ export const getSavingsGoals = (userId: string | null, callback: (goals: Savings
 export const migrateLocalDataToFirestore = async (userId: string) => {
     if (!userId) return;
 
-    const collections = ["transactions", "budgets", "savings_goals"];
+    const collections = ["transactions", "budgets", "savings_goals", "accounts"];
 
     for (const collectionName of collections) {
         const localData = getLocalData<any>(collectionName);

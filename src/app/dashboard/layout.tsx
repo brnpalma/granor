@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -17,6 +17,7 @@ import {
   Plus,
   LogOut,
   Menu,
+  Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,8 +35,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const navItems = [
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
+  { href: "/dashboard/accounts", label: "Contas", icon: Wallet },
   { href: "/dashboard/transactions", label: "Transações", icon: ArrowRightLeft },
-  { href: "/dashboard/budgets", label: "Orçamentos", icon: Wallet },
+  { href: "/dashboard/budgets", label: "Orçamentos", icon: Target },
   { href: "/dashboard/reports", label: "Relatórios", icon: AreaChart },
   { href: "/dashboard/savings", label: "Economias", icon: PiggyBank },
 ];

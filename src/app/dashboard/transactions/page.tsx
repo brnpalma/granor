@@ -37,8 +37,8 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { addTransaction, getTransactions } from "@/lib/firestore";
-import type { Transaction, Category } from "@/lib/types";
+import { addTransaction, getTransactions, getAccounts } from "@/lib/firestore";
+import type { Transaction, Category, Account } from "@/lib/types";
 import { categories } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
@@ -49,25 +49,41 @@ import { useAuth } from "@/hooks/use-auth";
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const unsubscribe = getTransactions(user?.uid || null, (data) => {
+    const unsubscribeTransactions = getTransactions(user?.uid || null, (data) => {
         setTransactions(data);
         setIsLoading(false);
     });
-    return () => unsubscribe();
+    
+    const unsubscribeAccounts = getAccounts(user?.uid || null, (data) => {
+        setAccounts(data);
+    });
+
+    return () => {
+        unsubscribeTransactions();
+        unsubscribeAccounts();
+    };
   }, [user]);
 
 
   const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
     await addTransaction(user?.uid || null, transaction);
+    toast({ title: "Transação adicionada", description: "O saldo da sua conta foi atualizado." });
   };
   
+  const getAccountName = (accountId: string) => {
+    const account = accounts.find(a => a.id === accountId);
+    return account ? account.name : "Desconhecida";
+  }
+
   if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
@@ -82,13 +98,24 @@ export default function TransactionsPage() {
         <h1 className="text-2xl font-bold">Transações</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-                <Button>
+                <Button disabled={accounts.length === 0}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Transação
                 </Button>
             </DialogTrigger>
-            <TransactionForm onSubmit={handleAddTransaction} onSubmitted={() => setDialogOpen(false)} transactions={transactions} />
+            <TransactionForm 
+                onSubmit={handleAddTransaction} 
+                onSubmitted={() => setDialogOpen(false)} 
+                transactions={transactions}
+                accounts={accounts}
+            />
         </Dialog>
       </div>
+       {accounts.length === 0 && (
+          <Card className="text-center p-6">
+            <CardTitle>Nenhuma conta encontrada</CardTitle>
+            <CardDescription>Por favor, adicione uma conta primeiro para poder registrar transações.</CardDescription>
+          </Card>
+        )}
       <Card>
         <CardHeader>
           <CardTitle>Histórico de Transações</CardTitle>
@@ -99,6 +126,7 @@ export default function TransactionsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Descrição</TableHead>
+                <TableHead>Conta</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
@@ -108,6 +136,7 @@ export default function TransactionsPage() {
               {transactions.map((t) => (
                 <TableRow key={t.id} className={cn(t.isBudget && "bg-muted/50")}>
                   <TableCell className="font-medium">{t.description}</TableCell>
+                   <TableCell>{getAccountName(t.accountId)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                         {t.isBudget ? <Target className="h-4 w-4 text-muted-foreground" /> : <CategoryIcon category={t.category} className="h-4 w-4 text-muted-foreground" />}
@@ -137,16 +166,19 @@ function TransactionForm({
     onSubmit,
     onSubmitted,
     transactions,
+    accounts
 }: {
     onSubmit: (transaction: Omit<Transaction, "id">) => Promise<void>;
     onSubmitted: () => void;
     transactions: Transaction[];
+    accounts: Account[];
 }) {
     const [description, setDescription] = useState("");
     const [amount, setAmount] = useState("");
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [type, setType] = useState<"income" | "expense">("expense");
     const [category, setCategory] = useState<Category | "">("");
+    const [accountId, setAccountId] = useState<string>("");
     const [suggestedCategory, setSuggestedCategory] = useState<Category | null>(null);
     const [isSuggesting, setIsSuggesting] = useState(false);
     const { toast } = useToast();
@@ -186,7 +218,7 @@ function TransactionForm({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!description || !amount || !date || !category) {
+        if (!description || !amount || !date || !category || !accountId) {
             toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
             return;
         }
@@ -197,6 +229,7 @@ function TransactionForm({
             date,
             type,
             category,
+            accountId,
         });
 
         // Reset form
@@ -205,6 +238,7 @@ function TransactionForm({
         setDate(new Date());
         setType("expense");
         setCategory("");
+        setAccountId("");
         setSuggestedCategory(null);
         onSubmitted();
     };
@@ -215,6 +249,19 @@ function TransactionForm({
                 <DialogTitle>Adicionar Nova Transação</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="accountId">Conta</Label>
+                    <Select onValueChange={setAccountId} value={accountId}>
+                        <SelectTrigger id="accountId">
+                            <SelectValue placeholder="Selecione a conta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {accounts.map(acc => (
+                                <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="description">Descrição</Label>
                     <div className="flex items-center gap-2">

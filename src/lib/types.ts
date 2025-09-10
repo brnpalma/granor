@@ -12,6 +12,23 @@ export const categories = [
 
 export type Category = (typeof categories)[number];
 
+export const accountTypes = [
+  "Conta Corrente",
+  "Poupança",
+  "Carteira",
+  "Investimentos",
+  "Outro",
+] as const;
+
+export type AccountType = (typeof accountTypes)[number];
+
+export interface Account {
+  id: string;
+  name: string;
+  type: AccountType;
+  balance: number;
+}
+
 export interface Transaction {
   id: string;
   date: Date;
@@ -19,6 +36,7 @@ export interface Transaction {
   amount: number;
   type: "income" | "expense";
   category: Category;
+  accountId: string;
   isBudget?: boolean;
 }
 
