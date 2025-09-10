@@ -224,7 +224,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-6 text-white px-2">
-        <div className="flex justify-around items-center text-center p-2">
+        <div className="flex justify-center items-center text-center p-2 gap-4">
             <div className="flex-1 text-center">
                 <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
                     <CheckCircle className="h-4 w-4 text-green-500" />
@@ -309,7 +309,7 @@ export default function DashboardPage() {
                     <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-gray-400" /></Button>
                 </div>
             </div>
-            <div className="bg-[#27272a] rounded-lg p-4 space-y-4">
+            <div className="bg-[#27272a] rounded-lg p-2 space-y-4">
                 {accounts.map(account => (
                     <div key={account.id} className="flex items-center gap-4">
                         <BankIcon name={account.name} />
@@ -344,7 +344,7 @@ export default function DashboardPage() {
                     <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-gray-400" /></Button>
                 </div>
             </div>
-            <div className="bg-[#27272a] rounded-lg p-4 space-y-4">
+            <div className="bg-[#27272a] rounded-lg p-2 space-y-4">
                 {creditCardInvoices.map(card => {
                     const dueDate = new Date();
                     dueDate.setDate(card.dueDay);
