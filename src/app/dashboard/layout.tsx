@@ -107,11 +107,26 @@ function SidebarContent({ onLinkClick }: { onLinkClick: () => void }) {
 
 function Header() {
     const { selectedDate, goToNextMonth, goToPreviousMonth } = useDate();
+    const [formattedDate, setFormattedDate] = useState('');
 
-    const formattedDate = selectedDate.toLocaleDateString('pt-BR', {
-        month: 'long',
-        year: 'numeric'
-    }).replace(/^\w/, (c) => c.toUpperCase());
+    useEffect(() => {
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const selectedYear = selectedDate.getFullYear();
+
+        let dateString;
+
+        if (currentYear === selectedYear) {
+            dateString = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(selectedDate);
+        } else {
+            const month = new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(selectedDate).replace('.', '');
+            const year = selectedDate.getFullYear().toString().slice(-2);
+            dateString = `${month.charAt(0).toUpperCase() + month.slice(1)}/${year}`;
+        }
+
+        setFormattedDate(dateString.replace(/^\w/, (c) => c.toUpperCase()));
+    }, [selectedDate]);
+
 
     return (
         <div className="flex w-full items-center justify-center gap-2">
