@@ -110,7 +110,6 @@ export default function AccountsPage() {
                         </div>
                         <div className="text-right">
                            <p className="font-bold">{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                           <p className="text-xs text-muted-foreground">Saldo previsto R$ 0,00</p>
                         </div>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -138,11 +137,9 @@ export default function AccountsPage() {
                     <div className="w-8 h-8"></div>
                     <div className="flex-1">
                         <p className="font-bold">Total</p>
-                         <p className="text-sm text-muted-foreground">Previsto</p>
                     </div>
                     <div className="text-right">
                         <p className="font-bold">{totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                         <p className="text-sm text-muted-foreground">R$ 0,00</p>
                     </div>
                     <div className="w-10"></div>
                 </div>
