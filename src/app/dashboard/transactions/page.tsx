@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
-import { PlusCircle, Trash2, Target, CreditCard } from "lucide-react";
+import { PlusCircle, Trash2, Target, CreditCard, Check, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -141,6 +142,7 @@ export default function TransactionsPage() {
                 <TableHead>Fonte</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Data</TableHead>
+                <TableHead>Efetivado</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -162,6 +164,9 @@ export default function TransactionsPage() {
                     </div>
                   </TableCell>
                   <TableCell>{t.date.toLocaleDateString('pt-BR')}</TableCell>
+                  <TableCell>
+                    {t.efetivado ? <Check className="h-4 w-4 text-green-500" /> : <Clock className="h-4 w-4 text-muted-foreground" />}
+                  </TableCell>
                   <TableCell className={cn(
                     "text-right",
                     t.type === "income" ? "text-green-500" : t.isBudget ? "text-yellow-600" : "text-red-500"
@@ -201,5 +206,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    

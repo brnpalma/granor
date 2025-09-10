@@ -59,6 +59,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
@@ -351,6 +352,7 @@ function TransactionForm({
     const [category, setCategory] = useState<string>("");
     const [source, setSource] = useState<"account" | "creditCard">("account");
     const [sourceId, setSourceId] = useState<string>("");
+    const [efetivado, setEfetivado] = useState(true);
     const { toast } = useToast();
     
     useEffect(() => {
@@ -388,6 +390,7 @@ function TransactionForm({
             date,
             type,
             category,
+            efetivado,
             ...(source === 'account' ? { accountId: sourceId } : {}),
             ...(source === 'creditCard' ? { creditCardId: sourceId } : {}),
         };
@@ -402,6 +405,7 @@ function TransactionForm({
         setCategory("");
         setSource("account");
         setSourceId("");
+        setEfetivado(true);
         onSubmitted();
     };
     
@@ -501,6 +505,10 @@ function TransactionForm({
                         </Select>
                     </div>
                 </div>
+                 <div className="flex items-center space-x-2">
+                    <Switch id="efetivado" checked={efetivado} onCheckedChange={setEfetivado} />
+                    <Label htmlFor="efetivado">Efetivado</Label>
+                </div>
                 <DialogFooter>
                     <Button type="submit">Adicionar Transação</Button>
                 </DialogFooter>
@@ -518,5 +526,3 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </DateProvider>
     );
 }
-
-    

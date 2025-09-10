@@ -40,6 +40,7 @@ export interface Transaction {
   amount: number;
   type: "income" | "expense";
   category: string;
+  efetivado: boolean;
   accountId?: string; // Optional: for bank account transactions
   creditCardId?: string; // Optional: for credit card transactions
   isBudget?: boolean;
