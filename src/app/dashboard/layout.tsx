@@ -78,8 +78,8 @@ const navItems = [
   { href: "/dashboard/transactions", label: "Transações", icon: ArrowRightLeft },
   { href: "/dashboard/categories", label: "Categorias", icon: Shapes },
   { href: "/dashboard/budgets", label: "Orçamentos", icon: Target },
-  { href: "/dashboard/reports", label: "Relatórios", icon: AreaChart },
   { href: "/dashboard/savings", label: "Metas", icon: PiggyBank },
+  { href: "/dashboard/reports", label: "Relatórios", icon: AreaChart },
 ];
 
 function SidebarContent({ onLinkClick }: { onLinkClick: () => void }) {
@@ -530,3 +530,4 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     
 
     
+
