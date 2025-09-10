@@ -109,12 +109,12 @@ const getDataSubscription = <T extends DataType>(
     userId: string | null,
     collectionName: string,
     callback: (data: T[]) => void,
-    { orderField = "date", dateRange, postProcess = (d) => d }: { orderField?: string; dateRange?: { startDate: Date; endDate: Date }; postProcess?: (data: any) => any }
+    { orderField = "date", orderDirection = "desc", dateRange, postProcess = (d) => d }: { orderField?: string; orderDirection?: "asc" | "desc"; dateRange?: { startDate: Date; endDate: Date }; postProcess?: (data: any) => any }
 ) => {
     const path = getCollectionPath(userId, collectionName);
 
     if (path) {
-        let q = query(collection(db, path), orderBy(orderField, "desc"));
+        let q = query(collection(db, path), orderBy(orderField, orderDirection));
 
         if (dateRange) {
             q = query(q, 
@@ -170,7 +170,7 @@ export const deleteCategory = (userId: string | null, categoryId: string) => {
 };
 
 export const getCategories = (userId: string | null, callback: (categories: Category[]) => void) => {
-    return getDataSubscription<Category>(userId, "categories", callback, { orderField: 'name' });
+    return getDataSubscription<Category>(userId, "categories", callback, { orderField: 'name', orderDirection: 'asc' });
 };
 
 // Accounts
@@ -209,7 +209,7 @@ export const deleteAccount = async (userId: string | null, accountId: string) =>
 
 
 export const getAccounts = (userId: string | null, callback: (accounts: Account[]) => void) => {
-    return getDataSubscription<Account>(userId, "accounts", callback, { orderField: 'name' });
+    return getDataSubscription<Account>(userId, "accounts", callback, { orderField: 'name', orderDirection: 'asc' });
 };
 
 // Credit Cards
@@ -247,7 +247,7 @@ export const deleteCreditCard = async (userId: string | null, cardId: string) =>
 };
 
 export const getCreditCards = (userId: string | null, callback: (cards: CreditCard[]) => void) => {
-    return getDataSubscription<CreditCard>(userId, "credit_cards", callback, { orderField: 'name' });
+    return getDataSubscription<CreditCard>(userId, "credit_cards", callback, { orderField: 'name', orderDirection: 'asc' });
 };
 
 
@@ -311,8 +311,25 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
 export const deleteTransaction = async (userId: string | null, transactionId: string) => {
     const transactionsPath = getCollectionPath(userId, 'transactions');
     if (!transactionsPath) {
+        // Handle local data deletion if needed
+        let localTransactions = getLocalData<Transaction>('transactions');
+        const transactionToDelete = localTransactions.find(t => t.id === transactionId);
+        if (transactionToDelete && transactionToDelete.accountId) {
+            let localAccounts = getLocalData<Account>('accounts');
+            const accountIndex = localAccounts.findIndex(a => a.id === transactionToDelete.accountId);
+            if (accountIndex > -1) {
+                const account = localAccounts[accountIndex];
+                const amountToRevert = transactionToDelete.amount;
+                const newBalance = transactionToDelete.type === 'expense' ? account.balance + amountToRevert : account.balance - amountToRevert;
+                localAccounts[accountIndex] = { ...account, balance: newBalance };
+                setLocalData('accounts', localAccounts);
+            }
+        }
+        localTransactions = localTransactions.filter(t => t.id !== transactionId);
+        setLocalData('transactions', localTransactions);
         return;
     }
+
     const transactionRef = doc(db, transactionsPath, transactionId);
 
     try {
@@ -385,7 +402,7 @@ export const getBudgets = (
     userId: string | null,
     callback: (budgets: Budget[]) => void,
 ) => {
-    return getDataSubscription<Budget>(userId, "budgets", callback, { orderField: 'category' });
+    return getDataSubscription<Budget>(userId, "budgets", callback, { orderField: 'category', orderDirection: 'asc' });
 };
 
 
@@ -399,7 +416,7 @@ export const deleteSavingsGoal = (userId: string | null, goalId: string) => {
 };
 
 export const getSavingsGoals = (userId: string | null, callback: (goals: SavingsGoal[]) => void) => {
-    return getDataSubscription<SavingsGoal>(userId, "savings_goals", callback, { orderField: 'name' });
+    return getDataSubscription<SavingsGoal>(userId, "savings_goals", callback, { orderField: 'name', orderDirection: 'asc' });
 };
 
 // Function to migrate local data to Firestore
