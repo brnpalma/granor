@@ -129,15 +129,15 @@ function AccountForm({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !type || !balance) {
-            toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
+        if (!name || !type) {
+            toast({ title: "Por favor, preencha o nome e o tipo da conta", variant: 'destructive' });
             return;
         }
 
         await onSubmit({
             name,
             type: type as AccountType,
-            balance: parseFloat(balance),
+            balance: parseFloat(balance) || 0,
         });
 
         setName("");
@@ -170,7 +170,7 @@ function AccountForm({
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="balance">Saldo Inicial</Label>
+                    <Label htmlFor="balance">Saldo Inicial (Opcional)</Label>
                     <Input id="balance" type="number" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0,00" />
                 </div>
                 <DialogFooter>
