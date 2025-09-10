@@ -33,7 +33,6 @@ export default function BudgetsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [addBudgetDialogOpen, setAddBudgetDialogOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const { selectedDate, getMonthDateRange } = useDate();
@@ -160,19 +159,6 @@ export default function BudgetsPage() {
             </Card>
           );
         })}
-         <Card className="border-dashed flex flex-col items-center justify-center">
-            <Dialog open={addBudgetDialogOpen} onOpenChange={setAddBudgetDialogOpen}>
-            <DialogTrigger asChild>
-                <Button variant="ghost" className="h-full w-full">
-                    <div className="flex flex-col items-center gap-2">
-                        <PlusCircle className="h-8 w-8 text-muted-foreground" />
-                        <span className="text-muted-foreground">Adicionar Novo Orçamento</span>
-                    </div>
-                </Button>
-            </DialogTrigger>
-            <BudgetForm onSubmit={handleAddBudget} onSubmitted={() => setAddBudgetDialogOpen(false)} categories={categories} />
-        </Dialog>
-          </Card>
       </div>
     </div>
   );
