@@ -129,9 +129,9 @@ export default function AccountsPage() {
 
        <div className="space-y-2">
             <Card>
-              <CardContent className="p-2 space-y-4">
+              <CardContent className="p-0">
                 {accounts.map(account => (
-                    <div key={account.id} className="flex items-center gap-4 p-2 rounded-lg hover:bg-muted">
+                    <div key={account.id} className="flex items-center gap-4 p-4 border-b last:border-b-0">
                         <BankIcon name={account.name} />
                         <div className="flex-1">
                             <p className="text-xs text-muted-foreground">{account.type}</p>
@@ -255,7 +255,7 @@ function AccountForm({
                     <Input id="balance" type="number" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0,00" />
                 </div>
                 <DialogFooter>
-                    <Button type="submit">{isEditing ? "Salvar Alterações" : "Adicionar Conta"}</Button>
+                    <Button type="submit">{isEditing ? "Salvar Alterações" : "Adicionar"}</Button>
                 </DialogFooter>
             </form>
         </DialogContent>
