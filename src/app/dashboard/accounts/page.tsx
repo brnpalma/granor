@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { PlusCircle, Trash2, MoreVertical, ExternalLink } from "lucide-react";
+import { PlusCircle, Trash2, MoreVertical, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,6 +19,12 @@ import {
   DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,7 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { addAccount, getAccounts, deleteAccount } from "@/lib/firestore";
+import { addAccount, getAccounts, deleteAccount, updateAccount } from "@/lib/firestore";
 import type { Account, AccountType } from "@/lib/types";
 import { accountTypes } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -50,6 +56,7 @@ export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -63,8 +70,29 @@ export default function AccountsPage() {
     return () => unsubscribe();
   }, [user]);
 
-  const handleAddAccount = async (account: Omit<Account, "id">) => {
-    await addAccount(user?.uid || null, account);
+  const handleOpenDialogForEdit = (account: Account) => {
+    setEditingAccount(account);
+    setDialogOpen(true);
+  };
+  
+  const handleOpenDialogForAdd = () => {
+    setEditingAccount(null);
+    setDialogOpen(true);
+  };
+  
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditingAccount(null);
+  };
+
+  const handleFormSubmit = async (accountData: Omit<Account, "id">, accountId?: string) => {
+    if (accountId) {
+      await updateAccount(user?.uid || null, accountId, accountData);
+      toast({ title: "Conta atualizada!" });
+    } else {
+      await addAccount(user?.uid || null, accountData);
+      toast({ title: "Conta adicionada!" });
+    }
   };
   
   const handleDeleteAccount = async (accountId: string) => {
@@ -85,13 +113,17 @@ export default function AccountsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Contas</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
             <DialogTrigger asChild>
-                <Button>
+                <Button onClick={handleOpenDialogForAdd}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
                 </Button>
             </DialogTrigger>
-            <AccountForm onSubmit={handleAddAccount} onSubmitted={() => setDialogOpen(false)} />
+            <AccountForm 
+              onSubmit={handleFormSubmit} 
+              onSubmitted={handleCloseDialog} 
+              account={editingAccount} 
+            />
         </Dialog>
       </div>
 
@@ -106,25 +138,39 @@ export default function AccountsPage() {
                             <p className="font-bold uppercase">{account.name}</p>
                         </div>
                         <div className="text-right">
-                           <AlertDialog>
-                             <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="shrink-0">
-                                   <MoreVertical className="h-5 w-5" />
-                               </Button>
-                             </AlertDialogTrigger>
-                             <AlertDialogContent>
-                               <AlertDialogHeader>
-                                 <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                 <AlertDialogDescription>
-                                   Esta ação não pode ser desfeita. Isso removerá permanentemente a conta e todas as transações associadas a ela.
-                                 </AlertDialogDescription>
-                               </AlertDialogHeader>
-                               <AlertDialogFooter>
-                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                 <AlertDialogAction onClick={() => handleDeleteAccount(account.id)}>Remover</AlertDialogAction>
-                               </AlertDialogFooter>
-                             </AlertDialogContent>
-                           </AlertDialog>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="shrink-0">
+                                        <MoreVertical className="h-5 w-5" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => handleOpenDialogForEdit(account)}>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        <span>Editar</span>
+                                    </DropdownMenuItem>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                                                <span className="text-destructive">Remover</span>
+                                            </DropdownMenuItem>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                   Esta ação não pode ser desfeita. Isso removerá permanentemente a conta e todas as transações associadas a ela.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteAccount(account.id)}>Remover</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                            <p className="font-bold text-sm mt-1">{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                         </div>
                     </div>
@@ -140,14 +186,30 @@ export default function AccountsPage() {
 function AccountForm({
     onSubmit,
     onSubmitted,
+    account,
 }: {
-    onSubmit: (account: Omit<Account, "id">) => Promise<void>;
+    onSubmit: (account: Omit<Account, "id">, accountId?: string) => Promise<void>;
     onSubmitted: () => void;
+    account: Account | null;
 }) {
     const [name, setName] = useState("");
     const [type, setType] = useState<AccountType | "">("");
     const [balance, setBalance] = useState("");
     const { toast } = useToast();
+    
+    const isEditing = !!account;
+
+    useEffect(() => {
+        if (isEditing) {
+            setName(account.name);
+            setType(account.type);
+            setBalance(String(account.balance));
+        } else {
+            setName("");
+            setType("");
+            setBalance("");
+        }
+    }, [account, isEditing]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -160,18 +222,15 @@ function AccountForm({
             name,
             type: type as AccountType,
             balance: parseFloat(balance) || 0,
-        });
+        }, account?.id);
 
-        setName("");
-        setType("");
-        setBalance("");
         onSubmitted();
     };
 
     return (
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Adicionar Nova Conta</DialogTitle>
+                <DialogTitle>{isEditing ? "Editar Conta" : "Adicionar Nova Conta"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -192,11 +251,11 @@ function AccountForm({
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="balance">Saldo Inicial (Opcional)</Label>
+                    <Label htmlFor="balance">{isEditing ? "Saldo" : "Saldo Inicial (Opcional)"}</Label>
                     <Input id="balance" type="number" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0,00" />
                 </div>
                 <DialogFooter>
-                    <Button type="submit">Adicionar Conta</Button>
+                    <Button type="submit">{isEditing ? "Salvar Alterações" : "Adicionar Conta"}</Button>
                 </DialogFooter>
             </form>
         </DialogContent>

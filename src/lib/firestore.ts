@@ -162,6 +162,26 @@ export const addAccount = (userId: string | null, account: Omit<Account, "id">) 
     return addDataItem<Account>(userId, "accounts", account);
 };
 
+export const updateAccount = async (userId: string | null, accountId: string, accountData: Omit<Account, "id">) => {
+    const path = getCollectionPath(userId, "accounts");
+    if (path) {
+        try {
+            await updateDoc(doc(db, path, accountId), accountData);
+        } catch (error) {
+            console.error(`Error updating account: `, error);
+            showToast({ title: "Erro", description: "Não foi possível atualizar a conta.", variant: "destructive" });
+        }
+    } else {
+        const localData = getLocalData<Account>("accounts");
+        const index = localData.findIndex(a => a.id === accountId);
+        if (index !== -1) {
+            localData[index] = { ...localData[index], ...accountData };
+            setLocalData("accounts", localData);
+        }
+    }
+};
+
+
 export const deleteAccount = async (userId: string | null, accountId: string) => {
     const accountPath = getCollectionPath(userId, "accounts");
     const transactionsPath = getCollectionPath(userId, "transactions");
