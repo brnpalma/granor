@@ -118,9 +118,9 @@ export default function DashboardPage() {
 
     unsubscribers.push(getTransactions(user.uid, (data) => {
       setPreviousMonthTransactions(data);
-      const prevIncome = data.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-      const prevExpenses = data.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-      setPreviousMonthLeftover(prevIncome - prevExpenses);
+      const prevTotalIncome = data.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+      const prevTotalExpenses = data.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+      setPreviousMonthLeftover(prevTotalIncome - prevTotalExpenses);
       dataLoaded.prevTransactions = true;
       checkLoading();
     }, { startDate: prevStartDate, endDate: prevEndDate }));
@@ -234,7 +234,7 @@ export default function DashboardPage() {
                     </div>
                     <span>Saldo</span>
                 </div>
-                <p className="text-xl md:text-3xl font-bold">
+                <p className="text-xl md:text-2xl font-bold">
                     {monthlyNetBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
@@ -370,3 +370,4 @@ export default function DashboardPage() {
     
 
     
+
