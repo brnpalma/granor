@@ -185,6 +185,14 @@ export default function DashboardPage() {
     }).filter(Boolean);
 
   }, [transactions, totalBalance, selectedDate, getMonthDateRange]);
+
+  const chartColors = useMemo(() => {
+    const isPositive = totalBalance >= 0;
+    return {
+        stroke: isPositive ? '#22c55e' : '#ef4444', // green-500 or red-500
+        fill: isPositive ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'
+    };
+  }, [totalBalance]);
   
 
   if (isLoading) {
@@ -207,7 +215,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 pb-6 text-white">
         <div className="flex justify-around items-center text-center p-4">
-            <div className="text-center">
+            <div className="flex-1 text-center">
                 <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Inicial</span>
@@ -227,7 +235,7 @@ export default function DashboardPage() {
                     {totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
-            <div className="text-center">
+            <div className="flex-1 text-center">
                  <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
                     <Clock className="h-4 w-4"/>
                     <span>Previsto *</span>
@@ -246,8 +254,8 @@ export default function DashboardPage() {
                 >
                 <defs>
                     <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="rgba(239, 68, 68, 0.4)" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="rgba(239, 68, 68, 0.1)" stopOpacity={0}/>
+                        <stop offset="5%" stopColor={chartColors.fill} stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor={chartColors.fill} stopOpacity={0}/>
                     </linearGradient>
                 </defs>
                 <XAxis 
@@ -271,14 +279,14 @@ export default function DashboardPage() {
                     formatter={(value: number) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), "Saldo"]}
                     labelStyle={{ fontWeight: 'bold' }}
                  />
-                <Area type="monotone" dataKey="Saldo" stroke="#ef4444" fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={2} dot={{ stroke: '#ef4444', strokeWidth: 2, r: 4, fill: '#18181b' }} activeDot={{ r: 6 }}/>
+                <Area type="monotone" dataKey="Saldo" stroke={chartColors.stroke} fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={2} dot={{ stroke: chartColors.stroke, strokeWidth: 2, r: 4, fill: '#18181b' }} activeDot={{ r: 6 }}/>
                 </AreaChart>
             </ResponsiveContainer>
         </div>
         
         <div>
-            <div className="relative px-4">
-                <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <div className="relative mx-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input placeholder="Pesquisar no Minhas Finanças" className="bg-[#27272a] border-[#3f3f46] pl-10 h-12 rounded-lg" />
             </div>
         </div>
