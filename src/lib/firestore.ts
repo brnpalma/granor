@@ -280,7 +280,7 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
     const path = getCollectionPath(userId, "transactions");
     const accountPath = getCollectionPath(userId, "accounts");
 
-    if (path && accountPath) {
+    if (path && accountPath && transaction.efetivado) {
         if (transaction.accountId) {
             try {
                 await runTransaction(db, async (t) => {
@@ -322,14 +322,13 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
                 showToast({ title: "Erro", description: "Não foi possível adicionar a transação do cartão.", variant: "destructive" });
             }
         }
-    } else {
-        // Handle local data logic
+    } else { // Handle local data or non-efetivado transactions
         await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
             ...item,
             date: item.date, 
         }));
         
-        if (transaction.accountId) {
+        if (transaction.accountId && transaction.efetivado) {
             const accounts = getLocalData<Account>('accounts');
             const accountIndex = accounts.findIndex(a => a.id === transaction.accountId);
             if (accountIndex > -1) {
@@ -343,6 +342,61 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
         }
     }
 };
+
+export const updateTransaction = async (userId: string, transactionId: string, transactionData: Omit<Transaction, "id"> & { id?: string }) => {
+    const path = getCollectionPath(userId, "transactions");
+    if (!path) return;
+
+    const { id, ...dataToUpdate } = transactionData;
+
+    try {
+        await runTransaction(db, async (t) => {
+            const transactionRef = doc(db, path, transactionId);
+            const transactionDoc = await t.get(transactionRef);
+
+            if (!transactionDoc.exists()) {
+                throw "Transaction does not exist!";
+            }
+
+            const originalTransaction = { id: transactionDoc.id, ...transactionDoc.data() } as Transaction;
+            originalTransaction.date = (originalTransaction.date as unknown as Timestamp).toDate();
+
+            const wasEfetivado = originalTransaction.efetivado;
+            const isNowEfetivado = dataToUpdate.efetivado;
+
+            // Only adjust balance if the 'efetivado' status changes
+            if (wasEfetivado !== isNowEfetivado && originalTransaction.accountId) {
+                const accountPath = getCollectionPath(userId, "accounts");
+                if (!accountPath) throw "Account path not found";
+                const accountRef = doc(db, accountPath, originalTransaction.accountId);
+                const accountDoc = await t.get(accountRef);
+
+                if (accountDoc.exists()) {
+                    const currentBalance = accountDoc.data().balance;
+                    let newBalance = currentBalance;
+
+                    // Becoming efetivado: apply transaction
+                    if (!wasEfetivado && isNowEfetivado) {
+                         newBalance = originalTransaction.type === 'income' ? currentBalance + originalTransaction.amount : currentBalance - originalTransaction.amount;
+                    } 
+                    // Becoming pending: revert transaction
+                    else if (wasEfetivado && !isNowEfetivado) {
+                         newBalance = originalTransaction.type === 'income' ? currentBalance - originalTransaction.amount : currentBalance + originalTransaction.amount;
+                    }
+                    t.update(accountRef, { balance: newBalance });
+                }
+            }
+            
+            const finalData = { ...dataToUpdate, date: Timestamp.fromDate(dataToUpdate.date) };
+            t.update(transactionRef, finalData);
+        });
+
+    } catch (error) {
+        console.error("Error updating transaction status: ", error);
+        showToast({ title: "Erro", description: "Não foi possível atualizar a transação.", variant: "destructive" });
+    }
+};
+
 
 export const deleteTransaction = async (userId: string | null, transactionId: string) => {
     const transactionsPath = getCollectionPath(userId, 'transactions');
@@ -376,8 +430,11 @@ export const deleteTransaction = async (userId: string | null, transactionId: st
             }
 
             const transactionData = transactionDoc.data() as Transaction;
+            transactionData.date = (transactionData.date as unknown as Timestamp).toDate();
 
-            if (transactionData.accountId) {
+
+            // Only adjust balance if the transaction was 'efetivado'
+            if (transactionData.accountId && transactionData.efetivado) {
                 const accountPath = getCollectionPath(userId, 'accounts');
                 if (!accountPath) return;
 
@@ -410,6 +467,7 @@ export const getTransactions = (
 ) => {
     return getDataSubscription<Transaction>(userId, "transactions", callback, {
         orderField: "date",
+        orderDirection: "desc",
         dateRange,
         postProcess: (data) => ({
             ...data,
