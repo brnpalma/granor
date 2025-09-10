@@ -43,7 +43,7 @@ const navItems = [
   { href: "/dashboard/categories", label: "Categorias", icon: Shapes },
   { href: "/dashboard/budgets", label: "Orçamentos", icon: Target },
   { href: "/dashboard/reports", label: "Relatórios", icon: AreaChart },
-  { href: "/dashboard/savings", label: "Economias", icon: PiggyBank },
+  { href: "/dashboard/savings", label: "Metas", icon: PiggyBank },
 ];
 
 function SidebarContent({ onLinkClick }: { onLinkClick: () => void }) {
@@ -141,9 +141,9 @@ export default function DashboardLayout({
               </Button>
             </SheetTrigger>
              <SheetContent side="left" className="sm:max-w-xs p-0">
-                 <SheetHeader>
+                <SheetHeader>
                     <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
-                 </SheetHeader>
+                </SheetHeader>
                  <SidebarContent onLinkClick={handleLinkClick} />
             </SheetContent>
           </Sheet>
