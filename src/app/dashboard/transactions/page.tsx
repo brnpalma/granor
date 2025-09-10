@@ -192,53 +192,55 @@ export default function TransactionsPage() {
                                 <p className="font-medium">{t.description}</p>
                                 <p className="text-sm text-muted-foreground">{getSourceName(t)}</p>
                             </div>
-                            <div className="text-right">
-                                <p className={cn(
-                                    "font-bold",
-                                    t.type === "income" ? "text-green-500" : "text-foreground"
-                                )}>
-                                    {t.type === "income" ? "+" : "-"}
-                                    {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                                </p>
-                                {!t.efetivado && (
-                                    <Button size="sm" variant="outline" className="mt-1 h-7 text-xs" onClick={() => handleToggleEfetivado(t)}>Efetivar</Button>
-                                )}
+                            <div className="flex items-center gap-2">
+                                <div className="text-right">
+                                    <p className={cn(
+                                        "font-bold",
+                                        t.type === "income" ? "text-green-500" : "text-foreground"
+                                    )}>
+                                        {t.type === "income" ? "+" : "-"}
+                                        {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                                    </p>
+                                    {!t.efetivado && (
+                                        <Button size="sm" variant="outline" className="mt-1 h-7 text-xs" onClick={() => handleToggleEfetivado(t)}>Efetivar</Button>
+                                    )}
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="shrink-0 -mr-2">
+                                            <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onClick={() => handleToggleEfetivado(t)}>
+                                            {t.efetivado ? <Clock className="mr-2 h-4 w-4" /> : <Check className="mr-2 h-4 w-4" />}
+                                            <span>{t.efetivado ? 'Pendente' : 'Efetivada'}</span>
+                                        </DropdownMenuItem>
+                                         {!t.isBudget && (
+                                         <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                    <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                                                    <span className="text-destructive">Remover</span>
+                                                </DropdownMenuItem>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                      Esta ação não pode ser desfeita. Isso removerá permanentemente a transação. Se for uma transação de conta, o saldo será ajustado.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteTransaction(t.id)}>Remover</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                         )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
-                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="shrink-0 -mr-2">
-                                        <MoreVertical className="h-5 w-5 text-muted-foreground" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                    <DropdownMenuItem onClick={() => handleToggleEfetivado(t)}>
-                                        {t.efetivado ? <Clock className="mr-2 h-4 w-4" /> : <Check className="mr-2 h-4 w-4" />}
-                                        <span>{t.efetivado ? 'Pendente' : 'Efetivada'}</span>
-                                    </DropdownMenuItem>
-                                     {!t.isBudget && (
-                                     <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                                                <span className="text-destructive">Remover</span>
-                                            </DropdownMenuItem>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                  Esta ação não pode ser desfeita. Isso removerá permanentemente a transação. Se for uma transação de conta, o saldo será ajustado.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDeleteTransaction(t.id)}>Remover</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                     )}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
                         </div>
                     ))}
                 </div>
