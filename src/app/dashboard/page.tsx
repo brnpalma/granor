@@ -297,7 +297,7 @@ export default function DashboardPage() {
         <div>
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input placeholder="Pesquisar no Minhas Finanças" className="bg-[#27272a] border-[#3f3f46] pl-10 h-12 rounded-lg" />
+                <Input placeholder="Pesquisar Transações" className="bg-[#27272a] border-[#3f3f46] pl-10 h-12 rounded-lg" />
             </div>
         </div>
 
