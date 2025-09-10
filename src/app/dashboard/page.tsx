@@ -216,8 +216,13 @@ export default function DashboardPage() {
                     {previousMonthLeftover.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
-            <div className="flex-1">
-                <p className="text-sm text-gray-400">Saldo</p>
+            <div className="text-center">
+                <div className="flex items-center justify-center gap-1 text-sm text-gray-400">
+                     <div className="h-4 w-4 rounded-full border-2 border-gray-400 flex items-center justify-center">
+                        <div className="h-1.5 w-1.5 rounded-full bg-gray-400"></div>
+                    </div>
+                    <span>Saldo</span>
+                </div>
                 <p className="text-2xl md:text-4xl font-bold">
                     {totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
@@ -351,5 +356,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
