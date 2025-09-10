@@ -177,7 +177,7 @@ export default function TransactionsPage() {
       <div className="space-y-6">
         {groupedTransactions.map((group, groupIndex) => (
             <div key={group.date}>
-                <h2 className="text-sm font-semibold text-muted-foreground mb-2 px-2">{group.date}</h2>
+                <h2 className="text-sm font-semibold text-muted-foreground mb-2 p-2 rounded-md bg-muted/50">{group.date}</h2>
                 <div className="space-y-1">
                     {group.transactions.map((t, transIndex) => (
                         <div key={t.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50">
@@ -253,3 +253,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    
