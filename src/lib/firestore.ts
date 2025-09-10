@@ -237,12 +237,12 @@ export const getCreditCards = (userId: string | null, callback: (cards: CreditCa
 
 // Transactions
 export const addTransaction = async (userId: string | null, transaction: Omit<Transaction, "id">) => {
-    if (transaction.accountId) {
-        const path = getCollectionPath(userId, "transactions");
-        const accountPath = getCollectionPath(userId, "accounts");
+    const path = getCollectionPath(userId, "transactions");
+    const accountPath = getCollectionPath(userId, "accounts");
 
-        if (path && accountPath) {
-             try {
+    if (path && accountPath) {
+        if (transaction.accountId) {
+            try {
                 await runTransaction(db, async (t) => {
                     const accountRef = doc(db, accountPath, transaction.accountId!);
                     const accountDoc = await t.get(accountRef);
@@ -258,21 +258,38 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
                     t.update(accountRef, { balance: newBalance });
 
                     const transactionRef = doc(collection(db, path));
-                    t.set(transactionRef, {
-                         ...transaction,
+                    const transactionToSave = {
+                        ...transaction,
                         date: Timestamp.fromDate(transaction.date),
-                    });
+                    };
+                    delete (transactionToSave as Partial<typeof transactionToSave>).creditCardId; // Ensure it's not set
+                    t.set(transactionRef, transactionToSave);
                 });
             } catch (error) {
-                console.error("Error adding transaction: ", error);
-                showToast({ title: "Erro", description: "Não foi possível adicionar a transação.", variant: "destructive" });
+                console.error("Error adding account transaction: ", error);
+                showToast({ title: "Erro", description: "Não foi possível adicionar a transação da conta.", variant: "destructive" });
             }
-        } else {
-            await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
-                ...item,
-                date: item.date, 
-            }));
-            
+        } else if (transaction.creditCardId) {
+             try {
+                const transactionToSave = {
+                    ...transaction,
+                    date: Timestamp.fromDate(transaction.date),
+                };
+                delete (transactionToSave as Partial<typeof transactionToSave>).accountId; // Ensure it's not set
+                await addDoc(collection(db, path), transactionToSave);
+            } catch(error) {
+                console.error("Error adding credit card transaction: ", error);
+                showToast({ title: "Erro", description: "Não foi possível adicionar a transação do cartão.", variant: "destructive" });
+            }
+        }
+    } else {
+        // Handle local data logic
+        await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
+            ...item,
+            date: item.date, 
+        }));
+        
+        if (transaction.accountId) {
             const accounts = getLocalData<Account>('accounts');
             const accountIndex = accounts.findIndex(a => a.id === transaction.accountId);
             if (accountIndex > -1) {
@@ -284,11 +301,6 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
                 setLocalData('accounts', accounts);
             }
         }
-    } else {
-         await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
-            ...item,
-            date: Timestamp.fromDate(item.date),
-        }));
     }
 };
 

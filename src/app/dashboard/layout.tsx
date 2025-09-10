@@ -388,8 +388,8 @@ function TransactionForm({
             date,
             type,
             category,
-            accountId: source === 'account' ? sourceId : undefined,
-            creditCardId: source === 'creditCard' ? sourceId : undefined,
+            ...(source === 'account' && { accountId: sourceId }),
+            ...(source === 'creditCard' && { creditCardId: sourceId }),
         };
 
         await onSubmit(transactionData);
