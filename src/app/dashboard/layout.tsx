@@ -195,12 +195,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <div className="flex min-h-screen w-full flex-col bg-muted">
+        <div className="flex min-h-screen w-full flex-col bg-background">
             <aside className="fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r border-border bg-background sm:flex">
                 <SidebarContent onLinkClick={() => { }} />
             </aside>
             <div className="flex flex-col sm:pl-60">
-                <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-border bg-muted px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+                <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-border bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                     <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                         <SheetTrigger asChild>
                             <Button size="icon" variant="outline" className="sm:hidden bg-transparent border-0 hover:bg-gray-700">
@@ -526,5 +526,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </DateProvider>
     );
 }
+
+    
 
     
