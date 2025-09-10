@@ -65,7 +65,7 @@ export default function DashboardPage() {
   
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
-  const [monthlyNetBalance, setMonthlyNetBalance] = useState(0);
+  const [previousMonthLeftover, setPreviousMonthLeftover] = useState(0);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -105,13 +105,15 @@ export default function DashboardPage() {
       const expenses = data.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
       setMonthlyIncome(income);
       setMonthlyExpenses(expenses);
-      setMonthlyNetBalance(income - expenses);
       dataLoaded.transactions = true;
       checkLoading();
     }, { startDate, endDate }));
 
     unsubscribers.push(getTransactions(user.uid, (data) => {
       setPreviousMonthTransactions(data);
+      const prevIncome = data.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+      const prevExpenses = data.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+      setPreviousMonthLeftover(prevIncome - prevExpenses);
       dataLoaded.prevTransactions = true;
       checkLoading();
     }, { startDate: prevStartDate, endDate: prevEndDate }));
@@ -125,6 +127,10 @@ export default function DashboardPage() {
 
     return () => unsubscribers.forEach(unsub => unsub());
   }, [user, selectedDate, getMonthDateRange]);
+
+  const monthlyNetBalance = useMemo(() => {
+    return previousMonthLeftover + monthlyIncome - monthlyExpenses;
+  }, [previousMonthLeftover, monthlyIncome, monthlyExpenses]);
   
 
   const totalBalance = useMemo(() => {
@@ -142,7 +148,7 @@ export default function DashboardPage() {
   
   const balanceChartData = useMemo(() => {
     const { startDate, endDate } = getMonthDateRange(selectedDate);
-    if (transactions.length === 0) return [];
+    if (transactions.length === 0 && previousMonthLeftover === 0) return [];
   
     const daysInMonth = eachDayOfInterval({ start: startDate, end: endDate });
   
@@ -150,23 +156,20 @@ export default function DashboardPage() {
       .filter(t => t.accountId)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
     
-    // This calculation is complex and depends on a reliable starting point.
-    // For now, let's track the net change within the month.
-    let cumulativeBalance = 0;
+    let cumulativeBalance = previousMonthLeftover;
     const dailyBalances: { [key: string]: number } = {};
 
     monthTransactions.forEach(t => {
       const day = format(t.date, 'dd/MM');
       const change = t.type === 'income' ? t.amount : -t.amount;
-      cumulativeBalance += change;
-      dailyBalances[day] = (dailyBalances[day] || (Object.values(dailyBalances).pop() ?? 0)) + change;
+      dailyBalances[day] = (dailyBalances[day] || 0) + change;
     });
 
-    let lastBalance = 0;
+    let lastBalance = previousMonthLeftover;
     return daysInMonth.map(day => {
         const dayKey = format(day, 'dd/MM');
         if (dailyBalances[dayKey] !== undefined) {
-            lastBalance = dailyBalances[dayKey];
+            lastBalance += dailyBalances[dayKey];
         }
          if (selectedDate.getMonth() === new Date().getMonth() && selectedDate.getFullYear() === new Date().getFullYear() && day > new Date()) {
             return null;
@@ -177,7 +180,7 @@ export default function DashboardPage() {
         };
     }).filter(Boolean);
 
-  }, [transactions, selectedDate, getMonthDateRange]);
+  }, [transactions, selectedDate, getMonthDateRange, previousMonthLeftover]);
 
   const chartColors = useMemo(() => {
     const isPositive = monthlyNetBalance >= 0;
@@ -214,7 +217,7 @@ export default function DashboardPage() {
                     <span>Inicial</span>
                 </div>
                 <p className="text-base md:text-lg font-bold">
-                    {monthlyIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {previousMonthLeftover.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
             <div className="text-center">
