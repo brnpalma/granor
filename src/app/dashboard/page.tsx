@@ -59,6 +59,8 @@ export default function DashboardPage() {
   const { selectedDate, getMonthDateRange } = useDate();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -96,7 +98,7 @@ export default function DashboardPage() {
 
     const { startDate, endDate } = getMonthDateRange(selectedDate);
     
-    let dataLoaded = { accounts: false, creditCards: false, transactions: false };
+    let dataLoaded = { accounts: false, creditCards: false, transactions: false, budgets: false, categories: false };
     const checkLoading = () => {
       if (Object.values(dataLoaded).every(Boolean)) {
         setIsLoading(false);
@@ -115,6 +117,18 @@ export default function DashboardPage() {
       setCreditCards(data);
       dataLoaded.creditCards = true;
       checkLoading();
+    }));
+
+    unsubscribers.push(getBudgets(user.uid, (data) => {
+      setBudgets(data);
+      dataLoaded.budgets = true;
+      checkLoading();
+    }));
+
+    unsubscribers.push(getCategories(user.uid, (data) => {
+        setCategories(data);
+        dataLoaded.categories = true;
+        checkLoading();
     }));
     
     unsubscribers.push(getTransactions(user.uid, (data) => {
@@ -210,6 +224,29 @@ export default function DashboardPage() {
     };
   }, [monthlyNetBalance]);
   
+  const getBudgetSpentAmount = (category: string) => {
+    return transactions
+      .filter((t) => t.type === 'expense' && t.category === category)
+      .reduce((sum, t) => sum + t.amount, 0);
+  };
+  
+  const expensesByCategory = useMemo(() => {
+    const expenseCategories = categories.filter(c => c.type === 'expense');
+    return expenseCategories.map(category => {
+        const total = transactions
+            .filter(t => t.type === 'expense' && t.category === category.name)
+            .reduce((sum, t) => sum + t.amount, 0);
+        return { name: category.name, value: total };
+    }).filter(c => c.value > 0)
+    .sort((a,b) => b.value - a.value);
+  }, [transactions, categories]);
+
+  const totalExpenses = useMemo(() => {
+    return expensesByCategory.reduce((sum, i) => sum + i.value, 0);
+  }, [expensesByCategory]);
+  
+  const PIECHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560"];
+
 
   if (isLoading || previousMonthLeftover === null) {
     return (
@@ -285,8 +322,7 @@ export default function DashboardPage() {
                 <YAxis 
                     stroke="hsl(var(--muted-foreground))"
                     fontSize={12} 
-                    tickLine={false} 
-                    axisLine={false}
+                    tickLine={false}                     axisLine={false}
                     tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
                     domain={['dataMin - 500', 'dataMax + 500']}
                 />
@@ -378,6 +414,91 @@ export default function DashboardPage() {
                     )
                 })}
               </CardContent>
+            </Card>
+        </div>
+        
+        <div className="space-y-2">
+            <div className="flex justify-between items-center px-4">
+                <h2 className="text-xl font-bold">Orçamentos de despesas</h2>
+                <div className="flex items-center gap-2">
+                    <Link href="/dashboard/budgets">
+                        <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
+                    </Link>
+                    <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-muted-foreground" /></Button>
+                </div>
+            </div>
+            <Card>
+                <CardContent className="p-4 space-y-4">
+                    {budgets.map((budget) => {
+                        const spent = getBudgetSpentAmount(budget.category);
+                        const progress = Math.min((spent / budget.amount) * 100, 100);
+                        return (
+                            <div key={budget.id}>
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-muted p-2 rounded-full">
+                                        <CategoryIcon category={budget.category} className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-center">
+                                            <p className="font-medium">{budget.category}</p>
+                                            <p className="text-sm font-medium">{spent.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                             <p className="text-xs text-muted-foreground">de {budget.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                                             <p className="text-xs text-muted-foreground">{progress.toFixed(0)}%</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <Progress value={progress} className="mt-2 h-2" />
+                            </div>
+                        )
+                    })}
+                </CardContent>
+            </Card>
+        </div>
+        
+        <div className="space-y-2">
+            <div className="flex justify-between items-center px-4">
+                <h2 className="text-xl font-bold">Despesas por categoria</h2>
+                <div className="flex items-center gap-2">
+                    <Link href="/dashboard/reports">
+                        <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
+                    </Link>
+                    <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-muted-foreground" /></Button>
+                </div>
+            </div>
+             <Card>
+                <CardContent className="p-4">
+                    <div className="h-64 relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={expensesByCategory}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    outerRadius={80}
+                                    innerRadius={60}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    paddingAngle={5}
+                                >
+                                    {expensesByCategory.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={PIECHART_COLORS[index % PIECHART_COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Legend iconType="circle" />
+                                <Tooltip
+                                    formatter={(value: number, name) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), name]}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                            <p className="text-2xl font-bold">{totalExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                            <p className="text-sm text-muted-foreground">Total de Despesas</p>
+                        </div>
+                    </div>
+                </CardContent>
             </Card>
         </div>
 
