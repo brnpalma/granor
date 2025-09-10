@@ -65,7 +65,7 @@ import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DateProvider, useDate } from "@/hooks/use-date";
-import { useTransactionDialog } from "@/hooks/use-transaction-dialog";
+import { TransactionDialogProvider, useTransactionDialog } from "@/hooks/use-transaction-dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { Transaction, Account, Category, CreditCard as CreditCardType } from "@/lib/types";
 import { getAccounts, getCategories, getCreditCards, getTransactions, addTransaction } from "@/lib/firestore";
@@ -547,27 +547,6 @@ function TransactionForm({
     );
 }
 
-const TransactionDialogProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [initialState, setInitialState] = useState<{ type?: 'income' | 'expense'; isCreditCard?: boolean }>({});
-
-    const openDialog = (state: { type?: 'income' | 'expense'; isCreditCard?: boolean } = {}) => {
-        setInitialState(state);
-        setIsOpen(true);
-    };
-    
-    const closeDialog = () => {
-        setIsOpen(false);
-        setInitialState({});
-    };
-
-    return (
-        <TransactionDialogContext.Provider value={{ isOpen, openDialog, closeDialog, initialType: initialState.type, initialIsCreditCard: initialState.isCreditCard }}>
-            {children}
-        </TransactionDialogContext.Provider>
-    );
-};
-
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
         <DateProvider>
@@ -577,13 +556,5 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </DateProvider>
     );
 }
-
-const TransactionDialogContext = createContext<{
-    isOpen: boolean;
-    openDialog: (state?: { type?: 'income' | 'expense'; isCreditCard?: boolean }) => void;
-    closeDialog: () => void;
-    initialType?: 'income' | 'expense';
-    initialIsCreditCard?: boolean;
-} | undefined>(undefined);
 
     
