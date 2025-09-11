@@ -1,10 +1,10 @@
 
-
 "use client";
 
 import { useState, useEffect, createContext } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   LayoutDashboard,
   ArrowRightLeft,
@@ -97,7 +97,7 @@ function SidebarContent({ onLinkClick }: { onLinkClick: () => void }) {
         <div className="flex flex-col h-full bg-background text-foreground">
             <div className="flex h-[60px] items-center border-b border-border px-6 justify-between">
                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold" onClick={onLinkClick}>
-                    <CategoryIcon category="Economias" className="h-6 w-6 text-amber-500" />
+                    <Image src="/icone/icone512.png" width={24} height={24} alt="Granor Logo" />
                     <span className="">Granor</span>
                 </Link>
                 <ThemeToggleButton />
@@ -302,9 +302,6 @@ function TransactionDialog() {
     const handleFormSubmit = async (transaction: Omit<Transaction, "id">, transactionId?: string) => {
         if (!user?.uid) return;
         
-        const account = accounts.find(a => a.id === transaction.accountId);
-        const isIgnored = account?.ignoreInTotals || false;
-
         if (transactionId) {
             await updateTransaction(user.uid, transactionId, transaction);
             toast({ title: "Transação atualizada!" });
