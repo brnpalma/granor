@@ -280,7 +280,7 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
     const path = getCollectionPath(userId, "transactions");
     const accountPath = getCollectionPath(userId, "accounts");
 
-    if (path && accountPath && transaction.accountId && transaction.efetivado) {
+    if (path && accountPath && transaction.accountId) {
         try {
             await runTransaction(db, async (t) => {
                 const accountRef = doc(db, accountPath, transaction.accountId!);
@@ -289,13 +289,14 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
                     throw new Error("Conta não encontrada!");
                 }
 
-                const currentBalance = accountDoc.data().balance;
-                const newBalance = transaction.type === 'income' 
-                    ? currentBalance + transaction.amount 
-                    : currentBalance - transaction.amount;
+                if (transaction.efetivado) {
+                    const currentBalance = accountDoc.data().balance;
+                    const newBalance = transaction.type === 'income' 
+                        ? currentBalance + transaction.amount 
+                        : currentBalance - transaction.amount;
+                    t.update(accountRef, { balance: newBalance });
+                }
                 
-                t.update(accountRef, { balance: newBalance });
-
                 const transactionRef = doc(collection(db, path));
                 t.set(transactionRef, { ...transaction, date: Timestamp.fromDate(transaction.date) });
             });
@@ -303,7 +304,7 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
             console.error("Error adding account transaction: ", error);
             showToast({ title: "Erro", description: "Não foi possível adicionar a transação da conta.", variant: "destructive" });
         }
-    } else { // Handle local data, non-efetivado transactions, or credit card transactions
+    } else { // Handle local data, or credit card transactions
         await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
             ...item,
             date: item.date, 
@@ -328,9 +329,11 @@ export const updateTransaction = async (userId: string, transactionId: string, d
     const transactionsPath = getCollectionPath(userId, "transactions");
     const accountsPath = getCollectionPath(userId, "accounts");
     if (!transactionsPath || !accountsPath) {
-         if (transactionsPath) {
-            // Still update the transaction even if the account is ignored
-            await updateDoc(doc(db, transactionsPath, transactionId), { ...dataToUpdate, date: Timestamp.fromDate(dataToUpdate.date) });
+        // Handle local data update
+        // This part is simplified and might need more robust implementation for local-only mode
+        if (transactionsPath) {
+             const finalData = { ...dataToUpdate, date: Timestamp.fromDate(dataToUpdate.date) };
+            await updateDoc(doc(db, transactionsPath, transactionId), finalData);
         }
         return;
     };
@@ -342,13 +345,17 @@ export const updateTransaction = async (userId: string, transactionId: string, d
             const transactionDoc = await t.get(transactionRef);
             if (!transactionDoc.exists()) throw "Transaction does not exist!";
 
-            const originalTransaction = { id: transactionDoc.id, ...transactionDoc.data() } as Transaction;
-            originalTransaction.date = (originalTransaction.date as unknown as Timestamp).toDate();
+            const originalTransactionData = transactionDoc.data() as Omit<Transaction, 'id'>;
+            const originalTransaction = { 
+                id: transactionDoc.id, 
+                ...originalTransactionData,
+                date: (originalTransactionData.date as unknown as Timestamp).toDate()
+            };
             
             const wasEfetivado = originalTransaction.efetivado;
             const isNowEfetivado = dataToUpdate.efetivado;
             
-            // Revert original transaction if it was efetivado
+            // Revert original transaction if it was an effective account transaction
             if (originalTransaction.accountId && wasEfetivado) {
                 const accountRef = doc(db, accountsPath, originalTransaction.accountId);
                 const accountDoc = await t.get(accountRef);
@@ -361,23 +368,25 @@ export const updateTransaction = async (userId: string, transactionId: string, d
                 }
             }
 
-            // Apply new transaction if it is efetivado
+            // Apply new transaction if it is an effective account transaction
+            // We need to fetch the account again to get the reverted balance if the account is the same.
             if (dataToUpdate.accountId && isNowEfetivado) {
-                const accountRef = doc(db, accountsPath, dataToUpdate.accountId);
-                const accountDoc = await t.get(accountRef);
-                if (accountDoc.exists()) {
+                 const accountRef = doc(db, accountsPath, dataToUpdate.accountId);
+                 // We don't need to re-fetch the document inside a transaction, we can chain operations.
+                 // The transaction ensures atomicity.
+                 const accountDoc = await t.get(accountRef);
+                 if (accountDoc.exists()) {
                      const currentBalance = accountDoc.data().balance;
-                     // Important: use the reverted balance if the account is the same
-                     const baseBalance = (originalTransaction.accountId === dataToUpdate.accountId && wasEfetivado) 
-                        ? (originalTransaction.type === 'income' ? currentBalance - originalTransaction.amount : currentBalance + originalTransaction.amount)
-                        : currentBalance;
+                     const baseBalance = (originalTransaction.accountId === dataToUpdate.accountId && wasEfetivado)
+                         ? (originalTransaction.type === 'income' ? currentBalance - originalTransaction.amount : currentBalance + originalTransaction.amount)
+                         : currentBalance;
                     
-                    const newBalance = dataToUpdate.type === 'income' 
-                        ? baseBalance + dataToUpdate.amount 
-                        : baseBalance - dataToUpdate.amount;
+                     const newBalance = dataToUpdate.type === 'income' 
+                         ? baseBalance + dataToUpdate.amount 
+                         : baseBalance - dataToUpdate.amount;
 
-                    t.update(accountRef, { balance: newBalance });
-                }
+                     t.update(accountRef, { balance: newBalance });
+                 }
             }
 
             // Update the transaction itself
