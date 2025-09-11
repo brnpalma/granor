@@ -24,7 +24,7 @@ import { ExternalLink, MoreVertical, Search, CheckCircle, Clock, Lock, EyeOff } 
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { getAccounts, getCreditCards, getBudgets, getTransactions, addCategory, getCategories, getUserPreferences } from "@/lib/firestore";
-import type { Account, CreditCard as CreditCardType, Budget, Transaction, Category, UserPreferences } from "@/lib/types";
+import type { Account, CreditCard as CreditCardType, Budget, Transaction, UserPreferences } from "@/lib/types";
 import { CategoryIcon, ItauLogo, NubankLogo, PicpayLogo, MercadoPagoLogo, BradescoLogo } from "@/components/icons";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -228,7 +228,7 @@ export default function DashboardPage() {
     const chartData = sortedDays.map((dayKey) => {
       lastBalance += dailyChanges[dayKey];
       return {
-        date: format(new Date(dayKey), "dd/MM"),
+        date: format(new Date(`${dayKey}T00:00:00`), "dd/MM"),
         Saldo: lastBalance,
       };
     });
@@ -570,6 +570,8 @@ export default function DashboardPage() {
   );
 
 }
+
+    
 
     
 
