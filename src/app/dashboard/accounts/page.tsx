@@ -82,10 +82,12 @@ export default function AccountsPage() {
     setDialogOpen(true);
   };
   
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-    setEditingAccount(null);
-  };
+  const handleDialogChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setEditingAccount(null);
+    }
+  }
 
   const handleFormSubmit = async (accountData: Omit<Account, "id">, accountId?: string) => {
     if (accountId) {
@@ -115,15 +117,15 @@ export default function AccountsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Contas</h1>
-        <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
+        <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
             <DialogTrigger asChild>
-                <Button onClick={handleOpenDialogForAdd}>
+                <Button>
                     <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
                 </Button>
             </DialogTrigger>
             <AccountForm 
               onSubmit={handleFormSubmit} 
-              onSubmitted={handleCloseDialog} 
+              onSubmitted={() => handleDialogChange(false)} 
               account={editingAccount} 
             />
         </Dialog>
@@ -205,7 +207,7 @@ function AccountForm({
     const isEditing = !!account;
 
     useEffect(() => {
-        if (isEditing) {
+        if (account) {
             setName(account.name);
             setType(account.type);
             setBalance(String(account.balance));
@@ -216,7 +218,7 @@ function AccountForm({
             setBalance("");
             setIgnoreInTotals(false);
         }
-    }, [account, isEditing]);
+    }, [account]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
