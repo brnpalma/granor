@@ -66,7 +66,7 @@ export default function DashboardPage() {
   
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
-  const [previousMonthLeftover, setPreviousMonthLeftover] = useState<number | null>(null);
+  const [previousMonthLeftover, setPreviousMonthLeftover] = useState(0);
   const [forecastedBalance, setForecastedBalance] = useState(0);
   
   const includedAccounts = useMemo(() => accounts.filter(a => !a.ignoreInTotals), [accounts]);
@@ -76,102 +76,103 @@ export default function DashboardPage() {
     return transactions.filter(t => !t.accountId || includedAccountIds.has(t.accountId));
   }, [transactions, includedAccountIds]);
 
-  // Effect to calculate previous month's leftover
-  useEffect(() => {
-    if (!user?.uid) {
-      if (previousMonthLeftover === null) setPreviousMonthLeftover(0);
-      return;
-    }
-    
-    setIsLoading(true);
-    const prevMonthDate = subMonths(selectedDate, 1);
-    const { startDate: prevStartDate, endDate: prevEndDate } = getMonthDateRange(prevMonthDate);
-
-    const unsubPrevTransactions = getTransactions(user.uid, (data) => {
-      const prevIncludedTransactions = data.filter(t => !t.accountId || includedAccountIds.has(t.accountId));
-      const prevTotalIncome = prevIncludedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-      const prevTotalExpenses = prevIncludedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-      setPreviousMonthLeftover(prevTotalIncome - prevTotalExpenses);
-    }, { startDate: prevStartDate, endDate: prevEndDate });
-
-    return () => unsubPrevTransactions();
-  }, [user, selectedDate, getMonthDateRange, includedAccountIds]);
-
-  // Effect to calculate current month's data, dependent on previousMonthLeftover
-  useEffect(() => {
-    if (!user?.uid || previousMonthLeftover === null) {
-        setIsLoading(false);
-        return;
-    }
-
-    const { startDate, endDate } = getMonthDateRange(selectedDate);
-    
-    let dataLoaded = { accounts: false, creditCards: false, transactions: false, budgets: false, categories: false };
-    const checkLoading = () => {
-      if (Object.values(dataLoaded).every(Boolean)) {
-        setIsLoading(false);
-      }
-    };
-
-    const unsubscribers: (() => void)[] = [];
-
-    unsubscribers.push(getAccounts(user.uid, (data) => {
-      setAccounts(data);
-      dataLoaded.accounts = true;
-      checkLoading();
-    }));
-
-    unsubscribers.push(getCreditCards(user.uid, (data) => {
-      setCreditCards(data);
-      dataLoaded.creditCards = true;
-      checkLoading();
-    }));
-
-    unsubscribers.push(getBudgets(user.uid, (data) => {
-      setBudgets(data);
-      dataLoaded.budgets = true;
-      checkLoading();
-    }));
-
-    unsubscribers.push(getCategories(user.uid, (data) => {
-        setCategories(data);
-        dataLoaded.categories = true;
-        checkLoading();
-    }));
-    
-    unsubscribers.push(getTransactions(user.uid, (data) => {
-      setTransactions(data);
-      
-      const currentIncludedTransactions = data.filter(t => !t.accountId || includedAccountIds.has(t.accountId));
-
-      const effectiveIncome = currentIncludedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-      const effectiveExpenses = currentIncludedTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-      setMonthlyIncome(effectiveIncome);
-      setMonthlyExpenses(effectiveExpenses);
-      
-      const totalIncome = currentIncludedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-      const totalExpenses = currentIncludedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-      
-      setForecastedBalance(totalIncome - totalExpenses + previousMonthLeftover);
-
-      dataLoaded.transactions = true;
-      checkLoading();
-    }, { startDate, endDate }));
-
-    const timer = setTimeout(() => {
-        if (Object.values(dataLoaded).some(v => !v)) {
+   // Effect to fetch all data
+    useEffect(() => {
+        if (!user?.uid) {
             setIsLoading(false);
+            return;
         }
-    }, 3000);
-    unsubscribers.push(() => clearTimeout(timer));
 
-    return () => unsubscribers.forEach(unsub => unsub());
+        setIsLoading(true);
 
-  }, [user, selectedDate, getMonthDateRange, previousMonthLeftover, includedAccountIds]);
+        const { startDate, endDate } = getMonthDateRange(selectedDate);
+        const prevMonthDate = subMonths(selectedDate, 1);
+        const { startDate: prevStartDate, endDate: prevEndDate } = getMonthDateRange(prevMonthDate);
+
+        let dataLoaded = {
+            accounts: false,
+            creditCards: false,
+            budgets: false,
+            categories: false,
+            transactions: false,
+            prevTransactions: false
+        };
+
+        const checkLoading = () => {
+            if (Object.values(dataLoaded).every(Boolean)) {
+                setIsLoading(false);
+            }
+        };
+
+        const unsubscribers: (() => void)[] = [];
+
+        unsubscribers.push(getAccounts(user.uid, (data) => {
+            setAccounts(data);
+            dataLoaded.accounts = true;
+            checkLoading();
+        }));
+
+        unsubscribers.push(getCreditCards(user.uid, (data) => {
+            setCreditCards(data);
+            dataLoaded.creditCards = true;
+            checkLoading();
+        }));
+
+        unsubscribers.push(getBudgets(user.uid, (data) => {
+            setBudgets(data);
+            dataLoaded.budgets = true;
+            checkLoading();
+        }));
+
+        unsubscribers.push(getCategories(user.uid, (data) => {
+            setCategories(data);
+            dataLoaded.categories = true;
+            checkLoading();
+        }));
+
+        // Fetch current month transactions
+        unsubscribers.push(getTransactions(user.uid, (data) => {
+            setTransactions(data);
+            const currentIncludedTransactions = data.filter(t => !t.accountId || new Set(accounts.filter(a => !a.ignoreInTotals).map(a => a.id)).has(t.accountId));
+
+            const effectiveIncome = currentIncludedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+            const effectiveExpenses = currentIncludedTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+            setMonthlyIncome(effectiveIncome);
+            setMonthlyExpenses(effectiveExpenses);
+            
+            const totalIncome = currentIncludedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            const totalExpenses = currentIncludedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            
+            // We need previous month leftover to calculate this, so it might be slightly delayed
+            setForecastedBalance(totalIncome - totalExpenses);
+
+            dataLoaded.transactions = true;
+            checkLoading();
+        }, { startDate, endDate }));
+
+        // Fetch previous month transactions
+        unsubscribers.push(getTransactions(user.uid, (data) => {
+            const prevIncludedTransactions = data.filter(t => !t.accountId || new Set(accounts.filter(a => !a.ignoreInTotals).map(a => a.id)).has(t.accountId));
+            const prevTotalIncome = prevIncludedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            const prevTotalExpenses = prevIncludedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            setPreviousMonthLeftover(prevTotalIncome - prevTotalExpenses);
+            dataLoaded.prevTransactions = true;
+            checkLoading();
+        }, { startDate: prevStartDate, endDate: prevEndDate }));
+
+        const timer = setTimeout(() => {
+            if (Object.values(dataLoaded).some(v => !v)) {
+                setIsLoading(false);
+            }
+        }, 3000);
+        unsubscribers.push(() => clearTimeout(timer));
+
+        return () => unsubscribers.forEach(unsub => unsub());
+
+    }, [user, selectedDate, getMonthDateRange, accounts]);
 
 
   const monthlyNetBalance = useMemo(() => {
-    if (previousMonthLeftover === null) return 0;
     const income = includedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
     const expenses = includedTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
     return previousMonthLeftover + income - expenses;
@@ -258,7 +259,7 @@ export default function DashboardPage() {
   const PIECHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560"];
 
 
-  if (isLoading || previousMonthLeftover === null) {
+  if (isLoading) {
     return (
         <div className="space-y-4">
              <div className="grid gap-4 md:grid-cols-3">
@@ -304,7 +305,7 @@ export default function DashboardPage() {
                     <span>Previsto *</span>
                 </div>
                 <p className="text-sm md:text-base">
-                    {forecastedBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {(forecastedBalance + previousMonthLeftover).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
         </div>
@@ -516,3 +517,5 @@ export default function DashboardPage() {
   );
 
 }
+
+    
