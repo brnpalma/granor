@@ -62,7 +62,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { CategoryIcon } from "@/components/icons";
+import { CategoryIcon, BankIcon } from "@/components/icons";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -443,12 +443,17 @@ function TransactionForm({
                     </Label>
                     <Select onValueChange={setSourceId} value={sourceId}>
                         <SelectTrigger id="sourceId">
-                            <SelectValue placeholder={`Selecione ${source === 'account' ? 'a conta' : 'o cartão'}`} />
+                             <SelectValue placeholder={`Selecione ${source === 'account' ? 'a conta' : 'o cartão'}`} />
                         </SelectTrigger>
                         <SelectContent>
                             {source === 'account' ? 
                               accounts.map(acc => (
-                                  <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</SelectItem>
+                                <SelectItem key={acc.id} value={acc.id}>
+                                    <div className="flex items-center gap-3">
+                                        <BankIcon name={acc.name} />
+                                        <span>{acc.name} ({acc.balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</span>
+                                    </div>
+                                </SelectItem>
                               )) :
                               creditCards.map(card => (
                                 <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>
