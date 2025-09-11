@@ -209,7 +209,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                                 <span className="sr-only">Alternar Menu</span>
                             </Button>
                         </SheetTrigger>
-                        <SheetContent side="left" className="p-0 bg-background border-r-border">
+                        <SheetContent side="left" className="w-60 p-0 bg-background border-r-border">
                             <SheetHeader>
                                 <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
                             </SheetHeader>
