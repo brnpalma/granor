@@ -221,6 +221,7 @@ export default function DashboardPage() {
     });
 
     const sortedDays = Object.keys(dailyChanges).sort();
+    if (sortedDays.length === 0) return [];
 
     let lastBalance = previousMonthLeftover || 0;
     
@@ -241,12 +242,12 @@ export default function DashboardPage() {
   ]);
 
   const chartColors = useMemo(() => {
-    const isPositive = monthlyNetBalance >= 0;
+    const isPositive = monthlyNetBalance >= previousMonthLeftover;
     return {
         stroke: isPositive ? '#22c55e' : '#ef4444', // green-500 or red-500
         fill: isPositive ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'
     };
-  }, [monthlyNetBalance]);
+  }, [monthlyNetBalance, previousMonthLeftover]);
   
   const getBudgetSpentAmount = (category: string) => {
     return includedTransactions
