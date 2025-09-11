@@ -14,7 +14,6 @@ import {
   PanelLeft,
   ChevronLeft,
   ChevronRight,
-  MoreVertical,
   Plus,
   LogOut,
   Menu,
@@ -25,6 +24,7 @@ import {
   Minus,
   Eye,
   EyeOff,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -195,7 +195,7 @@ function Header() {
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="hover:bg-gray-700">
-                            <MoreVertical className="h-5 w-5" />
+                            <Settings className="h-5 w-5" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -576,3 +576,5 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </DateProvider>
     );
 }
+
+    
