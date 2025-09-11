@@ -306,10 +306,10 @@ function TransactionDialog() {
         const isIgnored = account?.ignoreInTotals || false;
 
         if (transactionId) {
-            await updateTransaction(user.uid, transactionId, transaction, isIgnored);
+            await updateTransaction(user.uid, transactionId, transaction);
             toast({ title: "Transação atualizada!" });
         } else {
-            await addTransaction(user.uid, transaction, isIgnored);
+            await addTransaction(user.uid, transaction);
             toast({ title: "Transação adicionada!" });
         }
     };

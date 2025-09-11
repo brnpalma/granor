@@ -276,11 +276,11 @@ export const getCreditCards = (userId: string | null, callback: (cards: CreditCa
 
 
 // Transactions
-export const addTransaction = async (userId: string | null, transaction: Omit<Transaction, "id">, isIgnoredAccount: boolean) => {
+export const addTransaction = async (userId: string | null, transaction: Omit<Transaction, "id">) => {
     const path = getCollectionPath(userId, "transactions");
     const accountPath = getCollectionPath(userId, "accounts");
 
-    if (path && accountPath && transaction.accountId && transaction.efetivado && !isIgnoredAccount) {
+    if (path && accountPath && transaction.accountId && transaction.efetivado) {
         try {
             await runTransaction(db, async (t) => {
                 const accountRef = doc(db, accountPath, transaction.accountId!);
@@ -309,7 +309,7 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
             date: item.date, 
         }));
         
-        if (!path && transaction.accountId && transaction.efetivado && !isIgnoredAccount) {
+        if (!path && transaction.accountId && transaction.efetivado) {
             const accounts = getLocalData<Account>('accounts');
             const accountIndex = accounts.findIndex(a => a.id === transaction.accountId);
             if (accountIndex > -1) {
@@ -324,10 +324,10 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
     }
 };
 
-export const updateTransaction = async (userId: string, transactionId: string, dataToUpdate: Omit<Transaction, "id">, isIgnoredAccount: boolean) => {
+export const updateTransaction = async (userId: string, transactionId: string, dataToUpdate: Omit<Transaction, "id">) => {
     const transactionsPath = getCollectionPath(userId, "transactions");
     const accountsPath = getCollectionPath(userId, "accounts");
-    if (!transactionsPath || !accountsPath || isIgnoredAccount) {
+    if (!transactionsPath || !accountsPath) {
          if (transactionsPath) {
             // Still update the transaction even if the account is ignored
             await updateDoc(doc(db, transactionsPath, transactionId), { ...dataToUpdate, date: Timestamp.fromDate(dataToUpdate.date) });
@@ -345,11 +345,8 @@ export const updateTransaction = async (userId: string, transactionId: string, d
             const originalTransaction = { id: transactionDoc.id, ...transactionDoc.data() } as Transaction;
             originalTransaction.date = (originalTransaction.date as unknown as Timestamp).toDate();
             
-            const originalAccountDoc = originalTransaction.accountId ? await getDoc(doc(db, accountsPath, originalTransaction.accountId)) : null;
-            const wasIgnored = originalAccountDoc?.data()?.ignoreInTotals || false;
-
-            const wasEfetivado = originalTransaction.efetivado && !wasIgnored;
-            const isNowEfetivado = dataToUpdate.efetivado && !isIgnoredAccount;
+            const wasEfetivado = originalTransaction.efetivado;
+            const isNowEfetivado = dataToUpdate.efetivado;
             
             // Revert original transaction if it was efetivado
             if (originalTransaction.accountId && wasEfetivado) {
@@ -405,12 +402,10 @@ export const deleteTransaction = async (userId: string | null, transactionId: st
             const accountIndex = localAccounts.findIndex(a => a.id === transactionToDelete.accountId);
             if (accountIndex > -1) {
                 const account = localAccounts[accountIndex];
-                if (!account.ignoreInTotals) {
-                    const amountToRevert = transactionToDelete.amount;
-                    const newBalance = transactionToDelete.type === 'expense' ? account.balance + amountToRevert : account.balance - amountToRevert;
-                    localAccounts[accountIndex] = { ...account, balance: newBalance };
-                    setLocalData('accounts', localAccounts);
-                }
+                const amountToRevert = transactionToDelete.amount;
+                const newBalance = transactionToDelete.type === 'expense' ? account.balance + amountToRevert : account.balance - amountToRevert;
+                localAccounts[accountIndex] = { ...account, balance: newBalance };
+                setLocalData('accounts', localAccounts);
             }
         }
         localTransactions = localTransactions.filter(t => t.id !== transactionId);
@@ -439,7 +434,7 @@ export const deleteTransaction = async (userId: string | null, transactionId: st
                 const accountRef = doc(db, accountPath, transactionData.accountId);
                 const accountDoc = await t.get(accountRef);
 
-                if (accountDoc.exists() && !accountDoc.data().ignoreInTotals) {
+                if (accountDoc.exists()) {
                     const currentBalance = accountDoc.data().balance;
                     const amountToRevert = transactionData.amount;
                     const newBalance = transactionData.type === 'expense'
