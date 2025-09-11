@@ -97,7 +97,7 @@ function SidebarContent({ onLinkClick }: { onLinkClick: () => void }) {
         <div className="flex flex-col h-full bg-background text-foreground">
             <div className="flex h-[60px] items-center border-b border-border px-6 justify-between">
                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold" onClick={onLinkClick}>
-                    <Image src="/icone/icone512.png" width={29} height={29} alt="Granor Logo" />
+                    <Image src="/icone/iconeTransp.png" width={29} height={29} alt="Granor Logo" />
                     <span className="">Granor</span>
                 </Link>
                 <ThemeToggleButton />
