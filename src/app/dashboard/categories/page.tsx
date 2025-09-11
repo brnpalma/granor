@@ -160,13 +160,13 @@ export default function CategoriesPage() {
             {relevantCategories.map((cat, index) => {
                 const total = totalsMap.get(cat.name) || 0;
                 return (
-                    <div key={cat.id} className="flex items-center gap-4 p-4 border-b last:border-b-0">
+                    <div key={cat.id} className="flex items-center gap-4 p-3 border-b last:border-b-0">
                          <div className={`p-2 rounded-full ${getColorForCategory(index)}`}>
                             <CategoryIcon category={cat.name} className="h-5 w-5" />
                         </div>
                         <div className="flex-1">
                             <p className="font-bold">{cat.name}</p>
-                            <p className="text-sm text-muted-foreground">{total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                            <p className="text-xs text-muted-foreground">{total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                         </div>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
