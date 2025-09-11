@@ -306,7 +306,14 @@ export default function DashboardPage() {
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Inicial</span>
                 </div>
-                {renderBalance(previousMonthLeftover, "text-sm md:text-base")}
+                 {preferences.showBalance ? (
+                    <p className="text-sm md:text-base">{previousMonthLeftover.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                ) : (
+                    <div className="flex items-center justify-center gap-2 text-sm md:text-base">
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-mono">---</span>
+                    </div>
+                )}
             </div>
             <div className="flex-shrink-0 flex flex-col items-center gap-1">
                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
@@ -315,14 +322,28 @@ export default function DashboardPage() {
                     </div>
                     <span>Saldo</span>
                 </div>
-                {renderBalance(monthlyNetBalance, "text-lg md:text-xl font-bold")}
+                 {preferences.showBalance ? (
+                    <p className="text-lg md:text-xl font-bold">{monthlyNetBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                ) : (
+                     <div className="flex items-center justify-center gap-2 text-lg md:text-xl font-bold">
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-mono">---</span>
+                    </div>
+                )}
             </div>
             <div className="flex-1 flex flex-col items-center gap-1">
                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4"/>
-                    <span>Previsto *</span>
+                    <span>Previsto</span>
                 </div>
-                {renderBalance(forecastedBalance + previousMonthLeftover, "text-sm md:text-base")}
+                {preferences.showBalance ? (
+                    <p className="text-sm md:text-base">{(forecastedBalance + previousMonthLeftover).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                ) : (
+                    <div className="flex items-center justify-center gap-2 text-sm md:text-base">
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-mono">---</span>
+                    </div>
+                )}
             </div>
         </div>
 
@@ -535,3 +556,5 @@ export default function DashboardPage() {
   );
 
 }
+
+    
