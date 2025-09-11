@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, MoreVertical, Search, CheckCircle, Clock, Lock, EyeOff } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
-import { getAccounts, getCreditCards, getBudgets, getTransactions, addCategory, getCategories, getUserPreferences } from "@/lib/firestore";
+import { getAccounts, getCreditCards, getBudgets, getTransactions, addCategory, getCategories, getUserPreferences, getTransactionsOnce } from "@/lib/firestore";
 import type { Account, CreditCard as CreditCardType, Budget, Transaction, UserPreferences } from "@/lib/types";
 import { CategoryIcon, ItauLogo, NubankLogo, PicpayLogo, MercadoPagoLogo, BradescoLogo } from "@/components/icons";
 import Link from "next/link";
@@ -78,7 +78,7 @@ export default function DashboardPage() {
     return transactions.filter(t => !t.accountId || includedAccountIds.has(t.accountId));
   }, [transactions, includedAccountIds]);
 
-   // Effect to fetch all data
+   // Effect to fetch all data for the current month
     useEffect(() => {
         if (!user?.uid) {
             setIsLoading(false);
@@ -153,19 +153,24 @@ export default function DashboardPage() {
         return () => unsubscribers.forEach(unsub => unsub());
 
     }, [user, selectedDate, getMonthDateRange]);
+
+    // Effect to calculate previous month balance
+    useEffect(() => {
+        if (!user?.uid) return;
+
+        const previousMonth = subMonths(selectedDate, 1);
+        const { startDate, endDate } = getMonthDateRange(previousMonth);
+        
+        getTransactionsOnce(user.uid, { startDate, endDate }).then(prevMonthTransactions => {
+            const balance = prevMonthTransactions.reduce((acc, t) => {
+                return t.type === 'income' ? acc + t.amount : acc - t.amount;
+            }, 0);
+            setPreviousMonthLeftover(balance);
+        });
+
+    }, [user, selectedDate, getMonthDateRange]);
     
     useEffect(() => {
-        if (isLoading || accounts.length === 0) return;
-
-        const totalBalance = includedAccounts.reduce((sum, acc) => sum + acc.balance, 0);
-
-        const currentMonthIncome = includedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-        const currentMonthExpenses = includedTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-
-        const startingBalance = totalBalance - currentMonthIncome + currentMonthExpenses;
-        
-        setPreviousMonthLeftover(startingBalance);
-
         const effectiveIncome = includedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
         const effectiveExpenses = includedTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
         setMonthlyIncome(effectiveIncome);
@@ -176,7 +181,7 @@ export default function DashboardPage() {
       
         setForecastedBalance(totalIncome - totalExpenses);
 
-    }, [includedTransactions, includedAccounts, accounts, isLoading]);
+    }, [includedTransactions]);
 
 
   const monthlyNetBalance = useMemo(() => {

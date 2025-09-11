@@ -510,6 +510,39 @@ export const getTransactions = (
     });
 };
 
+export const getTransactionsOnce = async (
+    userId: string,
+    dateRange: { startDate: Date; endDate: Date }
+): Promise<Transaction[]> => {
+    const path = getCollectionPath(userId, "transactions");
+    if (!path) return [];
+    
+    try {
+        let q = query(
+            collection(db, path),
+            orderBy("date", "desc"),
+            where("date", ">=", Timestamp.fromDate(dateRange.startDate)),
+            where("date", "<=", Timestamp.fromDate(dateRange.endDate))
+        );
+
+        const querySnapshot = await getDocs(q);
+        const transactions: Transaction[] = [];
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            transactions.push({
+                id: doc.id,
+                ...data,
+                date: (data.date as Timestamp).toDate(),
+            } as Transaction);
+        });
+        return transactions;
+    } catch (error) {
+        console.error("Error fetching transactions once:", error);
+        return [];
+    }
+};
+
+
 
 // Budgets
 export const addBudget = async (userId: string | null, budget: Omit<Budget, "id">) => {
@@ -586,3 +619,5 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
     }
 };
+
+    
