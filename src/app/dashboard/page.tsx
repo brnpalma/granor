@@ -199,42 +199,55 @@ export default function DashboardPage() {
   
   const balanceChartData = useMemo(() => {
     if (includedTransactions.length === 0 && previousMonthLeftover === 0) {
-        return [];
+      return [];
     }
 
+    const { startDate, endDate } = getMonthDateRange(selectedDate);
+
     const monthTransactions = includedTransactions
-        .filter(t => t.accountId && t.efetivado)
-        .sort((a, b) => a.date.getTime() - b.date.getTime());
+      .filter(
+        (t) =>
+          t.accountId &&
+          t.efetivado &&
+          t.date >= startDate &&
+          t.date <= endDate
+      )
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
 
     const dailyChanges: { [key: string]: number } = {};
 
-    monthTransactions.forEach(t => {
-        const dayKey = format(startOfDay(t.date), 'yyyy-MM-dd');
-        const change = t.type === 'income' ? t.amount : -t.amount;
-        dailyChanges[dayKey] = (dailyChanges[dayKey] || 0) + change;
+    monthTransactions.forEach((t) => {
+      const dayKey = format(startOfDay(t.date), "yyyy-MM-dd");
+      const change = t.type === "income" ? t.amount : -t.amount;
+      dailyChanges[dayKey] = (dailyChanges[dayKey] || 0) + change;
     });
 
     const sortedDays = Object.keys(dailyChanges).sort();
-    
+
     let lastBalance = previousMonthLeftover || 0;
-    const chartData = sortedDays.map(dayKey => {
-        lastBalance += dailyChanges[dayKey];
-        return {
-            date: format(new Date(dayKey), 'dd/MM'),
-            Saldo: lastBalance,
-        };
+    const chartData = sortedDays.map((dayKey) => {
+      lastBalance += dailyChanges[dayKey];
+      return {
+        date: format(new Date(dayKey), "dd/MM"),
+        Saldo: lastBalance,
+      };
     });
 
     // Add initial point if there are transactions, or if there's a leftover balance
     if (chartData.length > 0 || previousMonthLeftover !== 0) {
-        chartData.unshift({
-            date: "Dia 0",
-            Saldo: previousMonthLeftover || 0
-        });
+      chartData.unshift({
+        date: "Dia 0",
+        Saldo: previousMonthLeftover || 0,
+      });
     }
-    
+
     return chartData;
-  }, [includedTransactions, previousMonthLeftover]);
+  }, [
+    includedTransactions,
+    previousMonthLeftover,
+    selectedDate,
+    getMonthDateRange,
+  ]);
 
   const chartColors = useMemo(() => {
     const isPositive = monthlyNetBalance >= 0;
@@ -557,6 +570,8 @@ export default function DashboardPage() {
   );
 
 }
+
+    
 
     
 
