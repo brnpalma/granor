@@ -155,7 +155,7 @@ export default function DashboardPage() {
     }, [user, selectedDate, getMonthDateRange]);
     
     useEffect(() => {
-        if (includedTransactions.length === 0 && includedAccounts.length === 0) return;
+        if (isLoading) return; // Wait for data to be loaded
 
         const totalBalance = includedAccounts.reduce((sum, acc) => sum + acc.balance, 0);
 
@@ -176,7 +176,7 @@ export default function DashboardPage() {
       
         setForecastedBalance(totalIncome - totalExpenses);
 
-    }, [includedTransactions, includedAccounts]);
+    }, [includedTransactions, includedAccounts, isLoading]);
 
 
   const monthlyNetBalance = useMemo(() => {
@@ -200,10 +200,6 @@ export default function DashboardPage() {
   }, [creditCards, transactions]);
   
   const balanceChartData = useMemo(() => {
-    if (includedTransactions.length === 0 && previousMonthLeftover === 0) {
-      return [];
-    }
-
     const { startDate, endDate } = getMonthDateRange(selectedDate);
 
     const monthTransactions = includedTransactions
@@ -227,6 +223,7 @@ export default function DashboardPage() {
     const sortedDays = Object.keys(dailyChanges).sort();
 
     let lastBalance = previousMonthLeftover || 0;
+    
     const chartData = sortedDays.map((dayKey) => {
       lastBalance += dailyChanges[dayKey];
       return {
@@ -234,14 +231,6 @@ export default function DashboardPage() {
         Saldo: lastBalance,
       };
     });
-
-    // Add initial point if there are transactions, or if there's a leftover balance
-    if (chartData.length > 0 || previousMonthLeftover !== 0) {
-      chartData.unshift({
-        date: "Dia 0",
-        Saldo: previousMonthLeftover || 0,
-      });
-    }
 
     return chartData;
   }, [
