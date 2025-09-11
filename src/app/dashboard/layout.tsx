@@ -451,7 +451,7 @@ function TransactionForm({
                                 <SelectItem key={acc.id} value={acc.id}>
                                     <div className="flex items-center gap-3">
                                         <BankIcon name={acc.name} />
-                                        <span>{acc.name} ({acc.balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</span>
+                                        <span>{acc.name}</span>
                                     </div>
                                 </SelectItem>
                               )) :
