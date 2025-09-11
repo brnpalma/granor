@@ -476,6 +476,9 @@ function TransactionForm({
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="w-auto">
+                                <DialogHeader>
+                                    <DialogTitle className="sr-only">Selecione uma data</DialogTitle>
+                                </DialogHeader>
                                 <Calendar mode="single" selected={date} onSelect={(newDate) => { setDate(newDate); setIsCalendarOpen(false); }} initialFocus />
                             </DialogContent>
                         </Dialog>
