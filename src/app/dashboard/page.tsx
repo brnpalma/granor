@@ -107,16 +107,6 @@ export default function DashboardPage() {
         const unsubscribers: (() => void)[] = [];
 
         unsubscribers.push(getAccounts(user.uid, (data) => {
-            const includedAccounts = data.filter(a => !a.ignoreInTotals);
-            const totalBalance = includedAccounts.reduce((sum, acc) => sum + acc.balance, 0);
-
-            const currentMonthTransactions = transactions.filter(t => t.accountId && includedAccounts.some(a => a.id === t.accountId));
-            const currentMonthIncome = currentMonthTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-            const currentMonthExpenses = currentMonthTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-
-            const startingBalance = totalBalance - currentMonthIncome + currentMonthExpenses;
-            
-            setPreviousMonthLeftover(startingBalance);
             setAccounts(data);
             dataLoaded.accounts = true;
             checkLoading();
@@ -163,18 +153,30 @@ export default function DashboardPage() {
         return () => unsubscribers.forEach(unsub => unsub());
 
     }, [user, selectedDate, getMonthDateRange]);
-
+    
     useEffect(() => {
-      const effectiveIncome = includedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-      const effectiveExpenses = includedTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-      setMonthlyIncome(effectiveIncome);
-      setMonthlyExpenses(effectiveExpenses);
+        if (includedTransactions.length === 0 && includedAccounts.length === 0) return;
 
-      const totalIncome = includedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-      const totalExpenses = includedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+        const totalBalance = includedAccounts.reduce((sum, acc) => sum + acc.balance, 0);
+
+        const currentMonthIncome = includedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+        const currentMonthExpenses = includedTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+
+        const startingBalance = totalBalance - currentMonthIncome + currentMonthExpenses;
+        
+        setPreviousMonthLeftover(startingBalance);
+
+        const effectiveIncome = includedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+        const effectiveExpenses = includedTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+        setMonthlyIncome(effectiveIncome);
+        setMonthlyExpenses(effectiveExpenses);
+
+        const totalIncome = includedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+        const totalExpenses = includedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
       
-      setForecastedBalance(totalIncome - totalExpenses);
-    }, [includedTransactions]);
+        setForecastedBalance(totalIncome - totalExpenses);
+
+    }, [includedTransactions, includedAccounts]);
 
 
   const monthlyNetBalance = useMemo(() => {
@@ -322,7 +324,7 @@ export default function DashboardPage() {
                     <span>Inicial</span>
                 </div>
                  {preferences.showBalance ? (
-                    <p className="text-sm md:text-base">{previousMonthLeftover.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                    <p className="text-sm md:text-base">{renderBalance(previousMonthLeftover)}</p>
                 ) : (
                     <div className="flex items-center justify-center gap-2 text-sm md:text-base">
                         <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -338,7 +340,7 @@ export default function DashboardPage() {
                     <span>Saldo</span>
                 </div>
                  {preferences.showBalance ? (
-                    <p className="text-lg md:text-xl font-bold">{monthlyNetBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                    <p className="text-lg md:text-xl font-bold">{renderBalance(monthlyNetBalance)}</p>
                 ) : (
                      <div className="flex items-center justify-center gap-2 text-lg md:text-xl font-bold">
                         <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -352,7 +354,7 @@ export default function DashboardPage() {
                     <span>Previsto</span>
                 </div>
                 {preferences.showBalance ? (
-                    <p className="text-sm md:text-base">{(forecastedBalance + previousMonthLeftover).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                    <p className="text-sm md:text-base">{renderBalance(forecastedBalance + previousMonthLeftover)}</p>
                 ) : (
                     <div className="flex items-center justify-center gap-2 text-sm md:text-base">
                         <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -573,5 +575,3 @@ export default function DashboardPage() {
   );
 
 }
-
-    
