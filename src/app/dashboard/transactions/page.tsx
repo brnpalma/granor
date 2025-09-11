@@ -124,6 +124,12 @@ export default function TransactionsPage() {
     return "N/A";
   }
 
+  const isTransactionIgnored = (transaction: Transaction) => {
+    if (!transaction.accountId) return false;
+    const account = accounts.find(a => a.id === transaction.accountId);
+    return account?.ignoreInTotals || false;
+  }
+
   const groupedTransactions = useMemo(() => {
     const groups: { [key: string]: Transaction[] } = {};
     transactions.forEach(t => {
@@ -179,12 +185,15 @@ export default function TransactionsPage() {
             <div key={group.date}>
                 <h2 className="text-sm font-semibold text-muted-foreground mb-2 p-2 rounded-md bg-muted/50">{group.date}</h2>
                 <div className="space-y-1">
-                    {group.transactions.map((t, transIndex) => (
+                    {group.transactions.map((t, transIndex) => {
+                      const isIgnored = isTransactionIgnored(t);
+
+                      return (
                         <div key={t.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                             <div className="relative flex flex-col items-center">
                                 {groupIndex > 0 || transIndex > 0 ? <div className="absolute top-0 h-1/2 w-0.5 bg-border -translate-y-1/2"></div> : null}
                                 <div className="z-10 bg-background">
-                                     <div className="bg-muted p-2 rounded-full">
+                                     <div className={cn("bg-muted p-2 rounded-full", isIgnored && "opacity-50")}>
                                          {t.creditCardId ? 
                                          <CreditCard className="h-5 w-5 text-muted-foreground" /> :
                                          <CategoryIcon category={t.category} className="h-5 w-5 text-muted-foreground" />
@@ -194,7 +203,7 @@ export default function TransactionsPage() {
                                 {transIndex < group.transactions.length - 1 ? <div className="absolute bottom-0 h-1/2 w-0.5 bg-border translate-y-1/2"></div> : null}
                             </div>
                             <div className="flex-1">
-                                <p className="font-medium">{t.description}</p>
+                                <p className={cn("font-medium", isIgnored && "text-muted-foreground")}>{t.description}</p>
                                 <p className="text-sm text-muted-foreground">{getSourceName(t)}</p>
                             </div>
                             <div className="flex flex-col items-end gap-1">
@@ -235,7 +244,8 @@ export default function TransactionsPage() {
                                 </DropdownMenu>
                                 <p className={cn(
                                     "font-bold text-sm",
-                                    t.type === "income" ? "text-green-500" : "text-foreground"
+                                    t.type === "income" ? "text-green-500" : "text-foreground",
+                                    isIgnored && "text-muted-foreground"
                                 )}>
                                     {t.type === "income" ? "+" : "-"}
                                     {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
@@ -245,7 +255,8 @@ export default function TransactionsPage() {
                                 )}
                             </div>
                         </div>
-                    ))}
+                      )
+                    })}
                 </div>
             </div>
         ))}
