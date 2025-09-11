@@ -22,6 +22,7 @@ export interface Account {
   name: string;
   type: AccountType;
   balance: number;
+  ignoreInTotals?: boolean;
 }
 
 export interface CreditCard {

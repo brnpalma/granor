@@ -105,8 +105,9 @@ export default function TransactionsPage() {
 
   const handleToggleEfetivado = async (transaction: Transaction) => {
       if (!user?.uid) return;
-      // We pass the original transaction data but toggle the 'efetivado' state
-      await updateTransaction(user.uid, transaction.id, { ...transaction, efetivado: !transaction.efetivado });
+      const account = accounts.find(a => a.id === transaction.accountId);
+      const isIgnored = account?.ignoreInTotals || false;
+      await updateTransaction(user.uid, transaction.id, { ...transaction, efetivado: !transaction.efetivado }, isIgnored);
       toast({ title: `Transação ${!transaction.efetivado ? 'efetivada' : 'marcada como pendente'}.` });
   }
 

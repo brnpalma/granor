@@ -68,6 +68,13 @@ export default function DashboardPage() {
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
   const [previousMonthLeftover, setPreviousMonthLeftover] = useState<number | null>(null);
   const [forecastedBalance, setForecastedBalance] = useState(0);
+  
+  const includedAccounts = useMemo(() => accounts.filter(a => !a.ignoreInTotals), [accounts]);
+  const includedAccountIds = useMemo(() => new Set(includedAccounts.map(a => a.id)), [includedAccounts]);
+  
+  const includedTransactions = useMemo(() => {
+    return transactions.filter(t => !t.accountId || includedAccountIds.has(t.accountId));
+  }, [transactions, includedAccountIds]);
 
   // Effect to calculate previous month's leftover
   useEffect(() => {
@@ -81,13 +88,14 @@ export default function DashboardPage() {
     const { startDate: prevStartDate, endDate: prevEndDate } = getMonthDateRange(prevMonthDate);
 
     const unsubPrevTransactions = getTransactions(user.uid, (data) => {
-      const prevTotalIncome = data.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-      const prevTotalExpenses = data.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+      const prevIncludedTransactions = data.filter(t => !t.accountId || includedAccountIds.has(t.accountId));
+      const prevTotalIncome = prevIncludedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+      const prevTotalExpenses = prevIncludedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
       setPreviousMonthLeftover(prevTotalIncome - prevTotalExpenses);
     }, { startDate: prevStartDate, endDate: prevEndDate });
 
     return () => unsubPrevTransactions();
-  }, [user, selectedDate, getMonthDateRange]);
+  }, [user, selectedDate, getMonthDateRange, includedAccountIds]);
 
   // Effect to calculate current month's data, dependent on previousMonthLeftover
   useEffect(() => {
@@ -134,13 +142,15 @@ export default function DashboardPage() {
     unsubscribers.push(getTransactions(user.uid, (data) => {
       setTransactions(data);
       
-      const effectiveIncome = data.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-      const effectiveExpenses = data.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+      const currentIncludedTransactions = data.filter(t => !t.accountId || includedAccountIds.has(t.accountId));
+
+      const effectiveIncome = currentIncludedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+      const effectiveExpenses = currentIncludedTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
       setMonthlyIncome(effectiveIncome);
       setMonthlyExpenses(effectiveExpenses);
       
-      const totalIncome = data.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-      const totalExpenses = data.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+      const totalIncome = currentIncludedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+      const totalExpenses = currentIncludedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
       
       setForecastedBalance(totalIncome - totalExpenses + previousMonthLeftover);
 
@@ -157,20 +167,20 @@ export default function DashboardPage() {
 
     return () => unsubscribers.forEach(unsub => unsub());
 
-  }, [user, selectedDate, getMonthDateRange, previousMonthLeftover]);
+  }, [user, selectedDate, getMonthDateRange, previousMonthLeftover, includedAccountIds]);
 
 
   const monthlyNetBalance = useMemo(() => {
     if (previousMonthLeftover === null) return 0;
-    const income = transactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-    const expenses = transactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+    const income = includedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+    const expenses = includedTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
     return previousMonthLeftover + income - expenses;
-  }, [transactions, previousMonthLeftover]);
+  }, [includedTransactions, previousMonthLeftover]);
   
 
   const totalBalance = useMemo(() => {
-    return accounts.reduce((sum, acc) => sum + acc.balance, 0);
-  }, [accounts]);
+    return includedAccounts.reduce((sum, acc) => sum + acc.balance, 0);
+  }, [includedAccounts]);
   
   const creditCardInvoices = useMemo(() => {
     return creditCards.map(card => {
@@ -183,11 +193,11 @@ export default function DashboardPage() {
   
   const balanceChartData = useMemo(() => {
     const { startDate, endDate } = getMonthDateRange(selectedDate);
-    if (transactions.length === 0 && (previousMonthLeftover === null || previousMonthLeftover === 0)) return [];
+    if (includedTransactions.length === 0 && (previousMonthLeftover === null || previousMonthLeftover === 0)) return [];
   
     const daysInMonth = eachDayOfInterval({ start: startDate, end: endDate });
   
-    const monthTransactions = transactions
+    const monthTransactions = includedTransactions
       .filter(t => t.accountId && t.efetivado)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
     
@@ -214,7 +224,7 @@ export default function DashboardPage() {
         };
     }).filter(Boolean);
 
-  }, [transactions, selectedDate, getMonthDateRange, previousMonthLeftover]);
+  }, [includedTransactions, selectedDate, getMonthDateRange, previousMonthLeftover]);
 
   const chartColors = useMemo(() => {
     const isPositive = monthlyNetBalance >= 0;
@@ -225,7 +235,7 @@ export default function DashboardPage() {
   }, [monthlyNetBalance]);
   
   const getBudgetSpentAmount = (category: string) => {
-    return transactions
+    return includedTransactions
       .filter((t) => t.type === 'expense' && t.category === category)
       .reduce((sum, t) => sum + t.amount, 0);
   };
@@ -233,13 +243,13 @@ export default function DashboardPage() {
   const expensesByCategory = useMemo(() => {
     const expenseCategories = categories.filter(c => c.type === 'expense');
     return expenseCategories.map(category => {
-        const total = transactions
+        const total = includedTransactions
             .filter(t => t.type === 'expense' && t.category === category.name)
             .reduce((sum, t) => sum + t.amount, 0);
         return { name: category.name, value: total };
     }).filter(c => c.value > 0)
     .sort((a,b) => b.value - a.value);
-  }, [transactions, categories]);
+  }, [includedTransactions, categories]);
 
   const totalExpenses = useMemo(() => {
     return expensesByCategory.reduce((sum, i) => sum + i.value, 0);
@@ -506,5 +516,3 @@ export default function DashboardPage() {
   );
 
 }
-
-    

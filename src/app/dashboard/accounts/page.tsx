@@ -45,6 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { addAccount, getAccounts, deleteAccount, updateAccount } from "@/lib/firestore";
 import type { Account, AccountType } from "@/lib/types";
 import { accountTypes } from "@/lib/types";
@@ -131,7 +132,7 @@ export default function AccountsPage() {
             <Card>
               <CardContent className="p-0">
                 {accounts.map(account => (
-                    <div key={account.id} className="flex items-center gap-4 p-2 border-b last:border-b-0">
+                    <div key={account.id} className="flex items-center gap-4 p-2.5 border-b last:border-b-0">
                         <BankIcon name={account.name} />
                         <div className="flex-1">
                             <p className="text-xs text-muted-foreground">{account.type}</p>
@@ -195,6 +196,7 @@ function AccountForm({
     const [name, setName] = useState("");
     const [type, setType] = useState<AccountType | "">("");
     const [balance, setBalance] = useState("");
+    const [ignoreInTotals, setIgnoreInTotals] = useState(false);
     const { toast } = useToast();
     
     const isEditing = !!account;
@@ -204,10 +206,12 @@ function AccountForm({
             setName(account.name);
             setType(account.type);
             setBalance(String(account.balance));
+            setIgnoreInTotals(account.ignoreInTotals || false);
         } else {
             setName("");
             setType("");
             setBalance("");
+            setIgnoreInTotals(false);
         }
     }, [account, isEditing]);
 
@@ -222,6 +226,7 @@ function AccountForm({
             name,
             type: type as AccountType,
             balance: parseFloat(balance) || 0,
+            ignoreInTotals,
         }, account?.id);
 
         onSubmitted();
@@ -253,6 +258,10 @@ function AccountForm({
                 <div className="space-y-2">
                     <Label htmlFor="balance">{isEditing ? "Saldo" : "Saldo Inicial (Opcional)"}</Label>
                     <Input id="balance" type="number" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0,00" />
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Switch id="ignoreInTotals" checked={ignoreInTotals} onCheckedChange={setIgnoreInTotals} />
+                    <Label htmlFor="ignoreInTotals">Ignorar nos totais</Label>
                 </div>
                 <DialogFooter>
                     <Button type="submit">{isEditing ? "Salvar Alterações" : "Adicionar"}</Button>

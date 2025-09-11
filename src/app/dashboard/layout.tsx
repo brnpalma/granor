@@ -301,12 +301,15 @@ function TransactionDialog() {
 
     const handleFormSubmit = async (transaction: Omit<Transaction, "id">, transactionId?: string) => {
         if (!user?.uid) return;
+        
+        const account = accounts.find(a => a.id === transaction.accountId);
+        const isIgnored = account?.ignoreInTotals || false;
 
         if (transactionId) {
-            await updateTransaction(user.uid, transactionId, transaction);
+            await updateTransaction(user.uid, transactionId, transaction, isIgnored);
             toast({ title: "Transação atualizada!" });
         } else {
-            await addTransaction(user.uid, transaction);
+            await addTransaction(user.uid, transaction, isIgnored);
             toast({ title: "Transação adicionada!" });
         }
     };
@@ -418,7 +421,7 @@ function TransactionForm({
     }
 
     return (
-        <DialogContent onInteractOutside={(e) => e.preventDefault()}>
+        <DialogContent onInteractOutside={(e) => { if(isCalendarOpen) e.preventDefault() }}>
             <DialogHeader>
                 <DialogTitle>{isEditing ? "Editar Transação" : "Adicionar Nova Transação"}</DialogTitle>
             </DialogHeader>
