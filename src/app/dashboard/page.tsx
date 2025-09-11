@@ -30,7 +30,7 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { useDate } from "@/hooks/use-date";
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, subMonths } from 'date-fns';
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, subMonths, startOfDay } from 'date-fns';
 import { cn } from "@/lib/utils";
 
 
@@ -88,16 +88,13 @@ export default function DashboardPage() {
         setIsLoading(true);
 
         const { startDate, endDate } = getMonthDateRange(selectedDate);
-        const prevMonthDate = subMonths(selectedDate, 1);
-        const { startDate: prevStartDate, endDate: prevEndDate } = getMonthDateRange(prevMonthDate);
-
+        
         let dataLoaded = {
             accounts: false,
             creditCards: false,
             budgets: false,
             categories: false,
             transactions: false,
-            prevTransactions: false,
             preferences: false,
         };
 
@@ -110,6 +107,16 @@ export default function DashboardPage() {
         const unsubscribers: (() => void)[] = [];
 
         unsubscribers.push(getAccounts(user.uid, (data) => {
+            const includedAccounts = data.filter(a => !a.ignoreInTotals);
+            const totalBalance = includedAccounts.reduce((sum, acc) => sum + acc.balance, 0);
+
+            const currentMonthTransactions = transactions.filter(t => t.accountId && includedAccounts.some(a => a.id === t.accountId));
+            const currentMonthIncome = currentMonthTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+            const currentMonthExpenses = currentMonthTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+
+            const startingBalance = totalBalance - currentMonthIncome + currentMonthExpenses;
+            
+            setPreviousMonthLeftover(startingBalance);
             setAccounts(data);
             dataLoaded.accounts = true;
             checkLoading();
@@ -145,18 +152,6 @@ export default function DashboardPage() {
             dataLoaded.transactions = true;
             checkLoading();
         }, { startDate, endDate }));
-
-        // Fetch previous month transactions
-        unsubscribers.push(getTransactions(user.uid, (data) => {
-            const localAccounts = accounts; // Use a local copy to avoid dependency issue
-            const prevIncludedAccountIds = new Set(localAccounts.filter(a => !a.ignoreInTotals).map(a => a.id));
-            const prevIncludedTransactions = data.filter(t => !t.accountId || prevIncludedAccountIds.has(t.accountId));
-            const prevTotalIncome = prevIncludedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-            const prevTotalExpenses = prevIncludedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-            setPreviousMonthLeftover(prevTotalIncome - prevTotalExpenses);
-            dataLoaded.prevTransactions = true;
-            checkLoading();
-        }, { startDate: prevStartDate, endDate: prevEndDate }));
 
         const timer = setTimeout(() => {
             if (Object.values(dataLoaded).some(v => !v)) {
@@ -203,39 +198,43 @@ export default function DashboardPage() {
   }, [creditCards, transactions]);
   
   const balanceChartData = useMemo(() => {
-    const { startDate, endDate } = getMonthDateRange(selectedDate);
-    if (includedTransactions.length === 0 && (previousMonthLeftover === null || previousMonthLeftover === 0)) return [];
-  
-    const daysInMonth = eachDayOfInterval({ start: startDate, end: endDate });
-  
+    if (includedTransactions.length === 0 && previousMonthLeftover === 0) {
+        return [];
+    }
+
     const monthTransactions = includedTransactions
-      .filter(t => t.accountId && t.efetivado)
-      .sort((a, b) => a.date.getTime() - b.date.getTime());
-    
-    const dailyBalances: { [key: string]: number } = {};
+        .filter(t => t.accountId && t.efetivado)
+        .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    const dailyChanges: { [key: string]: number } = {};
 
     monthTransactions.forEach(t => {
-      const day = format(t.date, 'dd/MM');
-      const change = t.type === 'income' ? t.amount : -t.amount;
-      dailyBalances[day] = (dailyBalances[day] || 0) + change;
+        const dayKey = format(startOfDay(t.date), 'yyyy-MM-dd');
+        const change = t.type === 'income' ? t.amount : -t.amount;
+        dailyChanges[dayKey] = (dailyChanges[dayKey] || 0) + change;
     });
 
+    const sortedDays = Object.keys(dailyChanges).sort();
+    
     let lastBalance = previousMonthLeftover || 0;
-    return daysInMonth.map(day => {
-        const dayKey = format(day, 'dd/MM');
-        if (dailyBalances[dayKey] !== undefined) {
-            lastBalance += dailyBalances[dayKey];
-        }
-         if (selectedDate.getMonth() === new Date().getMonth() && selectedDate.getFullYear() === new Date().getFullYear() && day > new Date()) {
-            return null;
-        }
+    const chartData = sortedDays.map(dayKey => {
+        lastBalance += dailyChanges[dayKey];
         return {
-            date: dayKey,
+            date: format(new Date(dayKey), 'dd/MM'),
             Saldo: lastBalance,
         };
-    }).filter(Boolean);
+    });
 
-  }, [includedTransactions, selectedDate, getMonthDateRange, previousMonthLeftover]);
+    // Add initial point if there are transactions, or if there's a leftover balance
+    if (chartData.length > 0 || previousMonthLeftover !== 0) {
+        chartData.unshift({
+            date: "Dia 0",
+            Saldo: previousMonthLeftover || 0
+        });
+    }
+    
+    return chartData;
+  }, [includedTransactions, previousMonthLeftover]);
 
   const chartColors = useMemo(() => {
     const isPositive = monthlyNetBalance >= 0;
@@ -286,16 +285,16 @@ export default function DashboardPage() {
     );
   }
   
-  const renderBalance = (value: number, className?: string) => {
+  const renderBalance = (value: number) => {
     if (!preferences.showBalance) {
         return (
-            <div className={cn("flex items-center justify-center gap-2", className)}>
+            <div className="flex items-center justify-center gap-2">
                 <EyeOff className="h-4 w-4 text-muted-foreground" />
                 <span className="font-mono">---</span>
             </div>
         )
     }
-    return <span className={className}>{value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>;
+    return <span>{value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>;
   }
 
   return (
@@ -409,7 +408,9 @@ export default function DashboardPage() {
                         <div className="flex-1">
                             <p className={cn("font-bold uppercase", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
                         </div>
-                        {renderBalance(account.balance, cn("font-bold", account.ignoreInTotals && "text-muted-foreground"))}
+                        <div className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>
+                            {renderBalance(account.balance)}
+                        </div>
                          <Button variant="ghost" size="icon" className="text-muted-foreground"><MoreVertical className="h-5 w-5" /></Button>
                     </div>
                 ))}
@@ -455,7 +456,7 @@ export default function DashboardPage() {
                             <div className="text-right">
                                 <div className="flex items-center justify-end gap-2 font-bold">
                                     {isClosed ? <Lock className="h-4 w-4 text-red-500" /> : <CheckCircle className="h-4 w-4 text-green-500" />}
-                                    <span>{renderBalance(card.invoiceTotal)}</span>
+                                    {renderBalance(card.invoiceTotal)}
                                 </div>
                                 <p className="text-sm text-muted-foreground">{dueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}</p>
                             </div>
@@ -556,5 +557,7 @@ export default function DashboardPage() {
   );
 
 }
+
+    
 
     
