@@ -177,7 +177,7 @@ export default function AccountsPage() {
                                     </AlertDialog>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                           <p className={cn("font-bold text-sm mt-1", account.ignoreInTotals && "text-muted-foreground")}>{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                           <p className={cn("font-bold text-sm mt-1", account.ignoreInTotals && "text-muted-foreground")}>{(typeof account.balance === 'number' ? account.balance : 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                         </div>
                     </div>
                 ))}
