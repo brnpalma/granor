@@ -133,19 +133,6 @@ export default function DashboardPage() {
         // Fetch current month transactions
         unsubscribers.push(getTransactions(user.uid, (data) => {
             setTransactions(data);
-            const currentIncludedTransactions = data.filter(t => !t.accountId || new Set(accounts.filter(a => !a.ignoreInTotals).map(a => a.id)).has(t.accountId));
-
-            const effectiveIncome = currentIncludedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-            const effectiveExpenses = currentIncludedTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-            setMonthlyIncome(effectiveIncome);
-            setMonthlyExpenses(effectiveExpenses);
-            
-            const totalIncome = currentIncludedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-            const totalExpenses = currentIncludedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-            
-            // We need previous month leftover to calculate this, so it might be slightly delayed
-            setForecastedBalance(totalIncome - totalExpenses);
-
             dataLoaded.transactions = true;
             checkLoading();
         }, { startDate, endDate }));
@@ -169,7 +156,19 @@ export default function DashboardPage() {
 
         return () => unsubscribers.forEach(unsub => unsub());
 
-    }, [user, selectedDate, getMonthDateRange, accounts]);
+    }, [user, selectedDate, getMonthDateRange]);
+
+    useEffect(() => {
+      const effectiveIncome = includedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+      const effectiveExpenses = includedTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
+      setMonthlyIncome(effectiveIncome);
+      setMonthlyExpenses(effectiveExpenses);
+
+      const totalIncome = includedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+      const totalExpenses = includedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+      
+      setForecastedBalance(totalIncome - totalExpenses);
+    }, [includedTransactions]);
 
 
   const monthlyNetBalance = useMemo(() => {
