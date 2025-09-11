@@ -32,7 +32,9 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap"
           rel="stylesheet"
         />
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon/favicon16.png" sizes="16x16" type="image/png" />
+        <link rel="icon" href="/favicon/favicon32.png" sizes="32x32" type="image/png" />
+        <link rel="icon" href="/favicon/favicon48.png" sizes="48x48" type="image/png" />
       </head>
       <body className={cn("font-body antialiased")}>
         <ThemeProvider
