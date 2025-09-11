@@ -148,6 +148,11 @@ function Header() {
     const { selectedDate, goToNextMonth, goToPreviousMonth } = useDate();
     const [formattedDate, setFormattedDate] = useState('');
     const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true });
+    
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const handleLinkClick = () => {
+        setMobileMenuOpen(false);
+    }
 
     useEffect(() => {
         if (!user?.uid) return;
@@ -180,7 +185,22 @@ function Header() {
 
 
     return (
-        <div className="relative flex w-full items-center justify-center">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-center border-b border-border bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 relative">
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                    <Button size="icon" variant="outline" className="sm:hidden bg-transparent border-0 hover:bg-gray-700 absolute left-4">
+                        <Menu className="h-5 w-5" />
+                        <span className="sr-only">Alternar Menu</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-60 p-0 bg-background border-r-border">
+                    <SheetHeader>
+                        <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
+                    </SheetHeader>
+                    <SidebarContent onLinkClick={handleLinkClick} />
+                </SheetContent>
+            </Sheet>
+
             <div className="flex items-center justify-center gap-2">
                 <Button variant="ghost" size="icon" className="hover:bg-gray-700" onClick={goToPreviousMonth}>
                     <ChevronLeft className="h-5 w-5" />
@@ -190,7 +210,8 @@ function Header() {
                     <ChevronRight className="h-5 w-5" />
                 </Button>
             </div>
-            <div className="absolute right-0">
+
+            <div className="absolute right-4">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="hover:bg-gray-700">
@@ -212,12 +233,11 @@ function Header() {
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
-        </div>
+        </header>
     );
 }
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const pathname = usePathname();
     const { openDialog } = useTransactionDialog();
@@ -230,35 +250,13 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         return () => clearTimeout(timer);
     }, [pathname]);
 
-    const handleLinkClick = () => {
-        setMobileMenuOpen(false);
-    }
-
     return (
         <div className="flex min-h-screen w-full flex-col bg-background">
             <aside className="fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r border-border bg-background sm:flex">
                 <SidebarContent onLinkClick={() => { }} />
             </aside>
             <div className="flex flex-col sm:pl-60">
-                <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-border bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-                    <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                        <SheetTrigger asChild>
-                            <Button size="icon" variant="outline" className="sm:hidden bg-transparent border-0 hover:bg-gray-700">
-                                <Menu className="h-5 w-5" />
-                                <span className="sr-only">Alternar Menu</span>
-                            </Button>
-                        </SheetTrigger>
-                        <SheetContent side="left" className="w-60 p-0 bg-background border-r-border">
-                            <SheetHeader>
-                                <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
-                            </SheetHeader>
-                            <SidebarContent onLinkClick={handleLinkClick} />
-                        </SheetContent>
-                    </Sheet>
-
-                    <Header />
-
-                </header>
+                <Header />
                 <main className="flex-1 p-4 sm:p-6 pb-24">
                     <TransactionDialog />
                     {isLoading ? (
@@ -575,5 +573,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </DateProvider>
     );
 }
+
+    
 
     
