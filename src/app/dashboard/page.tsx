@@ -65,6 +65,7 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true });
   const [isLoading, setIsLoading] = useState(true);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
@@ -157,15 +158,19 @@ export default function DashboardPage() {
     // Effect to calculate previous month balance
     useEffect(() => {
         if (!user?.uid) return;
+        setIsBalanceLoading(true);
 
         const previousMonth = subMonths(selectedDate, 1);
         const { startDate, endDate } = getMonthDateRange(previousMonth);
         
         getTransactionsOnce(user.uid, { startDate, endDate }).then(prevMonthTransactions => {
             const balance = prevMonthTransactions.reduce((acc, t) => {
-                return t.type === 'income' ? acc + t.amount : acc - t.amount;
+                 if (t.type === 'income') return acc + t.amount;
+                 if (t.type === 'expense') return acc - t.amount;
+                 return acc;
             }, 0);
             setPreviousMonthLeftover(balance);
+            setIsBalanceLoading(false);
         });
 
     }, [user, selectedDate, getMonthDateRange]);
@@ -317,14 +322,7 @@ export default function DashboardPage() {
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Inicial</span>
                 </div>
-                 {preferences.showBalance ? (
-                    <p className="text-sm md:text-base">{renderBalance(previousMonthLeftover)}</p>
-                ) : (
-                    <div className="flex items-center justify-center gap-2 text-sm md:text-base">
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-mono">---</span>
-                    </div>
-                )}
+                 {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : <p className="text-sm md:text-base">{renderBalance(previousMonthLeftover)}</p>}
             </div>
             <div className="flex-shrink-0 flex flex-col items-center gap-1">
                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
@@ -333,28 +331,14 @@ export default function DashboardPage() {
                     </div>
                     <span>Saldo</span>
                 </div>
-                 {preferences.showBalance ? (
-                    <p className="text-lg md:text-xl font-bold">{renderBalance(monthlyNetBalance)}</p>
-                ) : (
-                     <div className="flex items-center justify-center gap-2 text-lg md:text-xl font-bold">
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-mono">---</span>
-                    </div>
-                )}
+                 {isBalanceLoading ? <Skeleton className="h-7 w-28" /> : <p className="text-lg md:text-xl font-bold">{renderBalance(monthlyNetBalance)}</p>}
             </div>
             <div className="flex-1 flex flex-col items-center gap-1">
                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4"/>
                     <span>Previsto</span>
                 </div>
-                {preferences.showBalance ? (
-                    <p className="text-sm md:text-base">{renderBalance(forecastedBalance + previousMonthLeftover)}</p>
-                ) : (
-                    <div className="flex items-center justify-center gap-2 text-sm md:text-base">
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-mono">---</span>
-                    </div>
-                )}
+                {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : <p className="text-sm md:text-base">{renderBalance(forecastedBalance + previousMonthLeftover)}</p>}
             </div>
         </div>
 
@@ -570,4 +554,3 @@ export default function DashboardPage() {
 
 }
 
-    
