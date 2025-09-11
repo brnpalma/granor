@@ -131,7 +131,7 @@ export default function AccountsPage() {
             <Card>
               <CardContent className="p-0">
                 {accounts.map(account => (
-                    <div key={account.id} className="flex items-center gap-4 p-4 border-b last:border-b-0">
+                    <div key={account.id} className="flex items-center gap-4 p-3 border-b last:border-b-0">
                         <BankIcon name={account.name} />
                         <div className="flex-1">
                             <p className="text-xs text-muted-foreground">{account.type}</p>
