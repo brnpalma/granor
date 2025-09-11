@@ -155,7 +155,7 @@ export default function DashboardPage() {
     }, [user, selectedDate, getMonthDateRange]);
     
     useEffect(() => {
-        if (isLoading) return; // Wait for data to be loaded
+        if (isLoading || accounts.length === 0) return;
 
         const totalBalance = includedAccounts.reduce((sum, acc) => sum + acc.balance, 0);
 
@@ -176,7 +176,7 @@ export default function DashboardPage() {
       
         setForecastedBalance(totalIncome - totalExpenses);
 
-    }, [includedTransactions, includedAccounts, isLoading]);
+    }, [includedTransactions, includedAccounts, accounts, isLoading]);
 
 
   const monthlyNetBalance = useMemo(() => {
@@ -242,12 +242,11 @@ export default function DashboardPage() {
   ]);
 
   const chartColors = useMemo(() => {
-    const isPositive = monthlyNetBalance >= previousMonthLeftover;
     return {
-        stroke: isPositive ? '#22c55e' : '#ef4444', // green-500 or red-500
-        fill: isPositive ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'
+        stroke: 'hsl(var(--primary))',
+        fill: 'hsl(var(--primary))'
     };
-  }, [monthlyNetBalance, previousMonthLeftover]);
+  }, []);
   
   const getBudgetSpentAmount = (category: string) => {
     return includedTransactions
@@ -362,7 +361,7 @@ export default function DashboardPage() {
                 >
                 <defs>
                     <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={chartColors.fill} stopOpacity={0.8}/>
+                        <stop offset="5%" stopColor={chartColors.fill} stopOpacity={0.4}/>
                         <stop offset="95%" stopColor={chartColors.fill} stopOpacity={0}/>
                     </linearGradient>
                 </defs>
@@ -431,7 +430,7 @@ export default function DashboardPage() {
                     </div>
                     <div>
                         <div className="font-bold text-right">{renderBalance(totalBalance)}</div>
-                        <div className="text-sm text-muted-foreground text-right">{renderBalance(forecastedBalance - totalExpenses)}</div>
+                        <div className="text-sm text-muted-foreground text-right">{renderBalance(forecastedBalance + previousMonthLeftover)}</div>
                     </div>
                     <div className="w-10"></div>
                 </div>
@@ -565,3 +564,5 @@ export default function DashboardPage() {
   );
 
 }
+
+    
