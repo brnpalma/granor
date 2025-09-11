@@ -52,6 +52,7 @@ import { accountTypes } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { BankIcon } from "@/components/icons";
+import { cn } from "@/lib/utils";
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -133,10 +134,12 @@ export default function AccountsPage() {
               <CardContent className="p-0">
                 {accounts.map(account => (
                     <div key={account.id} className="flex items-center gap-4 p-2.5 border-b last:border-b-0">
-                        <BankIcon name={account.name} />
+                        <div className={cn(account.ignoreInTotals && "opacity-50")}>
+                          <BankIcon name={account.name} />
+                        </div>
                         <div className="flex-1">
                             <p className="text-xs text-muted-foreground">{account.type}</p>
-                            <p className="font-bold uppercase">{account.name}</p>
+                            <p className={cn("font-bold uppercase", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
                         </div>
                         <div className="text-right">
                             <DropdownMenu>
@@ -172,7 +175,7 @@ export default function AccountsPage() {
                                     </AlertDialog>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                           <p className="font-bold text-sm mt-1">{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                           <p className={cn("font-bold text-sm mt-1", account.ignoreInTotals && "text-muted-foreground")}>{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                         </div>
                     </div>
                 ))}

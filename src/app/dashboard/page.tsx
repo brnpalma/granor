@@ -31,6 +31,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { useDate } from "@/hooks/use-date";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, subMonths } from 'date-fns';
+import { cn } from "@/lib/utils";
 
 
 const BankIcon = ({ name }: { name: string }) => {
@@ -139,7 +140,9 @@ export default function DashboardPage() {
 
         // Fetch previous month transactions
         unsubscribers.push(getTransactions(user.uid, (data) => {
-            const prevIncludedTransactions = data.filter(t => !t.accountId || new Set(accounts.filter(a => !a.ignoreInTotals).map(a => a.id)).has(t.accountId));
+            const localAccounts = accounts; // Use a local copy to avoid dependency issue
+            const prevIncludedAccountIds = new Set(localAccounts.filter(a => !a.ignoreInTotals).map(a => a.id));
+            const prevIncludedTransactions = data.filter(t => !t.accountId || prevIncludedAccountIds.has(t.accountId));
             const prevTotalIncome = prevIncludedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
             const prevTotalExpenses = prevIncludedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
             setPreviousMonthLeftover(prevTotalIncome - prevTotalExpenses);
@@ -365,11 +368,13 @@ export default function DashboardPage() {
               <CardContent className="p-2 space-y-4">
                 {accounts.map(account => (
                     <div key={account.id} className="flex items-center gap-4">
-                        <BankIcon name={account.name} />
-                        <div className="flex-1">
-                            <p className="font-bold uppercase">{account.name}</p>
+                        <div className={cn(account.ignoreInTotals && "opacity-50")}>
+                            <BankIcon name={account.name} />
                         </div>
-                        <p className="font-bold">{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                        <div className="flex-1">
+                            <p className={cn("font-bold uppercase", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
+                        </div>
+                        <p className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                          <Button variant="ghost" size="icon" className="text-muted-foreground"><MoreVertical className="h-5 w-5" /></Button>
                     </div>
                 ))}

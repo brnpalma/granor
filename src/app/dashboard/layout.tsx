@@ -453,8 +453,10 @@ function TransactionForm({
                               accounts.map(acc => (
                                 <SelectItem key={acc.id} value={acc.id}>
                                     <div className="flex items-center gap-3">
-                                        <BankIcon name={acc.name} />
-                                        <span>{acc.name}</span>
+                                        <div className={cn(acc.ignoreInTotals && "opacity-50")}>
+                                            <BankIcon name={acc.name} />
+                                        </div>
+                                        <span className={cn(acc.ignoreInTotals && "text-muted-foreground")}>{acc.name}</span>
                                     </div>
                                 </SelectItem>
                               )) :
