@@ -35,6 +35,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon/favicon16.png" sizes="16x16" type="image/png" />
         <link rel="icon" href="/favicon/favicon32.png" sizes="32x32" type="image/png" />
         <link rel="icon" href="/favicon/favicon48.png" sizes="48x48" type="image/png" />
+        <link rel="apple-touch-icon" href="/icone/icone180.png"></link>
       </head>
       <body className={cn("font-body antialiased")}>
         <ThemeProvider
