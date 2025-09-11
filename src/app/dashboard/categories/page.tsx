@@ -208,10 +208,7 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-         <div>
-            <h1 className="text-2xl font-bold">Categorias</h1>
-            <p className="text-muted-foreground">{selectedDate.toLocaleString('pt-BR', { month: 'long' })}</p>
-         </div>
+        <h1 className="text-2xl font-bold">Categorias</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
                 <Button>
@@ -299,4 +296,3 @@ function CategoryForm({
         </DialogContent>
     );
 }
-
