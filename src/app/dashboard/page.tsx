@@ -286,16 +286,16 @@ export default function DashboardPage() {
     );
   }
   
-  const renderBalance = (value: number) => {
+  const renderBalance = (value: number, className?: string) => {
     if (!preferences.showBalance) {
         return (
-            <div className="flex items-center gap-2">
+            <div className={cn("flex items-center justify-center gap-2", className)}>
                 <EyeOff className="h-4 w-4 text-muted-foreground" />
                 <span className="font-mono">---</span>
             </div>
         )
     }
-    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return <span className={className}>{value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>;
   }
 
   return (
@@ -306,9 +306,7 @@ export default function DashboardPage() {
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Inicial</span>
                 </div>
-                <p className="text-sm md:text-base">
-                    {renderBalance(previousMonthLeftover)}
-                </p>
+                {renderBalance(previousMonthLeftover, "text-sm md:text-base")}
             </div>
             <div className="flex-shrink-0 flex flex-col items-center gap-1">
                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
@@ -317,18 +315,14 @@ export default function DashboardPage() {
                     </div>
                     <span>Saldo</span>
                 </div>
-                <p className="text-lg md:text-xl font-bold">
-                    {renderBalance(monthlyNetBalance)}
-                </p>
+                {renderBalance(monthlyNetBalance, "text-lg md:text-xl font-bold")}
             </div>
             <div className="flex-1 flex flex-col items-center gap-1">
                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4"/>
                     <span>Previsto *</span>
                 </div>
-                <p className="text-sm md:text-base">
-                    {renderBalance(forecastedBalance + previousMonthLeftover)}
-                </p>
+                {renderBalance(forecastedBalance + previousMonthLeftover, "text-sm md:text-base")}
             </div>
         </div>
 
@@ -394,7 +388,7 @@ export default function DashboardPage() {
                         <div className="flex-1">
                             <p className={cn("font-bold uppercase", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
                         </div>
-                        <p className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>{renderBalance(account.balance)}</p>
+                        {renderBalance(account.balance, cn("font-bold", account.ignoreInTotals && "text-muted-foreground"))}
                          <Button variant="ghost" size="icon" className="text-muted-foreground"><MoreVertical className="h-5 w-5" /></Button>
                     </div>
                 ))}
@@ -406,8 +400,8 @@ export default function DashboardPage() {
                          <p className="text-sm text-muted-foreground">Previsto</p>
                     </div>
                     <div>
-                        <p className="font-bold text-right">{renderBalance(totalBalance)}</p>
-                         <p className="text-sm text-muted-foreground text-right">{renderBalance(0)}</p>
+                        <div className="font-bold text-right">{renderBalance(totalBalance)}</div>
+                        <div className="text-sm text-muted-foreground text-right">{renderBalance(0)}</div>
                     </div>
                     <div className="w-10"></div>
                 </div>
@@ -476,7 +470,7 @@ export default function DashboardPage() {
                                     <div className="flex-1">
                                         <div className="flex justify-between items-center">
                                             <p className="font-medium">{budget.category}</p>
-                                            <p className="text-sm font-medium">{renderBalance(spent)}</p>
+                                            <div className="text-sm font-medium">{renderBalance(spent)}</div>
                                         </div>
                                         <div className="flex justify-between items-center">
                                              <p className="text-xs text-muted-foreground">de {budget.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
@@ -529,7 +523,7 @@ export default function DashboardPage() {
                             </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
-                            <p className="text-2xl font-bold">{renderBalance(totalExpenses)}</p>
+                           <div className="text-2xl font-bold">{renderBalance(totalExpenses)}</div>
                             <p className="text-sm text-muted-foreground">Total de Despesas</p>
                         </div>
                     </div>
