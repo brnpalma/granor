@@ -141,15 +141,6 @@ export default function CategoriesPage() {
       });
     return incomeMap;
   }, [transactions]);
-  
-  const totalExpenses = useMemo(() => {
-    return Array.from(categoryExpenses.values()).reduce((sum, amount) => sum + amount, 0);
-  }, [categoryExpenses]);
-
-  const totalIncomes = useMemo(() => {
-    return Array.from(categoryIncomes.values()).reduce((sum, amount) => sum + amount, 0);
-  }, [categoryIncomes]);
-
 
   if (isLoading) {
     return (
@@ -222,10 +213,10 @@ export default function CategoriesPage() {
        <Tabs defaultValue="expenses" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="expenses">
-                  Despesas ({totalExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})
+                  Despesas
                 </TabsTrigger>
                 <TabsTrigger value="incomes">
-                  Receitas ({totalIncomes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})
+                  Receitas
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="expenses">
