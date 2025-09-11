@@ -180,8 +180,7 @@ function Header() {
 
 
     return (
-        <div className="flex w-full items-center justify-between gap-2">
-            <div className="flex-1"></div>
+        <div className="relative flex w-full items-center justify-center">
             <div className="flex items-center justify-center gap-2">
                 <Button variant="ghost" size="icon" className="hover:bg-gray-700" onClick={goToPreviousMonth}>
                     <ChevronLeft className="h-5 w-5" />
@@ -191,7 +190,7 @@ function Header() {
                     <ChevronRight className="h-5 w-5" />
                 </Button>
             </div>
-            <div className="flex-1 flex justify-end">
+            <div className="absolute right-0">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="hover:bg-gray-700">
