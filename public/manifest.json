@@ -21,6 +21,11 @@
       "src": "/icone/icone512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icone/iconeTransp550.png",
+      "sizes": "550x550",
+      "type": "image/png"
     }
   ]
 }
