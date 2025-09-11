@@ -20,11 +20,11 @@ import {
 } from "@/components/ui/chart";
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Pie, PieChart, Cell, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, MoreVertical, Search, CheckCircle, Clock, Lock } from 'lucide-react';
+import { ExternalLink, MoreVertical, Search, CheckCircle, Clock, Lock, EyeOff } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
-import { getAccounts, getCreditCards, getBudgets, getTransactions, addCategory, getCategories } from "@/lib/firestore";
-import type { Account, CreditCard as CreditCardType, Budget, Transaction, Category } from "@/lib/types";
+import { getAccounts, getCreditCards, getBudgets, getTransactions, addCategory, getCategories, getUserPreferences } from "@/lib/firestore";
+import type { Account, CreditCard as CreditCardType, Budget, Transaction, Category, UserPreferences } from "@/lib/types";
 import { CategoryIcon, ItauLogo, NubankLogo, PicpayLogo, MercadoPagoLogo, BradescoLogo } from "@/components/icons";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -63,6 +63,7 @@ export default function DashboardPage() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true });
   const [isLoading, setIsLoading] = useState(true);
   
   const [monthlyIncome, setMonthlyIncome] = useState(0);
@@ -96,7 +97,8 @@ export default function DashboardPage() {
             budgets: false,
             categories: false,
             transactions: false,
-            prevTransactions: false
+            prevTransactions: false,
+            preferences: false,
         };
 
         const checkLoading = () => {
@@ -128,6 +130,12 @@ export default function DashboardPage() {
         unsubscribers.push(getCategories(user.uid, (data) => {
             setCategories(data);
             dataLoaded.categories = true;
+            checkLoading();
+        }));
+        
+        unsubscribers.push(getUserPreferences(user.uid, (data) => {
+            setPreferences(data);
+            dataLoaded.preferences = true;
             checkLoading();
         }));
 
@@ -277,6 +285,18 @@ export default function DashboardPage() {
         </div>
     );
   }
+  
+  const renderBalance = (value: number) => {
+    if (!preferences.showBalance) {
+        return (
+            <div className="flex items-center gap-2">
+                <EyeOff className="h-4 w-4 text-muted-foreground" />
+                <span className="font-mono">---</span>
+            </div>
+        )
+    }
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
 
   return (
     <div className="space-y-6">
@@ -287,7 +307,7 @@ export default function DashboardPage() {
                     <span>Inicial</span>
                 </div>
                 <p className="text-sm md:text-base">
-                    {(previousMonthLeftover ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {renderBalance(previousMonthLeftover)}
                 </p>
             </div>
             <div className="flex-shrink-0 flex flex-col items-center gap-1">
@@ -298,7 +318,7 @@ export default function DashboardPage() {
                     <span>Saldo</span>
                 </div>
                 <p className="text-lg md:text-xl font-bold">
-                    {monthlyNetBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {renderBalance(monthlyNetBalance)}
                 </p>
             </div>
             <div className="flex-1 flex flex-col items-center gap-1">
@@ -307,7 +327,7 @@ export default function DashboardPage() {
                     <span>Previsto *</span>
                 </div>
                 <p className="text-sm md:text-base">
-                    {(forecastedBalance + previousMonthLeftover).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {renderBalance(forecastedBalance + previousMonthLeftover)}
                 </p>
             </div>
         </div>
@@ -336,12 +356,12 @@ export default function DashboardPage() {
                     stroke="hsl(var(--muted-foreground))"
                     fontSize={12} 
                     tickLine={false}                     axisLine={false}
-                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                    tickFormatter={(value) => preferences.showBalance ? `${(value / 1000).toFixed(0)}k` : '---'}
                     domain={['dataMin - 500', 'dataMax + 500']}
                 />
                 <Tooltip
                     contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}
-                    formatter={(value: number) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), "Saldo"]}
+                    formatter={(value: number) => [preferences.showBalance ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : "---", "Saldo"]}
                     labelStyle={{ fontWeight: 'bold' }}
                  />
                 <Area type="monotone" dataKey="Saldo" stroke={chartColors.stroke} fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={2} dot={{ stroke: chartColors.stroke, strokeWidth: 2, r: 4, fill: 'hsl(var(--background))' }} activeDot={{ r: 6 }}/>
@@ -374,7 +394,7 @@ export default function DashboardPage() {
                         <div className="flex-1">
                             <p className={cn("font-bold uppercase", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
                         </div>
-                        <p className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>{account.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                        <p className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>{renderBalance(account.balance)}</p>
                          <Button variant="ghost" size="icon" className="text-muted-foreground"><MoreVertical className="h-5 w-5" /></Button>
                     </div>
                 ))}
@@ -386,8 +406,8 @@ export default function DashboardPage() {
                          <p className="text-sm text-muted-foreground">Previsto</p>
                     </div>
                     <div>
-                        <p className="font-bold text-right">{totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                         <p className="text-sm text-muted-foreground text-right">R$ 0,00</p>
+                        <p className="font-bold text-right">{renderBalance(totalBalance)}</p>
+                         <p className="text-sm text-muted-foreground text-right">{renderBalance(0)}</p>
                     </div>
                     <div className="w-10"></div>
                 </div>
@@ -420,7 +440,7 @@ export default function DashboardPage() {
                             <div className="text-right">
                                 <div className="flex items-center justify-end gap-2 font-bold">
                                     {isClosed ? <Lock className="h-4 w-4 text-red-500" /> : <CheckCircle className="h-4 w-4 text-green-500" />}
-                                    <span>{card.invoiceTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                    <span>{renderBalance(card.invoiceTotal)}</span>
                                 </div>
                                 <p className="text-sm text-muted-foreground">{dueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}</p>
                             </div>
@@ -456,7 +476,7 @@ export default function DashboardPage() {
                                     <div className="flex-1">
                                         <div className="flex justify-between items-center">
                                             <p className="font-medium">{budget.category}</p>
-                                            <p className="text-sm font-medium">{spent.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                                            <p className="text-sm font-medium">{renderBalance(spent)}</p>
                                         </div>
                                         <div className="flex justify-between items-center">
                                              <p className="text-xs text-muted-foreground">de {budget.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
@@ -504,12 +524,12 @@ export default function DashboardPage() {
                                 </Pie>
                                 <Legend iconType="circle" />
                                 <Tooltip
-                                    formatter={(value: number, name) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), name]}
+                                    formatter={(value: number, name) => [preferences.showBalance ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : "---", name]}
                                 />
                             </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
-                            <p className="text-2xl font-bold">{totalExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                            <p className="text-2xl font-bold">{renderBalance(totalExpenses)}</p>
                             <p className="text-sm text-muted-foreground">Total de Despesas</p>
                         </div>
                     </div>
@@ -521,5 +541,3 @@ export default function DashboardPage() {
   );
 
 }
-
-    

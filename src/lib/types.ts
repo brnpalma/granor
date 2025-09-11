@@ -1,5 +1,9 @@
 
 
+export interface UserPreferences {
+  showBalance: boolean;
+}
+
 export interface Category {
   id: string;
   name: string;

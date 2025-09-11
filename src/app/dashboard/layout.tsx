@@ -23,6 +23,8 @@ import {
   Shapes,
   ArrowUpDown,
   Minus,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,8 +71,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DateProvider, useDate } from "@/hooks/use-date";
 import { TransactionDialogProvider, useTransactionDialog } from "@/hooks/use-transaction-dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { Transaction, Account, Category, CreditCard as CreditCardType } from "@/lib/types";
-import { getAccounts, getCategories, getCreditCards, getTransactions, addTransaction, updateTransaction } from "@/lib/firestore";
+import type { Transaction, Account, Category, CreditCard as CreditCardType, UserPreferences } from "@/lib/types";
+import { getAccounts, getCategories, getCreditCards, getTransactions, addTransaction, updateTransaction, getUserPreferences, updateUserPreferences } from "@/lib/firestore";
 
 const navItems = [
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
@@ -142,8 +144,21 @@ function SidebarContent({ onLinkClick }: { onLinkClick: () => void }) {
 }
 
 function Header() {
+    const { user } = useAuth();
     const { selectedDate, goToNextMonth, goToPreviousMonth } = useDate();
     const [formattedDate, setFormattedDate] = useState('');
+    const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true });
+
+    useEffect(() => {
+        if (!user?.uid) return;
+        const unsubscribe = getUserPreferences(user.uid, setPreferences);
+        return () => unsubscribe();
+    }, [user]);
+
+    const handleShowBalanceToggle = (checked: boolean) => {
+        if (!user?.uid) return;
+        updateUserPreferences(user.uid, { showBalance: checked });
+    };
 
     useEffect(() => {
         const currentDate = new Date();
@@ -165,14 +180,39 @@ function Header() {
 
 
     return (
-        <div className="flex w-full items-center justify-center gap-2">
-            <Button variant="ghost" size="icon" className="hover:bg-gray-700" onClick={goToPreviousMonth}>
-                <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <span className="text-lg font-semibold w-32 text-center">{formattedDate}</span>
-            <Button variant="ghost" size="icon" className="hover:bg-gray-700" onClick={goToNextMonth}>
-                <ChevronRight className="h-5 w-5" />
-            </Button>
+        <div className="flex w-full items-center justify-between gap-2">
+            <div className="flex-1"></div>
+            <div className="flex items-center justify-center gap-2">
+                <Button variant="ghost" size="icon" className="hover:bg-gray-700" onClick={goToPreviousMonth}>
+                    <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <span className="text-lg font-semibold w-32 text-center">{formattedDate}</span>
+                <Button variant="ghost" size="icon" className="hover:bg-gray-700" onClick={goToNextMonth}>
+                    <ChevronRight className="h-5 w-5" />
+                </Button>
+            </div>
+            <div className="flex-1 flex justify-end">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="hover:bg-gray-700">
+                            <MoreVertical className="h-5 w-5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                         <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
+                            <Label htmlFor="show-balance-switch" className="flex items-center gap-2 cursor-pointer">
+                                {preferences.showBalance ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                <span>Exibir Saldo</span>
+                            </Label>
+                            <Switch
+                                id="show-balance-switch"
+                                checked={preferences.showBalance}
+                                onCheckedChange={handleShowBalanceToggle}
+                            />
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
         </div>
     );
 }
@@ -219,9 +259,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
                     <Header />
 
-                    <Button variant="ghost" size="icon" className="hover:bg-gray-700">
-                        <MoreVertical className="h-5 w-5" />
-                    </Button>
                 </header>
                 <main className="flex-1 p-4 sm:p-6 pb-24">
                     <TransactionDialog />

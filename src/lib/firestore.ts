@@ -18,8 +18,9 @@ import {
   deleteDoc,
   where,
   getDoc,
+  setDoc,
 } from "firebase/firestore";
-import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard } from "./types";
+import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, UserPreferences } from "./types";
 import { useToast } from "@/hooks/use-toast";
 
 // Toast hook must be called from a component
@@ -143,6 +144,37 @@ const getDataSubscription = <T extends DataType>(
         return () => {};
     }
 };
+
+// User Preferences
+export const getUserPreferences = (
+    userId: string,
+    callback: (preferences: UserPreferences) => void
+): (() => void) => {
+    const prefDocRef = doc(db, `users/${userId}/preferences`, 'user');
+    const unsubscribe = onSnapshot(prefDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            callback(docSnap.data() as UserPreferences);
+        } else {
+            // Return default preferences if document doesn't exist
+            callback({ showBalance: true });
+        }
+    });
+    return unsubscribe;
+};
+
+export const updateUserPreferences = async (
+    userId: string,
+    preferences: Partial<UserPreferences>
+): Promise<void> => {
+    const prefDocRef = doc(db, `users/${userId}/preferences`, 'user');
+    try {
+        await setDoc(prefDocRef, preferences, { merge: true });
+    } catch (error) {
+        console.error("Error updating user preferences: ", error);
+        showToast({ title: "Erro", description: "Não foi possível salvar suas preferências.", variant: "destructive" });
+    }
+};
+
 
 // Categories
 export const addCategory = (userId: string | null, category: Omit<Category, "id">) => {
