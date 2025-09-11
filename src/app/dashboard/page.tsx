@@ -299,6 +299,9 @@ export default function DashboardPage() {
   }
   
   const renderBalance = (value: number) => {
+    if (typeof value !== 'number' || isNaN(value)) {
+        value = 0;
+    }
     if (!preferences.showBalance) {
         return (
             <div className="flex items-center justify-center gap-2">
@@ -436,7 +439,7 @@ export default function DashboardPage() {
                     </div>
                     <div>
                         <div className="font-bold text-right">{renderBalance(totalBalance)}</div>
-                        <div className="text-sm text-muted-foreground text-right">{renderBalance(0)}</div>
+                        <div className="text-sm text-muted-foreground text-right">{renderBalance(forecastedBalance - totalExpenses)}</div>
                     </div>
                     <div className="w-10"></div>
                 </div>
