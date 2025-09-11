@@ -45,7 +45,8 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogFooter
+    DialogFooter,
+    DialogTrigger
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -350,6 +351,7 @@ function TransactionForm({
     const [sourceId, setSourceId] = useState<string>("");
     const [efetivado, setEfetivado] = useState(true);
     const { toast } = useToast();
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
     const isEditing = !!initialData?.transaction;
 
@@ -467,16 +469,16 @@ function TransactionForm({
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="date">Data</Label>
-                        <Popover>
-                            <PopoverTrigger asChild>
+                        <Dialog open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                            <DialogTrigger asChild>
                                 <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
                                     {date ? date.toLocaleDateString('pt-BR') : <span>Escolha uma data</span>}
                                 </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
-                            </PopoverContent>
-                        </Popover>
+                            </DialogTrigger>
+                            <DialogContent className="w-auto">
+                                <Calendar mode="single" selected={date} onSelect={(newDate) => { setDate(newDate); setIsCalendarOpen(false); }} initialFocus />
+                            </DialogContent>
+                        </Dialog>
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -527,10 +529,3 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </DateProvider>
     );
 }
-
-    
-
-    
-
-
-
