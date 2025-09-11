@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
 
 interface DateContextType {
   selectedDate: Date;
@@ -32,13 +32,13 @@ export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const getMonthDateRange = (date: Date) => {
+  const getMonthDateRange = useCallback((date: Date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
     const startDate = new Date(year, month, 1);
     const endDate = new Date(year, month + 1, 0, 23, 59, 59);
     return { startDate, endDate };
-  };
+  }, []);
 
   const value = useMemo(() => ({
     selectedDate,
@@ -46,7 +46,7 @@ export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     goToNextMonth,
     goToPreviousMonth,
     getMonthDateRange,
-  }), [selectedDate]);
+  }), [selectedDate, getMonthDateRange]);
 
   return <DateContext.Provider value={value}>{children}</DateContext.Provider>;
 };
