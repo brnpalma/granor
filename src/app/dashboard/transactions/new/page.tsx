@@ -16,7 +16,7 @@ import { Switch }from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Tags, ArrowRight, MoreVertical, Plus } from 'lucide-react';
+import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Tags, ArrowRight, Plus } from 'lucide-react';
 
 function TransactionForm() {
     const router = useRouter();
@@ -146,9 +146,6 @@ function TransactionForm() {
                 <div className="flex items-center gap-2">
                     <Button onClick={handleSubmit} className={cn(saveButtonColor)} disabled={isSaving}>
                         {isSaving ? "Salvando..." : "Salvar"}
-                    </Button>
-                    <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-6 w-6" />
                     </Button>
                 </div>
             </header>
