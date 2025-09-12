@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/chart";
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Pie, PieChart, Cell, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, MoreVertical, Search, CheckCircle, Clock, Lock, EyeOff } from 'lucide-react';
+import { ExternalLink, MoreVertical, Search, CheckCircle, Clock, Lock, EyeOff, LineChart } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { getAccounts, getCreditCards, getBudgets, getTransactions, addCategory, getCategories, getUserPreferences, findPreviousMonthBalance } from "@/lib/firestore";
@@ -337,40 +337,47 @@ export default function DashboardPage() {
         </div>
 
         <div className="h-40 w-full mx-auto">
-             <ResponsiveContainer width="100%" height="100%">
-                <AreaChart 
-                    data={balanceChartData}
-                    margin={{ top: 5, right: 30, left: -20, bottom: 5 }}
-                >
-                <defs>
-                    <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={chartColors.fill} stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor={chartColors.fill} stopOpacity={0}/>
-                    </linearGradient>
-                </defs>
-                <XAxis 
-                    dataKey="date" 
-                    stroke="hsl(var(--muted-foreground))" 
-                    fontSize={12} 
-                    tickLine={false} 
-                    axisLine={false}
-                    interval="preserveStartEnd"
-                />
-                <YAxis 
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12} 
-                    tickLine={false}                     axisLine={false}
-                    tickFormatter={(value) => preferences.showBalance ? `${(value / 1000).toFixed(0)}k` : '---'}
-                    domain={['dataMin - 500', 'dataMax + 500']}
-                />
-                <Tooltip
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}
-                    formatter={(value: number) => [preferences.showBalance ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : "---", "Saldo"]}
-                    labelStyle={{ fontWeight: 'bold' }}
-                 />
-                <Area type="monotone" dataKey="Saldo" stroke={chartColors.stroke} fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={2} dot={{ stroke: chartColors.stroke, strokeWidth: 2, r: 4, fill: 'hsl(var(--background))' }} activeDot={{ r: 6 }}/>
-                </AreaChart>
-            </ResponsiveContainer>
+            {balanceChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart 
+                        data={balanceChartData}
+                        margin={{ top: 5, right: 30, left: -20, bottom: 5 }}
+                    >
+                    <defs>
+                        <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={chartColors.fill} stopOpacity={0.4}/>
+                            <stop offset="95%" stopColor={chartColors.fill} stopOpacity={0}/>
+                        </linearGradient>
+                    </defs>
+                    <XAxis 
+                        dataKey="date" 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={12} 
+                        tickLine={false} 
+                        axisLine={false}
+                        interval="preserveStartEnd"
+                    />
+                    <YAxis 
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={12} 
+                        tickLine={false}                     axisLine={false}
+                        tickFormatter={(value) => preferences.showBalance ? `${(value / 1000).toFixed(0)}k` : '---'}
+                        domain={['dataMin - 500', 'dataMax + 500']}
+                    />
+                    <Tooltip
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}
+                        formatter={(value: number) => [preferences.showBalance ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : "---", "Saldo"]}
+                        labelStyle={{ fontWeight: 'bold' }}
+                    />
+                    <Area type="monotone" dataKey="Saldo" stroke={chartColors.stroke} fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={2} dot={{ stroke: chartColors.stroke, strokeWidth: 2, r: 4, fill: 'hsl(var(--background))' }} activeDot={{ r: 6 }}/>
+                    </AreaChart>
+                </ResponsiveContainer>
+            ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center rounded-lg border-2 border-dashed bg-muted/50">
+                    <LineChart className="h-10 w-10 text-muted-foreground" />
+                    <p className="mt-2 text-sm text-muted-foreground">Sem dados de saldo para exibir no período.</p>
+                </div>
+            )}
         </div>
         
         <div>
