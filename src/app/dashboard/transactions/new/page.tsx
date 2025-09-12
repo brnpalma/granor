@@ -151,9 +151,9 @@ function TransactionForm() {
                     <ArrowLeft className="h-6 w-6" />
                 </Button>
                 <h1 className="text-lg font-semibold">{pageTitle}</h1>
-                <div className="flex items-center gap-2">
-                    <Button onClick={handleSubmit} className={cn(saveButtonColor)} disabled={isSaving}>
-                        {isSaving ? "Salvando..." : "Salvar"}
+                <div className="w-9 h-9">
+                    <Button onClick={handleSubmit} className={cn(saveButtonColor, "w-full h-full p-0")} disabled={isSaving}>
+                        {isSaving ? "..." : "✓"}
                     </Button>
                 </div>
             </header>
@@ -259,7 +259,7 @@ function TransactionForm() {
                             value={creditCardId ? `cc-${creditCardId}` : accountId ? `acc-${accountId}` : ''}
                         >
                             <SelectTrigger className="border-0 focus:ring-0 w-full">
-                                <SelectValue placeholder="Selecione a fonte" />
+                                <SelectValue placeholder="Selecione a conta" />
                             </SelectTrigger>
                             <SelectContent>
                                 {accounts.map(acc => (
