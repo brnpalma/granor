@@ -19,10 +19,11 @@ import {
   where,
   getDoc,
   setDoc,
+  limit,
 } from "firebase/firestore";
 import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, UserPreferences } from "./types";
 import { useToast } from "@/hooks/use-toast";
-import { subMonths } from 'date-fns';
+import { subMonths, startOfMonth } from 'date-fns';
 
 
 // Toast hook must be called from a component
@@ -550,16 +551,50 @@ export const getTransactionsOnce = async (
     }
 };
 
+const getEarliestTransaction = async (userId: string): Promise<Transaction | null> => {
+    const path = getCollectionPath(userId, "transactions");
+    if (!path) return null;
+
+    try {
+        const q = query(collection(db, path), orderBy("date", "asc"), limit(1));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const doc = querySnapshot.docs[0];
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                date: (data.date as Timestamp).toDate(),
+            } as Transaction;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching earliest transaction:", error);
+        return null;
+    }
+};
+
 export const findPreviousMonthBalance = async (
   userId: string,
   currentDate: Date,
   getMonthDateRange: (date: Date) => { startDate: Date; endDate: Date }
 ): Promise<number> => {
+  const earliestTransaction = await getEarliestTransaction(userId);
+  if (!earliestTransaction) {
+    return 0; // No transactions at all, so initial balance is 0
+  }
+
+  const earliestTransactionDate = startOfMonth(earliestTransaction.date);
   let dateToSearch = subMonths(currentDate, 1);
+  const maxAttempts = 24; // Keep a safeguard
   let attempts = 0;
-  const maxAttempts = 24; // Limit search to 2 years to prevent infinite loops
 
   while (attempts < maxAttempts) {
+    // Stop searching if the month to search is before the first ever transaction
+    if (dateToSearch < earliestTransactionDate) {
+      return 0;
+    }
+
     const { startDate, endDate } = getMonthDateRange(dateToSearch);
     const transactions = await getTransactionsOnce(userId, { startDate, endDate });
 
@@ -655,3 +690,5 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
     }
 };
+
+    
