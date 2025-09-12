@@ -205,19 +205,27 @@ export default function DashboardPage() {
   
   const balanceChartData = useMemo(() => {
     const { startDate, endDate } = getMonthDateRange(selectedDate);
-
     const monthTransactions = includedTransactions
-      .filter(
-        (t) =>
-          t.accountId &&
-          t.efetivado &&
-          t.date >= startDate &&
-          t.date <= endDate
-      )
+      .filter((t) => t.accountId && t.efetivado)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    const dailyChanges: { [key: string]: number } = {};
+    if (monthTransactions.length === 0) {
+      if (previousMonthLeftover || forecastedBalance) {
+        return [
+          {
+            date: format(startDate, "dd/MM"),
+            Saldo: previousMonthLeftover,
+          },
+          {
+            date: format(endDate, "dd/MM"),
+            Saldo: previousMonthLeftover + forecastedBalance,
+          },
+        ];
+      }
+      return [];
+    }
 
+    const dailyChanges: { [key: string]: number } = {};
     monthTransactions.forEach((t) => {
       const dayKey = format(startOfDay(t.date), "yyyy-MM-dd");
       const change = t.type === "income" ? t.amount : -t.amount;
@@ -225,8 +233,6 @@ export default function DashboardPage() {
     });
 
     const sortedDays = Object.keys(dailyChanges).sort();
-    if (sortedDays.length === 0) return [];
-
     let lastBalance = previousMonthLeftover || 0;
     
     const chartData = sortedDays.map((dayKey) => {
@@ -241,9 +247,11 @@ export default function DashboardPage() {
   }, [
     includedTransactions,
     previousMonthLeftover,
+    forecastedBalance,
     selectedDate,
     getMonthDateRange,
   ]);
+
 
   const chartColors = useMemo(() => {
     return {
