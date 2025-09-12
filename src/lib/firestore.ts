@@ -557,7 +557,7 @@ export const findPreviousMonthBalance = async (
 ): Promise<number> => {
   let dateToSearch = subMonths(currentDate, 1);
   let attempts = 0;
-  const maxAttempts = 120; // Limit search to 10 years to prevent infinite loops
+  const maxAttempts = 24; // Limit search to 2 years to prevent infinite loops
 
   while (attempts < maxAttempts) {
     const { startDate, endDate } = getMonthDateRange(dateToSearch);
