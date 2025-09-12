@@ -3,7 +3,7 @@ name: Fix Git Author
 on:
   push:
     branches:
-      - main  # ajuste se seu branch for diferente
+      - firebase-auto  # ajuste se seu branch for diferente
 
 jobs:
   fix-author:
