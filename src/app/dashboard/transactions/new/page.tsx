@@ -223,7 +223,6 @@ function TransactionForm() {
                 
                 {/* Category */}
                 <div className="pt-4 space-y-1">
-                    <Label className="px-3 text-sm text-muted-foreground">Categoria</Label>
                     <div className="flex items-center gap-2 p-1 rounded-lg border">
                         <div className="p-2 rounded-full bg-muted">
                            <Shapes className="h-5 w-5 text-muted-foreground" />
@@ -244,7 +243,6 @@ function TransactionForm() {
 
                  {/* Account or Credit Card */}
                 <div className="pt-4 space-y-1">
-                    <Label className="px-3 text-sm text-muted-foreground">Conta</Label>
                      { type === 'expense' ? (
                         <div className="flex items-center gap-2 p-1 rounded-lg border">
                              <div className="p-2 rounded-full bg-muted">
@@ -326,5 +324,3 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
-
-    
