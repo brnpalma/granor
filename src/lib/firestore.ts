@@ -360,20 +360,13 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
 export const updateTransaction = async (userId: string, transactionId: string, dataToUpdate: Omit<Transaction, "id">) => {
     const transactionsPath = getCollectionPath(userId, "transactions");
     const accountsPath = getCollectionPath(userId, "accounts");
-    if (!transactionsPath || !accountsPath) {
-        // Handle local data update
-        // This part is simplified and might need more robust implementation for local-only mode
-        if (transactionsPath) {
-             const finalData = { ...dataToUpdate, date: Timestamp.fromDate(dataToUpdate.date) };
-            await updateDoc(doc(db, transactionsPath, transactionId), finalData);
-        }
-        return;
-    };
+    if (!transactionsPath || !accountsPath) return;
 
     const transactionRef = doc(db, transactionsPath, transactionId);
 
     try {
         await runTransaction(db, async (t) => {
+            // 1. READ ALL DOCUMENTS FIRST
             const transactionDoc = await t.get(transactionRef);
             if (!transactionDoc.exists()) throw "Transaction does not exist!";
 
@@ -384,43 +377,56 @@ export const updateTransaction = async (userId: string, transactionId: string, d
                 date: (originalTransactionData.date as unknown as Timestamp).toDate()
             };
             
+            const originalAccountRef = originalTransaction.accountId ? doc(db, accountsPath, originalTransaction.accountId) : null;
+            const newAccountRef = dataToUpdate.accountId ? doc(db, accountsPath, dataToUpdate.accountId) : null;
+
+            const originalAccountDoc = originalAccountRef ? await t.get(originalAccountRef) : null;
+            // Only read new account if it's different from the original one to avoid reading the same doc twice
+            const newAccountDoc = (newAccountRef && newAccountRef.path !== originalAccountRef?.path) ? await t.get(newAccountRef) : originalAccountDoc;
+
+            // --- ALL READS ARE DONE ---
+
+            // 2. PERFORM LOGIC AND CALCULATIONS
             const wasEfetivado = originalTransaction.efetivado;
             const isNowEfetivado = dataToUpdate.efetivado;
             
+            let originalAccountBalance: number | null = null;
+            let newAccountBalance: number | null = null;
+
             // Revert original transaction if it was an effective account transaction
-            if (originalTransaction.accountId && wasEfetivado) {
-                const accountRef = doc(db, accountsPath, originalTransaction.accountId);
-                const accountDoc = await t.get(accountRef);
-                if (accountDoc.exists()) {
-                    const currentBalance = accountDoc.data().balance;
-                    const revertedBalance = originalTransaction.type === 'income' 
-                        ? currentBalance - originalTransaction.amount 
-                        : currentBalance + originalTransaction.amount;
-                    t.update(accountRef, { balance: revertedBalance });
-                }
+            if (originalAccountDoc?.exists() && wasEfetivado) {
+                const currentBalance = originalAccountDoc.data().balance;
+                originalAccountBalance = originalTransaction.type === 'income' 
+                    ? currentBalance - originalTransaction.amount 
+                    : currentBalance + originalTransaction.amount;
             }
 
             // Apply new transaction if it is an effective account transaction
-            // We need to fetch the account again to get the reverted balance if the account is the same.
-            if (dataToUpdate.accountId && isNowEfetivado) {
-                 const accountRef = doc(db, accountsPath, dataToUpdate.accountId);
-                 // We don't need to re-fetch the document inside a transaction, we can chain operations.
-                 // The transaction ensures atomicity.
-                 const accountDoc = await t.get(accountRef);
-                 if (accountDoc.exists()) {
-                     const currentBalance = accountDoc.data().balance;
-                     const baseBalance = (originalTransaction.accountId === dataToUpdate.accountId && wasEfetivado)
-                         ? (originalTransaction.type === 'income' ? currentBalance - originalTransaction.amount : currentBalance + originalTransaction.amount)
-                         : currentBalance;
-                    
-                     const newBalance = dataToUpdate.type === 'income' 
-                         ? baseBalance + dataToUpdate.amount 
-                         : baseBalance - dataToUpdate.amount;
-
-                     t.update(accountRef, { balance: newBalance });
-                 }
+            if (newAccountDoc?.exists() && isNowEfetivado) {
+                // If we're updating the same account, use the already calculated reverted balance
+                const baseBalance = newAccountRef?.path === originalAccountRef?.path
+                    ? originalAccountBalance ?? newAccountDoc.data().balance
+                    : newAccountDoc.data().balance;
+                
+                newAccountBalance = dataToUpdate.type === 'income' 
+                    ? baseBalance + dataToUpdate.amount 
+                    : baseBalance - dataToUpdate.amount;
             }
 
+            // --- ALL CALCULATIONS ARE DONE ---
+
+            // 3. PERFORM ALL WRITES LAST
+            if (originalAccountRef && originalAccountBalance !== null) {
+                // If the new transaction is on a different account, we just update the original account's balance
+                if(originalAccountRef.path !== newAccountRef?.path) {
+                    t.update(originalAccountRef, { balance: originalAccountBalance });
+                }
+            }
+
+            if (newAccountRef && newAccountBalance !== null) {
+                t.update(newAccountRef, { balance: newAccountBalance });
+            }
+            
             // Update the transaction itself
             const finalData = { ...dataToUpdate, date: Timestamp.fromDate(dataToUpdate.date) };
             t.update(transactionRef, finalData);
