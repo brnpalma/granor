@@ -312,6 +312,7 @@ export const getCreditCards = (userId: string | null, callback: (cards: CreditCa
 
 // Transactions
 export const addTransaction = async (userId: string | null, transaction: Omit<Transaction, "id">) => {
+    balanceCache.clear();
     const path = getCollectionPath(userId, "transactions");
     const accountPath = getCollectionPath(userId, "accounts");
 
@@ -361,6 +362,7 @@ export const addTransaction = async (userId: string | null, transaction: Omit<Tr
 };
 
 export const updateTransaction = async (userId: string, transactionId: string, dataToUpdate: Omit<Transaction, "id">) => {
+    balanceCache.clear();
     const transactionsPath = getCollectionPath(userId, "transactions");
     const accountsPath = getCollectionPath(userId, "accounts");
     if (!transactionsPath || !accountsPath) return;
@@ -442,6 +444,7 @@ export const updateTransaction = async (userId: string, transactionId: string, d
 
 
 export const deleteTransaction = async (userId: string | null, transactionId: string) => {
+    balanceCache.clear();
     const transactionsPath = getCollectionPath(userId, 'transactions');
     if (!transactionsPath) {
         // Handle local data deletion if needed
@@ -575,7 +578,7 @@ const getEarliestTransaction = async (userId: string): Promise<Transaction | nul
 };
 
 // In-memory cache for balance calculations
-const balanceCache = new Map<string, number>();
+export const balanceCache = new Map<string, number>();
 
 export const findPreviousMonthBalance = async (
   userId: string,
