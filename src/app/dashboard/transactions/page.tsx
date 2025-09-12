@@ -208,18 +208,14 @@ export default function TransactionsPage() {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Saldo Inicial do Período</CardTitle>
-        </CardHeader>
-        <CardContent>
-             {isBalanceLoading ? (
-                <Skeleton className="h-7 w-32" />
-            ) : (
-                <p className="text-2xl font-bold">{renderBalance(initialBalance)}</p>
-            )}
-        </CardContent>
-      </Card>
+      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+          <p className="text-sm font-medium text-muted-foreground">Saldo Inicial do Período</p>
+          {isBalanceLoading ? (
+              <Skeleton className="h-6 w-28" />
+          ) : (
+              <p className="text-lg font-bold">{renderBalance(initialBalance)}</p>
+          )}
+      </div>
 
 
        {(accounts.length === 0 && creditCards.length === 0) && (
