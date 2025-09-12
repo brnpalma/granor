@@ -3,7 +3,6 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { getAccounts, getCategories, getCreditCards, addTransaction, updateTransaction, getTransactionById } from '@/lib/firestore';
@@ -96,10 +95,14 @@ function TransactionForm() {
             date,
             type,
             category,
-            efetivado,
-            accountId: creditCardId ? undefined : accountId,
-            creditCardId: creditCardId || undefined,
+            efetivado
         };
+
+        if (creditCardId) {
+            transactionData.creditCardId = creditCardId;
+        } else if (accountId) {
+            transactionData.accountId = accountId;
+        }
 
         try {
             if (isEditing && transactionId) {
@@ -314,3 +317,5 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
+
+    
