@@ -325,7 +325,13 @@ export default function DashboardPage() {
                     </div>
                     <span>Saldo</span>
                 </div>
-                 {isBalanceLoading ? <Skeleton className="h-7 w-28" /> : <p className="text-lg md:text-xl font-bold">{renderBalance(monthlyNetBalance)}</p>}
+                 {isBalanceLoading ? <Skeleton className="h-7 w-28" /> : (
+                    <Link href="/dashboard/transactions">
+                        <p className="text-lg md:text-xl font-bold cursor-pointer hover:underline">
+                            {renderBalance(monthlyNetBalance)}
+                        </p>
+                    </Link>
+                 )}
             </div>
             <div className="flex-1 flex flex-col items-center gap-1">
                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
@@ -554,3 +560,5 @@ export default function DashboardPage() {
   );
 
 }
+
+    
