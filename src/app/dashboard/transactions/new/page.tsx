@@ -16,7 +16,7 @@ import { Switch }from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { X, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Tags, ArrowRight, MoreVertical } from 'lucide-react';
+import { X, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Tags, ArrowRight, MoreVertical, Plus } from 'lucide-react';
 
 function TransactionForm() {
     const router = useRouter();
@@ -317,5 +317,3 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
-
-    
