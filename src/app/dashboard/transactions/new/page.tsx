@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, Suspense } from 'react';
@@ -200,6 +199,7 @@ function TransactionForm() {
                             selected={date}
                             onSelect={setDate}
                             initialFocus
+                            fixedWeeks
                         />
                     </PopoverContent>
                 </Popover>
@@ -317,5 +317,3 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
-
-    
