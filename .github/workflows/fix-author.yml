@@ -3,7 +3,7 @@ name: Fix Git Author
 on:
   push:
     branches:
-      - firebase-auto  # ajuste se seu branch for diferente
+      - firebase-auto 
 
 jobs:
   fix-author:
@@ -31,4 +31,14 @@ jobs:
             git push origin HEAD:main --force
           else
             echo "Author OK: $AUTHOR_NAME <$AUTHOR_EMAIL>"
-          fi
+
+      - name: Criar Pull Request para main
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Firebase auto commits com author corrigido"
+          branch: firebase-auto
+          base: main
+          title: "Merge Firebase auto commits para main"
+          body: "Pull request automático gerado pelo workflow após corrigir author dos commits."
+          draft: false
