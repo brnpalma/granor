@@ -28,7 +28,6 @@ import type { Account, CreditCard as CreditCardType, Budget, Transaction, UserPr
 import { CategoryIcon, ItauLogo, NubankLogo, PicpayLogo, MercadoPagoLogo, BradescoLogo } from "@/components/icons";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
 import { useDate } from "@/hooks/use-date";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, subMonths, startOfDay } from 'date-fns';
 import { cn } from "@/lib/utils";
@@ -307,7 +306,7 @@ export default function DashboardPage() {
     }
     if (!preferences.showBalance) {
         return (
-            <div className={cn("flex items-center justify-center gap-2", className?.includes("text-right") && "justify-end")}>
+            <div className={cn("flex items-center gap-2", className?.includes("text-center") ? "justify-center" : className?.includes("text-right") ? "justify-end" : "justify-start" )}>
                 <EyeOff className="h-4 w-4 text-muted-foreground" />
                 <span className="font-mono">---</span>
             </div>
@@ -474,7 +473,7 @@ export default function DashboardPage() {
         
         <div className="space-y-2">
             <div className="flex justify-between items-center px-4">
-                <h2 className="text-xl font-bold">Orçamentos de despesas</h2>
+                <h2 className="text-xl font-bold">Orçamentos</h2>
                 <div className="flex items-center gap-2">
                     <Link href="/dashboard/budgets">
                         <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
@@ -565,3 +564,4 @@ export default function DashboardPage() {
     
 
     
+
