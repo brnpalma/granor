@@ -209,7 +209,7 @@ export default function TransactionsPage() {
       </div>
 
       <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-          <p className="text-sm font-medium text-muted-foreground">Saldo Inicial do Período</p>
+          <p className="text-sm font-medium text-muted-foreground">Saldo Inicial</p>
           {isBalanceLoading ? (
               <Skeleton className="h-6 w-28" />
           ) : (
@@ -316,3 +316,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    
