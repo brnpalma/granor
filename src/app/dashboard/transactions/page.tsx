@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { PlusCircle, Trash2, CreditCard, Edit, MoreVertical } from "lucide-react";
+import { PlusCircle, Trash2, CreditCard, Edit, MoreVertical, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,14 +29,15 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { deleteTransaction, getTransactions, getAccounts, getCreditCards, updateTransaction } from "@/lib/firestore";
-import type { Transaction, Account, CreditCard as CreditCardType } from "@/lib/types";
+import { deleteTransaction, getTransactions, getAccounts, getCreditCards, updateTransaction, findPreviousMonthBalance, getUserPreferences } from "@/lib/firestore";
+import type { Transaction, Account, CreditCard as CreditCardType, UserPreferences } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useDate } from "@/hooks/use-date";
 import { useTransactionDialog } from "@/hooks/use-transaction-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type GroupedTransactions = {
     date: string;
@@ -48,7 +49,10 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
+  const [initialBalance, setInitialBalance] = useState(0);
+  const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true });
   const [isLoading, setIsLoading] = useState(true);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   const { openDialog } = useTransactionDialog();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -57,13 +61,14 @@ export default function TransactionsPage() {
   useEffect(() => {
     if (typeof window === 'undefined' || !user?.uid) {
         setIsLoading(false);
+        setIsBalanceLoading(false);
         return;
     };
 
     setIsLoading(true);
     const { startDate, endDate } = getMonthDateRange(selectedDate);
     
-    let dataLoaded = { transactions: false, accounts: false, creditCards: false };
+    let dataLoaded = { transactions: false, accounts: false, creditCards: false, preferences: false };
     const checkLoading = () => {
         if(Object.values(dataLoaded).every(Boolean)) {
             setIsLoading(false);
@@ -86,18 +91,39 @@ export default function TransactionsPage() {
         dataLoaded.creditCards = true;
         checkLoading();
     });
+     const unsubPrefs = getUserPreferences(user.uid, (data) => {
+        setPreferences(data);
+        dataLoaded.preferences = true;
+        checkLoading();
+    });
 
-    const timeout = setTimeout(() => setIsLoading(false), 2500);
+    const timeout = setTimeout(() => {
+        setIsLoading(false);
+        setIsBalanceLoading(false);
+    }, 2500);
 
 
     return () => {
         unsubTransactions();
         unsubAccounts();
         unsubCreditCards();
+        unsubPrefs();
         clearTimeout(timeout);
     };
   }, [user, selectedDate, getMonthDateRange]);
 
+  useEffect(() => {
+      if (!user?.uid) return;
+
+      const fetchBalance = async () => {
+          setIsBalanceLoading(true);
+          const balance = await findPreviousMonthBalance(user.uid, selectedDate, getMonthDateRange);
+          setInitialBalance(balance);
+          setIsBalanceLoading(false);
+      };
+
+      fetchBalance();
+  }, [user, selectedDate, getMonthDateRange]);
   
   const handleDeleteTransaction = async (transactionId: string) => {
     await deleteTransaction(user?.uid || null, transactionId);
@@ -128,6 +154,21 @@ export default function TransactionsPage() {
     if (!transaction.accountId) return false;
     const account = accounts.find(a => a.id === transaction.accountId);
     return account?.ignoreInTotals || false;
+  }
+  
+  const renderBalance = (value: number) => {
+    if (typeof value !== 'number' || isNaN(value)) {
+        value = 0;
+    }
+    if (!preferences.showBalance) {
+        return (
+            <div className="flex items-center justify-start gap-2">
+                <EyeOff className="h-4 w-4 text-muted-foreground" />
+                <span className="font-mono">---</span>
+            </div>
+        )
+    }
+    return <span>{value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>;
   }
 
   const groupedTransactions = useMemo(() => {
@@ -166,6 +207,21 @@ export default function TransactionsPage() {
             <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
         </Button>
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Saldo Inicial do Período</CardTitle>
+        </CardHeader>
+        <CardContent>
+             {isBalanceLoading ? (
+                <Skeleton className="h-7 w-32" />
+            ) : (
+                <p className="text-2xl font-bold">{renderBalance(initialBalance)}</p>
+            )}
+        </CardContent>
+      </Card>
+
+
        {(accounts.length === 0 && creditCards.length === 0) && (
           <Card className="text-center p-6">
             <CardTitle>Nenhuma conta ou cartão encontrado</CardTitle>
