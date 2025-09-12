@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/chart";
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Pie, PieChart, Cell, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, MoreVertical, Search, CheckCircle, Clock, Lock, EyeOff, LineChart } from 'lucide-react';
+import { ExternalLink, MoreVertical, CheckCircle, Clock, Lock, EyeOff, LineChart } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { getAccounts, getCreditCards, getBudgets, getTransactions, addCategory, getCategories, getUserPreferences, findPreviousMonthBalance } from "@/lib/firestore";
@@ -394,13 +394,6 @@ export default function DashboardPage() {
             )}
         </div>
         
-        <div>
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input placeholder="Pesquisar Transações" className="bg-background border-border pl-10 h-12 rounded-lg" />
-            </div>
-        </div>
-
         <div className="space-y-2">
             <div className="flex justify-between items-center px-4">
                 <h2 className="text-xl font-bold">Contas</h2>
