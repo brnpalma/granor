@@ -301,19 +301,19 @@ export default function DashboardPage() {
     );
   }
   
-  const renderBalance = (value: number) => {
+  const renderBalance = (value: number, className?: string) => {
     if (typeof value !== 'number' || isNaN(value)) {
         value = 0;
     }
     if (!preferences.showBalance) {
         return (
-            <div className="flex items-center justify-center gap-2">
+            <div className={cn("flex items-center justify-center gap-2", className?.includes("text-right") && "justify-end")}>
                 <EyeOff className="h-4 w-4 text-muted-foreground" />
                 <span className="font-mono">---</span>
             </div>
         )
     }
-    return <span>{value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>;
+    return <p className={className}>{value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>;
   }
 
   return (
@@ -324,7 +324,7 @@ export default function DashboardPage() {
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Inicial</span>
                 </div>
-                 {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : <p className="text-sm md:text-base">{renderBalance(previousMonthLeftover)}</p>}
+                 {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : renderBalance(previousMonthLeftover, "text-sm md:text-base")}
             </div>
             <div className="flex-shrink-0 flex flex-col items-center gap-1">
                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
@@ -335,9 +335,9 @@ export default function DashboardPage() {
                 </div>
                  {isBalanceLoading ? <Skeleton className="h-7 w-28" /> : (
                     <Link href="/dashboard/transactions">
-                        <p className="text-lg md:text-xl font-bold cursor-pointer hover:underline">
-                            {renderBalance(monthlyNetBalance)}
-                        </p>
+                        <div className="cursor-pointer hover:underline">
+                            {renderBalance(monthlyNetBalance, "text-lg md:text-xl font-bold")}
+                        </div>
                     </Link>
                  )}
             </div>
@@ -346,7 +346,7 @@ export default function DashboardPage() {
                     <Clock className="h-4 w-4"/>
                     <span>Previsto</span>
                 </div>
-                {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : <p className="text-sm md:text-base">{renderBalance(forecastedBalance + previousMonthLeftover)}</p>}
+                {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : renderBalance(forecastedBalance + previousMonthLeftover, "text-sm md:text-base")}
             </div>
         </div>
 
@@ -568,5 +568,7 @@ export default function DashboardPage() {
   );
 
 }
+
+    
 
     
