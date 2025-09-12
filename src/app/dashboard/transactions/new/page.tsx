@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, Suspense } from 'react';
@@ -151,11 +152,9 @@ function TransactionForm() {
                     <ArrowLeft className="h-6 w-6" />
                 </Button>
                 <h1 className="text-lg font-semibold">{pageTitle}</h1>
-                <div className="w-9 h-9">
-                    <Button onClick={handleSubmit} className={cn(saveButtonColor, "w-full h-full p-0")} disabled={isSaving}>
-                        {isSaving ? "..." : "✓"}
-                    </Button>
-                </div>
+                <Button onClick={handleSubmit} className={cn(saveButtonColor)} disabled={isSaving}>
+                    {isSaving ? "Salvando..." : "Salvar"}
+                </Button>
             </header>
 
             <main className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -318,3 +317,5 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
+
+    
