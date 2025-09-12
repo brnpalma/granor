@@ -529,7 +529,13 @@ function TransactionForm({
                     <div className="space-y-2">
                         <Label htmlFor="type">Tipo</Label>
                         <Select onValueChange={handleTypeChange} value={type}>
-                            <SelectTrigger id="type">
+                            <SelectTrigger
+                                id="type"
+                                className={cn(
+                                    type === 'income' && 'bg-green-500/10 text-green-700 dark:bg-green-500/10 dark:text-green-400 border-green-500/20',
+                                    type === 'expense' && 'bg-red-500/10 text-red-700 dark:bg-red-500/10 dark:text-red-400 border-red-500/20'
+                                )}
+                            >
                                 <SelectValue placeholder="Selecione o tipo" />
                             </SelectTrigger>
                             <SelectContent>
@@ -573,7 +579,5 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </DateProvider>
     );
 }
-
-    
 
     
