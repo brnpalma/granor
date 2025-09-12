@@ -221,80 +221,74 @@ function TransactionForm() {
                     <Switch id="efetivado" checked={efetivado} onCheckedChange={setEfetivado} />
                 </div>
                 
-                {/* Category */}
-                <div className="pt-4 space-y-1">
+                <div className="flex items-center gap-2 p-1 rounded-lg border">
+                    <div className="p-2 rounded-full bg-muted">
+                       <Shapes className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <Select onValueChange={setCategory} value={category}>
+                        <SelectTrigger className="border-0 focus:ring-0 w-full">
+                            <SelectValue placeholder="Selecione a categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {categories.filter(c => c.type === type).map(cat => (
+                                <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Button variant="ghost" size="icon"><Plus className="h-5 w-5" /></Button>
+                </div>
+
+                 { type === 'expense' ? (
                     <div className="flex items-center gap-2 p-1 rounded-lg border">
-                        <div className="p-2 rounded-full bg-muted">
-                           <Shapes className="h-5 w-5 text-muted-foreground" />
+                         <div className="p-2 rounded-full bg-muted">
+                            {creditCardId !== undefined ? 
+                                <CreditCard className="h-5 w-5 text-muted-foreground" /> :
+                                <Wallet className="h-5 w-5 text-muted-foreground" />
+                            }
                         </div>
-                        <Select onValueChange={setCategory} value={category}>
+                        <Select 
+                            onValueChange={(val) => {
+                                if (val.startsWith('acc-')) {
+                                    setAccountId(val.replace('acc-', ''));
+                                    setCreditCardId(undefined);
+                                } else {
+                                    setCreditCardId(val.replace('cc-', ''));
+                                    setAccountId(undefined);
+                                }
+                            }} 
+                            value={creditCardId ? `cc-${creditCardId}` : accountId ? `acc-${accountId}` : ''}
+                        >
                             <SelectTrigger className="border-0 focus:ring-0 w-full">
-                                <SelectValue placeholder="Selecione" />
+                                <SelectValue placeholder="Selecione a fonte" />
                             </SelectTrigger>
                             <SelectContent>
-                                {categories.filter(c => c.type === type).map(cat => (
-                                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                                {accounts.map(acc => (
+                                    <SelectItem key={acc.id} value={`acc-${acc.id}`}>{acc.name}</SelectItem>
+                                ))}
+                                {creditCards.map(cc => (
+                                    <SelectItem key={cc.id} value={`cc-${cc.id}`}>{cc.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Button variant="ghost" size="icon"><Plus className="h-5 w-5" /></Button>
                     </div>
-                </div>
-
-                 {/* Account or Credit Card */}
-                <div className="pt-4 space-y-1">
-                     { type === 'expense' ? (
-                        <div className="flex items-center gap-2 p-1 rounded-lg border">
-                             <div className="p-2 rounded-full bg-muted">
-                                {creditCardId !== undefined ? 
-                                    <CreditCard className="h-5 w-5 text-muted-foreground" /> :
-                                    <Wallet className="h-5 w-5 text-muted-foreground" />
-                                }
-                            </div>
-                            <Select 
-                                onValueChange={(val) => {
-                                    if (val.startsWith('acc-')) {
-                                        setAccountId(val.replace('acc-', ''));
-                                        setCreditCardId(undefined);
-                                    } else {
-                                        setCreditCardId(val.replace('cc-', ''));
-                                        setAccountId(undefined);
-                                    }
-                                }} 
-                                value={creditCardId ? `cc-${creditCardId}` : accountId ? `acc-${accountId}` : ''}
-                            >
-                                <SelectTrigger className="border-0 focus:ring-0 w-full">
-                                    <SelectValue placeholder="Selecione a fonte" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {accounts.map(acc => (
-                                        <SelectItem key={acc.id} value={`acc-${acc.id}`}>{acc.name}</SelectItem>
-                                    ))}
-                                    {creditCards.map(cc => (
-                                        <SelectItem key={cc.id} value={`cc-${cc.id}`}>{cc.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                 ) : (
+                     <div className="flex items-center gap-2 p-1 rounded-lg border">
+                         <div className="p-2 rounded-full bg-muted">
+                            <Wallet className="h-5 w-5 text-muted-foreground" />
                         </div>
-                     ) : (
-                         <div className="flex items-center gap-2 p-1 rounded-lg border">
-                             <div className="p-2 rounded-full bg-muted">
-                                <Wallet className="h-5 w-5 text-muted-foreground" />
-                            </div>
-                            <Select onValueChange={setAccountId} value={accountId}>
-                                <SelectTrigger className="border-0 focus:ring-0 w-full">
-                                    <SelectValue placeholder="Selecione a conta" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {accounts.map(acc => (
-                                        <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                     )
-                    }
-                </div>
+                        <Select onValueChange={setAccountId} value={accountId}>
+                            <SelectTrigger className="border-0 focus:ring-0 w-full">
+                                <SelectValue placeholder="Selecione a conta" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {accounts.map(acc => (
+                                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                 )
+                }
 
                 <div className="flex items-center justify-between gap-4 p-3 rounded-lg border">
                     <div className="flex items-center gap-4">
