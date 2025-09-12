@@ -1,0 +1,34 @@
+name: Fix Git Author
+
+on:
+  push:
+      branches:
+            - main   # ou o branch que o Firebase Studio usa
+
+            jobs:
+              fix-author:
+                  runs-on: ubuntu-latest
+
+                      steps:
+                            - name: Checkout do código
+                                    uses: actions/checkout@v3
+                                            with:
+                                                      fetch-depth: 0
+
+                                                            - name: Configurar Git
+                                                                    run: |
+                                                                              git config user.name "Deploy Bot"
+                                                                                        git config user.email "bot@seuprojeto.com"
+
+                                                                                              - name: Corrigir commit sem author
+                                                                                                      run: |
+                                                                                                                AUTHOR_NAME=$(git log -1 --pretty=format:'%an')
+                                                                                                                          AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+
+                                                                                                                                    if [ -z "$AUTHOR_NAME" ] || [ -z "$AUTHOR_EMAIL" ] || [ "$AUTHOR_NAME" = "Unknown" ]; then
+                                                                                                                                                echo "Commit sem author detectado, corrigindo..."
+                                                                                                                                                            git commit --amend --no-edit --author="Deploy Bot <bot@seuprojeto.com>"
+                                                                                                                                                                        git push origin HEAD:main --force
+                                                                                                                                                                                  else
+                                                                                                                                                                                              echo "Author OK: $AUTHOR_NAME <$AUTHOR_EMAIL>"
+                                                                                                                                                                                                        fi
