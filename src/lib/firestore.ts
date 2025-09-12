@@ -22,6 +22,8 @@ import {
 } from "firebase/firestore";
 import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, UserPreferences } from "./types";
 import { useToast } from "@/hooks/use-toast";
+import { subMonths } from 'date-fns';
+
 
 // Toast hook must be called from a component
 const showToast = (options: { title: string; description?: string; variant?: "default" | "destructive" }) => {
@@ -548,6 +550,34 @@ export const getTransactionsOnce = async (
     }
 };
 
+export const findPreviousMonthBalance = async (
+  userId: string,
+  currentDate: Date,
+  getMonthDateRange: (date: Date) => { startDate: Date; endDate: Date }
+): Promise<number> => {
+  let dateToSearch = subMonths(currentDate, 1);
+  let attempts = 0;
+  const maxAttempts = 120; // Limit search to 10 years to prevent infinite loops
+
+  while (attempts < maxAttempts) {
+    const { startDate, endDate } = getMonthDateRange(dateToSearch);
+    const transactions = await getTransactionsOnce(userId, { startDate, endDate });
+
+    if (transactions.length > 0) {
+      const balance = transactions.reduce((acc, t) => {
+        if (t.type === 'income') return acc + t.amount;
+        if (t.type === 'expense') return acc - t.amount;
+        return acc;
+      }, 0);
+      return balance;
+    }
+
+    dateToSearch = subMonths(dateToSearch, 1);
+    attempts++;
+  }
+
+  return 0; // Return 0 if no transactions are found within the attempt limit
+};
 
 
 // Budgets
@@ -625,5 +655,3 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
     }
 };
-
-    

@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, MoreVertical, Search, CheckCircle, Clock, Lock, EyeOff } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
-import { getAccounts, getCreditCards, getBudgets, getTransactions, addCategory, getCategories, getUserPreferences, getTransactionsOnce } from "@/lib/firestore";
+import { getAccounts, getCreditCards, getBudgets, getTransactions, addCategory, getCategories, getUserPreferences, findPreviousMonthBalance } from "@/lib/firestore";
 import type { Account, CreditCard as CreditCardType, Budget, Transaction, UserPreferences } from "@/lib/types";
 import { CategoryIcon, ItauLogo, NubankLogo, PicpayLogo, MercadoPagoLogo, BradescoLogo } from "@/components/icons";
 import Link from "next/link";
@@ -158,21 +158,15 @@ export default function DashboardPage() {
     // Effect to calculate previous month balance
     useEffect(() => {
         if (!user?.uid) return;
-        setIsBalanceLoading(true);
 
-        const previousMonth = subMonths(selectedDate, 1);
-        const { startDate, endDate } = getMonthDateRange(previousMonth);
-        
-        getTransactionsOnce(user.uid, { startDate, endDate }).then(prevMonthTransactions => {
-            const balance = prevMonthTransactions.reduce((acc, t) => {
-                 if (t.type === 'income') return acc + t.amount;
-                 if (t.type === 'expense') return acc - t.amount;
-                 return acc;
-            }, 0);
+        const fetchBalance = async () => {
+            setIsBalanceLoading(true);
+            const balance = await findPreviousMonthBalance(user.uid, selectedDate, getMonthDateRange);
             setPreviousMonthLeftover(balance);
             setIsBalanceLoading(false);
-        });
+        };
 
+        fetchBalance();
     }, [user, selectedDate, getMonthDateRange]);
     
     useEffect(() => {
@@ -553,4 +547,3 @@ export default function DashboardPage() {
   );
 
 }
-
