@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { PlusCircle, Trash2, CreditCard, Edit, MoreVertical, EyeOff } from "lucide-react";
+import { CreditCard, Edit, MoreVertical, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -36,8 +36,10 @@ import { CategoryIcon } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useDate } from "@/hooks/use-date";
-import { useTransactionDialog } from "@/hooks/use-transaction-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
+
 
 type GroupedTransactions = {
     date: string;
@@ -53,10 +55,11 @@ export default function TransactionsPage() {
   const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true });
   const [isLoading, setIsLoading] = useState(true);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
-  const { openDialog } = useTransactionDialog();
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedDate, getMonthDateRange } = useDate();
+  const router = useRouter();
+
 
   useEffect(() => {
     if (typeof window === 'undefined' || !user?.uid) {
@@ -137,7 +140,7 @@ export default function TransactionsPage() {
   }
 
   const handleEditTransaction = (transaction: Transaction) => {
-      openDialog({ transaction });
+      router.push(`/dashboard/transactions/new?id=${transaction.id}`);
   }
   
   const getSourceName = (t: Transaction) => {
@@ -203,9 +206,6 @@ export default function TransactionsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Transações</h1>
-        <Button onClick={() => openDialog()} disabled={accounts.length === 0 && creditCards.length === 0}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
-        </Button>
       </div>
 
       <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">

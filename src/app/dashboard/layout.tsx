@@ -42,37 +42,13 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-    DialogTrigger
-} from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { CategoryIcon, BankIcon } from "@/components/icons";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DateProvider, useDate } from "@/hooks/use-date";
-import { TransactionDialogProvider, useTransactionDialog } from "@/hooks/use-transaction-dialog";
-import { useToast } from "@/hooks/use-toast";
-import type { Transaction, Account, Category, CreditCard as CreditCardType, UserPreferences } from "@/lib/types";
-import { getAccounts, getCategories, getCreditCards, getTransactions, addTransaction, updateTransaction, getUserPreferences, updateUserPreferences } from "@/lib/firestore";
+import type { UserPreferences } from "@/lib/types";
+import { getUserPreferences, updateUserPreferences } from "@/lib/firestore";
 
 const navItems = [
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
@@ -240,7 +216,7 @@ function Header() {
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(false);
     const pathname = usePathname();
-    const { openDialog } = useTransactionDialog();
+    const router = useRouter();
 
     useEffect(() => {
         setIsLoading(true);
@@ -258,7 +234,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             <div className="flex flex-col sm:pl-60">
                 <Header />
                 <main className="flex-1 p-4 sm:p-6 pb-24">
-                    <TransactionDialog />
                     {isLoading ? (
                         <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -282,21 +257,21 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                                 <span>Transferência</span>
                             </DropdownMenuItem>
                              <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => openDialog({ type: 'income' })}>
+                            <DropdownMenuItem onClick={() => router.push('/dashboard/transactions/new?type=income')}>
                                 <div className="bg-green-500/20 p-2 rounded-full mr-3">
                                     <Plus className="h-5 w-5 text-green-500" />
                                 </div>
                                 <span>Receita</span>
                             </DropdownMenuItem>
                              <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => openDialog({ type: 'expense' })}>
+                            <DropdownMenuItem onClick={() => router.push('/dashboard/transactions/new?type=expense')}>
                                  <div className="bg-red-500/20 p-2 rounded-full mr-3">
                                     <Minus className="h-5 w-5 text-red-500" />
                                 </div>
                                 <span>Despesa</span>
                             </DropdownMenuItem>
                              <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => openDialog({ type: 'expense', isCreditCard: true })}>
+                            <DropdownMenuItem onClick={() => router.push('/dashboard/transactions/new?type=expense&isCreditCard=true')}>
                                 <div className="bg-blue-500/20 p-2 rounded-full mr-3">
                                     <CreditCard className="h-5 w-5 text-blue-500" />
                                 </div>
@@ -310,272 +285,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     );
 }
 
-function TransactionDialog() {
-    const { isOpen, closeDialog, initialData } = useTransactionDialog();
-    const { user } = useAuth();
-    const { toast } = useToast();
-    const { selectedDate, getMonthDateRange } = useDate();
-    
-    const [accounts, setAccounts] = useState<Account[]>([]);
-    const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
-    const [categories, setCategories] = useState<Category[]>([]);
-
-    useEffect(() => {
-        if (!user?.uid) return;
-        const unsubAccounts = getAccounts(user.uid, setAccounts);
-        const unsubCreditCards = getCreditCards(user.uid, setCreditCards);
-        const unsubCategories = getCategories(user.uid, setCategories);
-
-        return () => {
-            unsubAccounts();
-            unsubCreditCards();
-            unsubCategories();
-        };
-    }, [user]);
-
-    const handleFormSubmit = async (transaction: Omit<Transaction, "id">, transactionId?: string) => {
-        if (!user?.uid) return;
-        
-        if (transactionId) {
-            await updateTransaction(user.uid, transactionId, transaction);
-            toast({ title: "Transação atualizada!" });
-        } else {
-            await addTransaction(user.uid, transaction);
-            toast({ title: "Transação adicionada!" });
-        }
-    };
-
-    if (!isOpen) return null;
-    
-    return (
-        <Dialog open={isOpen} onOpenChange={closeDialog}>
-             <TransactionForm 
-                onSubmit={handleFormSubmit} 
-                onSubmitted={closeDialog} 
-                accounts={accounts}
-                creditCards={creditCards}
-                categories={categories}
-                initialData={initialData}
-            />
-        </Dialog>
-    );
-}
-
-function TransactionForm({
-    onSubmit,
-    onSubmitted,
-    accounts,
-    creditCards,
-    categories,
-    initialData,
-}: {
-    onSubmit: (transaction: Omit<Transaction, "id">, transactionId?: string) => Promise<void>;
-    onSubmitted: () => void;
-    accounts: Account[];
-    creditCards: CreditCardType[];
-    categories: Category[];
-    initialData: { type?: 'income' | 'expense'; isCreditCard?: boolean, transaction?: Transaction };
-}) {
-    const [description, setDescription] = useState("");
-    const [amount, setAmount] = useState("");
-    const [date, setDate] = useState<Date | undefined>(new Date());
-    const [type, setType] = useState<"income" | "expense">("expense");
-    const [category, setCategory] = useState<string>("");
-    const [source, setSource] = useState<"account" | "creditCard">("account");
-    const [sourceId, setSourceId] = useState<string>("");
-    const [efetivado, setEfetivado] = useState(true);
-    const { toast } = useToast();
-    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-
-    const isEditing = !!initialData?.transaction;
-
-    useEffect(() => {
-        if (isEditing && initialData.transaction) {
-            const t = initialData.transaction;
-            setDescription(t.description);
-            setAmount(String(t.amount));
-            setDate(t.date);
-            setType(t.type);
-            setCategory(t.category);
-            setEfetivado(t.efetivado);
-            if(t.accountId) {
-                setSource("account");
-                setSourceId(t.accountId);
-            } else if (t.creditCardId) {
-                setSource("creditCard");
-                setSourceId(t.creditCardId);
-            }
-        } else {
-            if (initialData.type) setType(initialData.type);
-            if (initialData.isCreditCard) setSource("creditCard");
-        }
-    }, [initialData, isEditing]);
-
-    useEffect(() => {
-        // Reset sourceId when source type changes, unless we are editing
-        if(!isEditing) setSourceId("");
-    }, [source, isEditing]);
-
-    useEffect(() => {
-      // If income is selected, force source to be account
-      if (type === 'income') {
-        setSource('account');
-      }
-    }, [type]);
-
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!description || !amount || !date || !category || !sourceId) {
-            toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
-            return;
-        }
-
-        const transactionData: Omit<Transaction, "id"> = {
-            description,
-            amount: parseFloat(amount),
-            date,
-            type,
-            category,
-            efetivado,
-            ...(source === 'account' ? { accountId: sourceId } : {}),
-            ...(source === 'creditCard' ? { creditCardId: sourceId } : {}),
-        };
-
-        await onSubmit(transactionData, initialData.transaction?.id);
-        onSubmitted();
-    };
-    
-    const handleTypeChange = (value: "income" | "expense") => {
-        setType(value);
-        setCategory(""); // Reset category when type changes
-    }
-
-    return (
-        <DialogContent onInteractOutside={(e) => { if(isCalendarOpen) e.preventDefault() }}>
-            <DialogHeader>
-                <DialogTitle>{isEditing ? "Editar Transação" : "Adicionar Nova Transação"}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                    <Label>Fonte da Transação</Label>
-                    <RadioGroup value={source} onValueChange={(value) => setSource(value as "account" | "creditCard")} className="flex gap-4">
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="account" id="account" />
-                            <Label htmlFor="account">Conta</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="creditCard" id="creditCard" disabled={type === 'income'}/>
-                            <Label htmlFor="creditCard">Cartão de Crédito</Label>
-                        </div>
-                    </RadioGroup>
-                </div>
-                
-                <div className="space-y-2">
-                    <Label htmlFor="sourceId">
-                      {source === 'account' ? 'Conta' : 'Cartão de Crédito'}
-                    </Label>
-                    <Select onValueChange={setSourceId} value={sourceId}>
-                        <SelectTrigger id="sourceId">
-                             <SelectValue placeholder={`Selecione ${source === 'account' ? 'a conta' : 'o cartão'}`} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {source === 'account' ? 
-                              accounts.map(acc => (
-                                <SelectItem key={acc.id} value={acc.id}>
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn(acc.ignoreInTotals && "opacity-50")}>
-                                            <BankIcon name={acc.name} />
-                                        </div>
-                                        <span className={cn(acc.ignoreInTotals && "text-muted-foreground")}>{acc.name}</span>
-                                    </div>
-                                </SelectItem>
-                              )) :
-                              creditCards.map(card => (
-                                <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>
-                              ))
-                            }
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <div className="space-y-2">
-                    <Label htmlFor="description">Descrição</Label>
-                    <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="ex: Café com amigos" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="amount">Valor</Label>
-                        <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="date">Data</Label>
-                        <Dialog open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
-                                    {date ? date.toLocaleDateString('pt-BR') : <span>Escolha uma data</span>}
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="w-auto">
-                                <DialogHeader>
-                                    <DialogTitle className="sr-only">Selecione uma data</DialogTitle>
-                                </DialogHeader>
-                                <Calendar mode="single" selected={date} onSelect={(newDate) => { setDate(newDate); setIsCalendarOpen(false); }} initialFocus />
-                            </DialogContent>
-                        </Dialog>
-                    </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="type">Tipo</Label>
-                        <Select onValueChange={handleTypeChange} value={type}>
-                            <SelectTrigger
-                                id="type"
-                                className={cn(
-                                    type === 'income' && 'bg-green-500/10 text-green-700 dark:bg-green-500/10 dark:text-green-400 border-green-500/20',
-                                    type === 'expense' && 'bg-red-500/10 text-red-700 dark:bg-red-500/10 dark:text-red-400 border-red-500/20'
-                                )}
-                            >
-                                <SelectValue placeholder="Selecione o tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="expense">Despesa</SelectItem>
-                                <SelectItem value="income">Receita</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="category">Categoria</Label>
-                        <Select onValueChange={(value: string) => setCategory(value)} value={category}>
-                            <SelectTrigger id="category">
-                                <SelectValue placeholder="Selecione a categoria" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {categories.filter(c => c.type === type).map(cat => (
-                                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-                 <div className="flex items-center space-x-2">
-                    <Switch id="efetivado" checked={efetivado} onCheckedChange={setEfetivado} />
-                    <Label htmlFor="efetivado">Efetivado</Label>
-                </div>
-                <DialogFooter>
-                    <Button type="submit">{isEditing ? "Salvar Alterações" : "Adicionar"}</Button>
-                </DialogFooter>
-            </form>
-        </DialogContent>
-    );
-}
-
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
         <DateProvider>
-            <TransactionDialogProvider>
-                <DashboardLayoutContent>{children}</DashboardLayoutContent>
-            </TransactionDialogProvider>
+            <DashboardLayoutContent>{children}</DashboardLayoutContent>
         </DateProvider>
     );
 }

@@ -505,6 +505,30 @@ export const deleteTransaction = async (userId: string | null, transactionId: st
     }
 };
 
+export const getTransactionById = async (userId: string, transactionId: string): Promise<Transaction | null> => {
+    const path = getCollectionPath(userId, "transactions");
+    if (!path) return null;
+
+    try {
+        const docRef = doc(db, path, transactionId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            return {
+                id: docSnap.id,
+                ...data,
+                date: (data.date as Timestamp).toDate(),
+            } as Transaction;
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.error("Error fetching transaction by ID:", error);
+        return null;
+    }
+};
+
 
 export const getTransactions = (
     userId: string | null,
@@ -705,3 +729,5 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
     }
 };
+
+    
