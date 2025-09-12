@@ -42,6 +42,8 @@ function TransactionForm() {
     const [isEditing, setIsEditing] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
 
     useEffect(() => {
         if (!user?.uid) return;
@@ -82,7 +84,9 @@ function TransactionForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
-        if (!user?.uid || !description || !amount || !date || !type || !category || (!accountId && !creditCardId)) {
+
+        const parsedAmount = parseFloat(amount);
+        if (!user?.uid || !description || isNaN(parsedAmount) || parsedAmount <= 0 || !date || !type || !category || (!accountId && !creditCardId)) {
             toast({ title: "Por favor, preencha todos os campos obrigatórios", variant: 'destructive' });
             setIsSaving(false);
             return;
@@ -90,11 +94,12 @@ function TransactionForm() {
 
         const transactionData: Omit<Transaction, "id"> = {
             description,
-            amount: parseFloat(amount),
+            amount: parsedAmount,
             date,
             type,
             category,
-            efetivado
+            efetivado,
+            isBudget: false,
         };
 
         if (creditCardId) {
@@ -102,6 +107,7 @@ function TransactionForm() {
         } else if (accountId) {
             transactionData.accountId = accountId;
         }
+
 
         try {
             if (isEditing && transactionId) {
@@ -181,7 +187,7 @@ function TransactionForm() {
                     </div>
                 </div>
 
-                <Popover>
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                     <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-start font-normal h-auto p-3 border">
                             <div className="flex items-center justify-between w-full">
@@ -197,7 +203,10 @@ function TransactionForm() {
                         <Calendar
                             mode="single"
                             selected={date}
-                            onSelect={setDate}
+                            onSelect={(newDate) => {
+                                setDate(newDate);
+                                setIsCalendarOpen(false);
+                            }}
                             initialFocus
                             fixedWeeks
                         />
@@ -317,3 +326,5 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
+
+    
