@@ -16,7 +16,7 @@ import { Switch }from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { X, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Tags, ArrowRight, MoreVertical, Plus } from 'lucide-react';
+import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Tags, ArrowRight, MoreVertical, Plus } from 'lucide-react';
 
 function TransactionForm() {
     const router = useRouter();
@@ -140,7 +140,7 @@ function TransactionForm() {
         <div className="flex flex-col h-screen bg-background">
             <header className="sticky top-0 z-10 flex items-center justify-between p-4 border-b bg-background">
                 <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                    <X className="h-6 w-6" />
+                    <ArrowLeft className="h-6 w-6" />
                 </Button>
                 <h1 className="text-lg font-semibold">{pageTitle}</h1>
                 <div className="flex items-center gap-2">

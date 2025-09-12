@@ -219,6 +219,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
+    
+    const showHeader = !pathname.startsWith('/dashboard/transactions/new');
 
     useEffect(() => {
         setIsLoading(true);
@@ -230,12 +232,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-background">
-            <aside className="fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r border-border bg-background sm:flex">
+            <aside className={cn("fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r border-border bg-background sm:flex", !showHeader && "sm:hidden")}>
                 <SidebarContent onLinkClick={() => { }} />
             </aside>
-            <div className="flex flex-col sm:pl-60">
-                <Header />
-                <main className="flex-1 p-4 sm:p-6 pb-24">
+            <div className={cn("flex flex-col", showHeader && "sm:pl-60")}>
+                {showHeader && <Header />}
+                <main className={cn("flex-1", showHeader && "p-4 sm:p-6 pb-24")}>
                     {isLoading ? (
                         <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -244,44 +246,46 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                         children
                     )}
                 </main>
-                <div className="fixed bottom-6 right-6 z-40">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button className="rounded-full h-14 w-14 shadow-lg bg-primary hover:bg-primary/90">
-                                <Plus className="h-7 w-7" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56 mb-2" side="top" align="end">
-                            <DropdownMenuItem disabled>
-                                <div className="bg-yellow-500/20 p-2 rounded-full mr-3">
-                                    <ArrowUpDown className="h-5 w-5 text-yellow-500" />
-                                </div>
-                                <span>Transferência</span>
-                            </DropdownMenuItem>
-                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => router.push('/dashboard/transactions/new?type=income')}>
-                                <div className="bg-green-500/20 p-2 rounded-full mr-3">
-                                    <Plus className="h-5 w-5 text-green-500" />
-                                </div>
-                                <span>Receita</span>
-                            </DropdownMenuItem>
-                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => router.push('/dashboard/transactions/new?type=expense')}>
-                                 <div className="bg-red-500/20 p-2 rounded-full mr-3">
-                                    <Minus className="h-5 w-5 text-red-500" />
-                                </div>
-                                <span>Despesa</span>
-                            </DropdownMenuItem>
-                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => router.push('/dashboard/transactions/new?type=expense&isCreditCard=true')}>
-                                <div className="bg-blue-500/20 p-2 rounded-full mr-3">
-                                    <CreditCard className="h-5 w-5 text-blue-500" />
-                                </div>
-                                <span>Despesa cartão</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
+                {showHeader && (
+                    <div className="fixed bottom-6 right-6 z-40">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button className="rounded-full h-14 w-14 shadow-lg bg-primary hover:bg-primary/90">
+                                    <Plus className="h-7 w-7" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-56 mb-2" side="top" align="end">
+                                <DropdownMenuItem disabled>
+                                    <div className="bg-yellow-500/20 p-2 rounded-full mr-3">
+                                        <ArrowUpDown className="h-5 w-5 text-yellow-500" />
+                                    </div>
+                                    <span>Transferência</span>
+                                </DropdownMenuItem>
+                                 <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => router.push('/dashboard/transactions/new?type=income')}>
+                                    <div className="bg-green-500/20 p-2 rounded-full mr-3">
+                                        <Plus className="h-5 w-5 text-green-500" />
+                                    </div>
+                                    <span>Receita</span>
+                                </DropdownMenuItem>
+                                 <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => router.push('/dashboard/transactions/new?type=expense')}>
+                                     <div className="bg-red-500/20 p-2 rounded-full mr-3">
+                                        <Minus className="h-5 w-5 text-red-500" />
+                                    </div>
+                                    <span>Despesa</span>
+                                </DropdownMenuItem>
+                                 <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => router.push('/dashboard/transactions/new?type=expense&isCreditCard=true')}>
+                                    <div className="bg-blue-500/20 p-2 rounded-full mr-3">
+                                        <CreditCard className="h-5 w-5 text-blue-500" />
+                                    </div>
+                                    <span>Despesa cartão</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                )}
             </div>
         </div>
     );
