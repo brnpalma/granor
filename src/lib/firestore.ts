@@ -574,13 +574,22 @@ const getEarliestTransaction = async (userId: string): Promise<Transaction | nul
     }
 };
 
+// In-memory cache for balance calculations
+const balanceCache = new Map<string, number>();
+
 export const findPreviousMonthBalance = async (
   userId: string,
   currentDate: Date,
   getMonthDateRange: (date: Date) => { startDate: Date; endDate: Date }
 ): Promise<number> => {
+  const cacheKey = `${userId}-${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+  if (balanceCache.has(cacheKey)) {
+    return balanceCache.get(cacheKey)!;
+  }
+
   const earliestTransaction = await getEarliestTransaction(userId);
   if (!earliestTransaction) {
+    balanceCache.set(cacheKey, 0);
     return 0; // No transactions at all, so initial balance is 0
   }
 
@@ -592,6 +601,7 @@ export const findPreviousMonthBalance = async (
   while (attempts < maxAttempts) {
     // Stop searching if the month to search is before the first ever transaction
     if (dateToSearch < earliestTransactionDate) {
+      balanceCache.set(cacheKey, 0);
       return 0;
     }
 
@@ -604,13 +614,15 @@ export const findPreviousMonthBalance = async (
         if (t.type === 'expense') return acc - t.amount;
         return acc;
       }, 0);
+      balanceCache.set(cacheKey, balance);
       return balance;
     }
 
     dateToSearch = subMonths(dateToSearch, 1);
     attempts++;
   }
-
+  
+  balanceCache.set(cacheKey, 0);
   return 0; // Return 0 if no transactions are found within the attempt limit
 };
 
@@ -690,5 +702,3 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
     }
 };
-
-    
