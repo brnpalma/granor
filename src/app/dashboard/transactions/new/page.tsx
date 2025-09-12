@@ -15,7 +15,7 @@ import { Switch }from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Tags, ArrowRight, Plus } from 'lucide-react';
+import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus } from 'lucide-react';
 
 function TransactionForm() {
     const router = useRouter();
@@ -288,22 +288,6 @@ function TransactionForm() {
                     </div>
                  )
                 }
-
-                <div className="flex items-center justify-between gap-4 p-3 rounded-lg border">
-                    <div className="flex items-center gap-4">
-                        <Tags className="h-5 w-5 text-muted-foreground" />
-                        <span>Tags</span>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                </div>
-                 <div className="flex items-center justify-between gap-4 p-3 rounded-lg border">
-                    <div className="flex items-center gap-4">
-                        <Repeat className="h-5 w-5 text-muted-foreground" />
-                        <Label htmlFor="save-continue">Salvar e continuar</Label>
-                    </div>
-                    <Switch id="save-continue" />
-                </div>
-
             </main>
         </div>
     );
