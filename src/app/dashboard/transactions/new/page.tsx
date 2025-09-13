@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { getAccounts, getCategories, getCreditCards, addTransaction, updateTransaction, getTransactionById } from '@/lib/firestore';
 import type { Transaction, Account, Category, CreditCard as CreditCardType, Recurrence, RecurrencePeriod, RecurrenceEditScope } from '@/lib/types';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -457,8 +457,8 @@ function TransactionForm() {
                       </AlertDialogHeader>
                       <AlertDialogFooter className="flex-col gap-2">
                            <AlertDialogAction onClick={() => handleSubmit("single")}>Salvar somente esta transação</AlertDialogAction>
-                           <AlertDialogAction onClick={() => handleSubmit("future")}>Salvar esta e as futuras</AlertDialogAction>
-                           <AlertDialogAction onClick={() => handleSubmit("all")}>Salvar todas as transações</AlertDialogAction>
+                           <AlertDialogAction className={cn(buttonVariants({ variant: "destructive" }))} onClick={() => handleSubmit("future")}>Salvar esta e as futuras</AlertDialogAction>
+                           <AlertDialogAction className={cn(buttonVariants({ variant: "destructive" }))} onClick={() => handleSubmit("all")}>Salvar todas as transações</AlertDialogAction>
                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
                       </AlertDialogFooter>
                   </AlertDialogContent>
@@ -476,3 +476,5 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
+
+    

@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { CreditCard, Edit, MoreVertical, EyeOff, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -354,12 +354,12 @@ export default function TransactionsPage() {
                 <AlertDialogFooter className="flex-col gap-2">
                     {transactionToDelete?.isRecurring ? (
                         <>
-                            <AlertDialogAction onClick={() => handleDeleteTransaction("single")}>Remover somente esta</AlertDialogAction>
-                            <AlertDialogAction onClick={() => handleDeleteTransaction("future")}>Remover esta e as futuras</AlertDialogAction>
-                            <AlertDialogAction onClick={() => handleDeleteTransaction("all")}>Remover todas as parcelas</AlertDialogAction>
+                            <AlertDialogAction className={cn(buttonVariants({ variant: "destructive" }))} onClick={() => handleDeleteTransaction("single")}>Remover somente esta</AlertDialogAction>
+                            <AlertDialogAction className={cn(buttonVariants({ variant: "destructive" }))} onClick={() => handleDeleteTransaction("future")}>Remover esta e as futuras</AlertDialogAction>
+                            <AlertDialogAction className={cn(buttonVariants({ variant: "destructive" }))} onClick={() => handleDeleteTransaction("all")}>Remover todas as parcelas</AlertDialogAction>
                         </>
                     ) : (
-                        <AlertDialogAction onClick={() => handleDeleteTransaction("single")}>Remover</AlertDialogAction>
+                        <AlertDialogAction className={cn(buttonVariants({ variant: "destructive" }))} onClick={() => handleDeleteTransaction("single")}>Remover</AlertDialogAction>
                     )}
                     <AlertDialogCancel onClick={() => setTransactionToDelete(null)}>Cancelar</AlertDialogCancel>
                 </AlertDialogFooter>
@@ -368,3 +368,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    
