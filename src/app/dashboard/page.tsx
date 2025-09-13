@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -202,20 +201,32 @@ export default function DashboardPage() {
     return forecastedBalance + initialAmount;
   }, [forecastedBalance, previousMonthLeftover, selectedDate, preferences.includePreviousMonthBalance]);
 
+  const isFutureMonth = isFuture(startOfMonth(selectedDate));
 
   const accountBalances = useMemo(() => {
     const balances = new Map<string, number>();
+    const { startDate, endDate } = getMonthDateRange(selectedDate);
+    
     accounts.forEach(account => {
-        const accountTransactions = allTransactions.filter(t => t.accountId === account.id && t.efetivado);
+        let relevantTransactions = allTransactions;
+        let startingBalance = account.initialBalance;
+
+        if (isFutureMonth && !preferences.includePreviousMonthBalance) {
+            // For future months without including past balance, only consider this month's transactions and start from 0
+            relevantTransactions = allTransactions.filter(t => t.date >= startDate && t.date <= endDate);
+            startingBalance = 0;
+        }
+
+        const accountTransactions = relevantTransactions.filter(t => t.accountId === account.id && t.efetivado);
         const currentBalance = accountTransactions.reduce((acc, t) => {
             if (t.type === 'income') return acc + t.amount;
             if (t.type === 'expense') return acc - t.amount;
             return acc;
-        }, account.initialBalance);
+        }, startingBalance);
         balances.set(account.id, currentBalance);
     });
     return balances;
-  }, [accounts, allTransactions]);
+  }, [accounts, allTransactions, selectedDate, getMonthDateRange, isFutureMonth, preferences.includePreviousMonthBalance]);
 
   const totalBalance = useMemo(() => {
     return includedAccounts.reduce((sum, acc) => sum + (accountBalances.get(acc.id) ?? 0), 0);
@@ -380,7 +391,6 @@ export default function DashboardPage() {
     return <p className={className}>{content}</p>;
   }
 
-  const isFutureMonth = isFuture(startOfMonth(selectedDate));
   const displayedInitialBalance = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : previousMonthLeftover;
 
 
@@ -629,3 +639,5 @@ export default function DashboardPage() {
   );
 
 }
+
+    
