@@ -14,6 +14,9 @@ import {
   type LucideProps,
   Shapes,
   Wallet,
+  ArrowRightLeft,
+  PlusCircle,
+  Calendar,
 } from "lucide-react";
 import Image from 'next/image';
 
@@ -28,6 +31,9 @@ const iconMap: Record<string, React.ComponentType<LucideProps>> = {
   Economias: PiggyBank,
   Outros: MoreHorizontal,
   Categorias: Shapes,
+  "Parcela inicial": ArrowRightLeft,
+  "Quantidade": PlusCircle,
+  "Periodicidade": Calendar,
 };
 
 interface CategoryIconProps extends LucideProps {

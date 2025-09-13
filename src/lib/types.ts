@@ -39,6 +39,14 @@ export interface CreditCard {
   defaultAccountId: string;
 }
 
+export type RecurrencePeriod = "diária" | "semanal" | "mensal" | "anual";
+
+export interface Recurrence {
+    period: RecurrencePeriod;
+    quantity: number;
+    startInstallment: number;
+}
+
 export interface Transaction {
   id: string;
   date: Date;
@@ -50,6 +58,9 @@ export interface Transaction {
   accountId?: string; // Optional: for bank account transactions
   creditCardId?: string; // Optional: for credit card transactions
   isBudget?: boolean;
+  isRecurring?: boolean;
+  recurrence?: Recurrence;
+  recurrenceId?: string;
 }
 
 export interface Budget {

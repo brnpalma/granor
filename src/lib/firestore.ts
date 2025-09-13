@@ -21,9 +21,9 @@ import {
   setDoc,
   limit,
 } from "firebase/firestore";
-import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, UserPreferences } from "./types";
+import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, UserPreferences, RecurrencePeriod } from "./types";
 import { useToast } from "@/hooks/use-toast";
-import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { subMonths, startOfMonth, endOfMonth, addDays, addWeeks, addMonths, addYears } from 'date-fns';
 
 
 // Toast hook must be called from a component
@@ -315,12 +315,60 @@ export const getCreditCards = (userId: string | null, callback: (cards: CreditCa
 
 
 // Transactions
-export const addTransaction = async (userId: string | null, transaction: Omit<Transaction, "id">) => {
+const getNextDate = (currentDate: Date, period: RecurrencePeriod): Date => {
+    switch(period) {
+        case 'diária': return addDays(currentDate, 1);
+        case 'semanal': return addWeeks(currentDate, 1);
+        case 'mensal': return addMonths(currentDate, 1);
+        case 'anual': return addYears(currentDate, 1);
+        default: return currentDate;
+    }
+};
+
+export const addTransaction = async (userId: string, transaction: Omit<Transaction, "id">) => {
     balanceCache.clear();
-    await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
-        ...item,
-        date: Timestamp.fromDate(item.date),
-    }));
+    const transactionsPath = getCollectionPath(userId, "transactions");
+    if (!transactionsPath) return;
+
+    try {
+        if (transaction.isRecurring && transaction.recurrence) {
+            const batch = writeBatch(db);
+            const recurrenceId = doc(collection(db, 'transactions')).id; // Generate a unique ID for the group
+            const { quantity, period, startInstallment } = transaction.recurrence;
+            let currentDate = transaction.date;
+
+            for (let i = 0; i < quantity; i++) {
+                const installmentNumber = i + startInstallment;
+                const newDocRef = doc(collection(db, transactionsPath));
+                
+                const installmentTransaction: Omit<Transaction, "id"> = {
+                    ...transaction,
+                    date: currentDate,
+                    description: `${transaction.description} (${installmentNumber}/${quantity})`,
+                    recurrenceId: recurrenceId,
+                    efetivado: i === 0 ? transaction.efetivado : false, // Only first is effective if checked
+                    isRecurring: true,
+                };
+                 // Ensure date is a Timestamp
+                const { date, ...restOfTransaction } = installmentTransaction;
+                batch.set(newDocRef, { ...restOfTransaction, date: Timestamp.fromDate(date) });
+
+                currentDate = getNextDate(currentDate, period);
+            }
+            await batch.commit();
+
+        } else {
+            // Single transaction
+             const { date, ...restOfTransaction } = transaction;
+            await addDoc(collection(db, transactionsPath), {
+                ...restOfTransaction,
+                date: Timestamp.fromDate(date),
+            });
+        }
+    } catch (error) {
+        console.error("Error adding transaction(s): ", error);
+        showToast({ title: "Erro", description: "Não foi possível adicionar a transação.", variant: "destructive" });
+    }
 };
 
 export const updateTransaction = async (userId: string, transactionId: string, dataToUpdate: Partial<Omit<Transaction, "id">>) => {
@@ -563,5 +611,3 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
     }
 };
-
-    

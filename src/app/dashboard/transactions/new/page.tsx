@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { getAccounts, getCategories, getCreditCards, addTransaction, updateTransaction, getTransactionById } from '@/lib/firestore';
-import type { Transaction, Account, Category, CreditCard as CreditCardType } from '@/lib/types';
+import type { Transaction, Account, Category, CreditCard as CreditCardType, Recurrence, RecurrencePeriod } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,8 +14,99 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch }from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus } from 'lucide-react';
+import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus, Minus, ArrowRightLeft, PlusCircle } from 'lucide-react';
+
+function RecurrenceDialog({
+  open,
+  onOpenChange,
+  recurrence,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  recurrence: Recurrence;
+  onSave: (recurrence: Recurrence) => void;
+}) {
+  const [tempRecurrence, setTempRecurrence] = useState<Recurrence>(recurrence);
+
+  useEffect(() => {
+    setTempRecurrence(recurrence);
+  }, [recurrence, open]);
+
+  const handleSave = () => {
+    onSave(tempRecurrence);
+    onOpenChange(false);
+  };
+  
+  const handleQuantityChange = (amount: number) => {
+    setTempRecurrence(prev => ({ ...prev, quantity: Math.max(2, prev.quantity + amount)}));
+  }
+  
+  const handleStartInstallmentChange = (amount: number) => {
+    setTempRecurrence(prev => ({ ...prev, startInstallment: Math.max(1, prev.startInstallment + amount)}));
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Configurar repetição</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className='flex items-center gap-4'>
+                <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
+                <Label>Parcela inicial</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={() => handleStartInstallmentChange(-1)}><Minus className="h-4 w-4" /></Button>
+              <span className="font-bold w-4 text-center">{tempRecurrence.startInstallment}</span>
+              <Button variant="ghost" size="icon" onClick={() => handleStartInstallmentChange(1)}><Plus className="h-4 w-4" /></Button>
+            </div>
+          </div>
+           <div className="flex items-center justify-between">
+            <div className='flex items-center gap-4'>
+                <PlusCircle className="h-5 w-5 text-muted-foreground" />
+                <Label>Quantidade</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={() => handleQuantityChange(-1)}><Minus className="h-4 w-4" /></Button>
+               <span className="font-bold w-4 text-center">{tempRecurrence.quantity}</span>
+              <Button variant="ghost" size="icon" onClick={() => handleQuantityChange(1)}><Plus className="h-4 w-4" /></Button>
+            </div>
+          </div>
+           <div className="flex items-center justify-between">
+            <div className='flex items-center gap-4'>
+                <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                <Label>Periodicidade</Label>
+            </div>
+             <Select 
+                value={tempRecurrence.period} 
+                onValueChange={(value: RecurrencePeriod) => setTempRecurrence(prev => ({ ...prev, period: value}))}
+             >
+                <SelectTrigger className="w-[120px] border-0 focus:ring-0">
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="diária">Diária</SelectItem>
+                    <SelectItem value="semanal">Semanal</SelectItem>
+                    <SelectItem value="mensal">Mensal</SelectItem>
+                    <SelectItem value="anual">Anual</SelectItem>
+                </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleSave}>Concluído</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function TransactionForm() {
     const router = useRouter();
@@ -35,6 +126,11 @@ function TransactionForm() {
     const [accountId, setAccountId] = useState<string | undefined>();
     const [creditCardId, setCreditCardId] = useState<string | undefined>();
     const [efetivado, setEfetivado] = useState(true);
+    
+    const [isRecurring, setIsRecurring] = useState(false);
+    const [recurrence, setRecurrence] = useState<Recurrence>({ period: 'mensal', quantity: 2, startInstallment: 1 });
+    const [isRecurrenceDialogOpen, setIsRecurrenceDialogOpen] = useState(false);
+
 
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
@@ -66,6 +162,10 @@ function TransactionForm() {
                     setEfetivado(t.efetivado);
                     setAccountId(t.accountId);
                     setCreditCardId(t.creditCardId);
+                    setIsRecurring(t.isRecurring || false);
+                    if (t.recurrence) {
+                        setRecurrence(t.recurrence);
+                    }
                 }
                 setIsLoading(false);
             });
@@ -101,6 +201,8 @@ function TransactionForm() {
             category,
             efetivado,
             isBudget: false,
+            isRecurring,
+            recurrence: isRecurring ? recurrence : undefined
         };
 
         if (creditCardId) {
@@ -126,6 +228,11 @@ function TransactionForm() {
             setIsSaving(false);
         }
     };
+    
+    const handleSaveRecurrence = (newRecurrence: Recurrence) => {
+        setRecurrence(newRecurrence);
+        setIsRecurring(true);
+    };
 
     if (isLoading) {
         return (
@@ -144,6 +251,10 @@ function TransactionForm() {
     const saveButtonColor = type === 'income'
         ? "bg-green-500 hover:bg-green-600 text-white"
         : "bg-red-500 hover:bg-red-600 text-white";
+        
+    const recurrenceText = isRecurring 
+        ? `${recurrence.period.charAt(0).toUpperCase() + recurrence.period.slice(1)}, ${recurrence.quantity} parcelas`
+        : "Não recorrente";
 
     return (
         <div className="flex flex-col h-screen bg-background">
@@ -179,12 +290,24 @@ function TransactionForm() {
                     />
                 </div>
                 
-                 <div className="flex items-center justify-between gap-4 p-3 rounded-lg border">
-                    <div className="flex items-center gap-4">
-                        <Repeat className="h-5 w-5 text-muted-foreground" />
-                        <span>Não recorrente</span>
+                <Button variant="outline" className="w-full justify-start font-normal h-auto p-3 border" onClick={() => setIsRecurrenceDialogOpen(true)} disabled={isEditing}>
+                    <div className="flex items-center justify-between w-full">
+                        <div className='flex items-center gap-4'>
+                            <Repeat className="h-5 w-5 text-muted-foreground" />
+                            <span>Repetir</span>
+                        </div>
+                        <span className="text-muted-foreground">{recurrenceText}</span>
                     </div>
-                </div>
+                </Button>
+                 {isRecurring && !isEditing && (
+                    <div className="flex items-center justify-between gap-4 p-3 rounded-lg border -mt-1">
+                        <div className="flex items-center gap-4">
+                            <Label htmlFor="is-recurring-switch">Desativar repetição</Label>
+                        </div>
+                        <Switch id="is-recurring-switch" checked={!isRecurring} onCheckedChange={(checked) => setIsRecurring(!checked)} />
+                    </div>
+                 )}
+
 
                 <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                     <PopoverTrigger asChild>
@@ -289,6 +412,12 @@ function TransactionForm() {
                  )
                 }
             </main>
+             <RecurrenceDialog
+                open={isRecurrenceDialogOpen}
+                onOpenChange={setIsRecurrenceDialogOpen}
+                recurrence={recurrence}
+                onSave={handleSaveRecurrence}
+            />
         </div>
     );
 }
@@ -301,5 +430,3 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
-
-    
