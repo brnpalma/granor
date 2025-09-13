@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, createContext } from "react";
@@ -25,6 +26,7 @@ import {
   Eye,
   EyeOff,
   Settings,
+  Merge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -125,7 +127,7 @@ function Header() {
     const { user } = useAuth();
     const { selectedDate, goToNextMonth, goToPreviousMonth } = useDate();
     const [formattedDate, setFormattedDate] = useState('');
-    const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true });
+    const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true });
     
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const handleLinkClick = () => {
@@ -138,9 +140,9 @@ function Header() {
         return () => unsubscribe();
     }, [user]);
 
-    const handleShowBalanceToggle = (checked: boolean) => {
+    const handlePreferenceToggle = (key: keyof UserPreferences, checked: boolean) => {
         if (!user?.uid) return;
-        updateUserPreferences(user.uid, { showBalance: checked });
+        updateUserPreferences(user.uid, { [key]: checked });
     };
 
     useEffect(() => {
@@ -205,7 +207,19 @@ function Header() {
                             <Switch
                                 id="show-balance-switch"
                                 checked={preferences.showBalance}
-                                onCheckedChange={handleShowBalanceToggle}
+                                onCheckedChange={(checked) => handlePreferenceToggle('showBalance', checked)}
+                            />
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                         <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
+                            <Label htmlFor="include-previous-balance-switch" className="flex items-center gap-2 cursor-pointer">
+                                <Merge className="h-4 w-4" />
+                                <span>Somar saldo anterior</span>
+                            </Label>
+                            <Switch
+                                id="include-previous-balance-switch"
+                                checked={preferences.includePreviousMonthBalance}
+                                onCheckedChange={(checked) => handlePreferenceToggle('includePreviousMonthBalance', checked)}
                             />
                         </DropdownMenuItem>
                     </DropdownMenuContent>

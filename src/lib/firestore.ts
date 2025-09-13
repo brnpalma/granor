@@ -156,10 +156,14 @@ export const getUserPreferences = (
     const prefDocRef = doc(db, `users/${userId}/preferences`, 'user');
     const unsubscribe = onSnapshot(prefDocRef, (docSnap) => {
         if (docSnap.exists()) {
-            callback(docSnap.data() as UserPreferences);
+            const data = docSnap.data();
+            callback({
+                showBalance: data.showBalance ?? true,
+                includePreviousMonthBalance: data.includePreviousMonthBalance ?? true,
+            });
         } else {
             // Return default preferences if document doesn't exist
-            callback({ showBalance: true });
+            callback({ showBalance: true, includePreviousMonthBalance: true });
         }
     });
     return unsubscribe;

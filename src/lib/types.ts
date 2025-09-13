@@ -2,6 +2,7 @@
 
 export interface UserPreferences {
   showBalance: boolean;
+  includePreviousMonthBalance: boolean;
 }
 
 export interface Category {

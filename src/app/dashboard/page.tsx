@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -62,7 +63,7 @@ export default function DashboardPage() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true });
+  const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true });
   const [isLoading, setIsLoading] = useState(true);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   
@@ -183,11 +184,19 @@ export default function DashboardPage() {
 
 
   const monthlyNetBalance = useMemo(() => {
+    const isFutureMonth = isFuture(startOfMonth(selectedDate));
+    const initialAmount = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : previousMonthLeftover;
     const income = includedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
     const expenses = includedTransactions.filter(t => t.type === 'expense' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
-    return previousMonthLeftover + income - expenses;
-  }, [includedTransactions, previousMonthLeftover]);
+    return initialAmount + income - expenses;
+  }, [includedTransactions, previousMonthLeftover, selectedDate, preferences.includePreviousMonthBalance]);
   
+  const effectiveForecastedBalance = useMemo(() => {
+    const isFutureMonth = isFuture(startOfMonth(selectedDate));
+    const initialAmount = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : previousMonthLeftover;
+    return forecastedBalance + initialAmount;
+  }, [forecastedBalance, previousMonthLeftover, selectedDate, preferences.includePreviousMonthBalance]);
+
 
   const totalBalance = useMemo(() => {
     return includedAccounts.reduce((sum, acc) => sum + acc.balance, 0);
@@ -207,6 +216,9 @@ export default function DashboardPage() {
     const today = endOfToday();
     const isCurrentMonth = isSameMonth(selectedDate, today);
     const isPastMonth = isBefore(endDate, today);
+    const isFutureMonth = isFuture(startDate);
+
+    const initialAmount = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : previousMonthLeftover;
     
     const chartEndDate = isCurrentMonth ? today : endDate;
 
@@ -221,14 +233,14 @@ export default function DashboardPage() {
         dailyChanges[dayKey] = (dailyChanges[dayKey] || 0) + change;
     });
     
-    if (monthTransactions.length === 0 && !isPastMonth) {
+    if (monthTransactions.length === 0 && !isPastMonth && !isCurrentMonth) {
         return [
-          { date: format(startDate, "dd/MM"), Saldo: previousMonthLeftover },
-          { date: format(chartEndDate, "dd/MM"), Saldo: previousMonthLeftover + forecastedBalance },
+          { date: format(startDate, "dd/MM"), Saldo: initialAmount },
+          { date: format(chartEndDate, "dd/MM"), Saldo: initialAmount + forecastedBalance },
         ];
     }
     
-    let balance = previousMonthLeftover;
+    let balance = initialAmount;
     
     const allDays = eachDayOfInterval({ start: startDate, end: chartEndDate });
 
@@ -253,7 +265,7 @@ export default function DashboardPage() {
         if (chartData[0].date !== firstDayOfMonth) {
             chartData.unshift({
                 date: firstDayOfMonth,
-                Saldo: previousMonthLeftover,
+                Saldo: initialAmount,
                 hasTransaction: false,
             });
         }
@@ -275,7 +287,7 @@ export default function DashboardPage() {
 
     return chartData;
 
-}, [includedTransactions, previousMonthLeftover, forecastedBalance, selectedDate, getMonthDateRange]);
+}, [includedTransactions, previousMonthLeftover, forecastedBalance, selectedDate, getMonthDateRange, preferences.includePreviousMonthBalance]);
 
 
   const chartColors = useMemo(() => {
@@ -326,20 +338,29 @@ export default function DashboardPage() {
     );
   }
   
-  const renderBalance = (value: number, className?: string) => {
+  const renderBalance = (value: number) => {
     if (typeof value !== 'number' || isNaN(value)) {
         value = 0;
     }
     if (!preferences.showBalance) {
         return (
-            <div className={cn("flex items-center gap-2", className?.includes("text-center") ? "justify-center" : className?.includes("text-right") ? "justify-end" : "justify-start" )}>
+            <div className="flex items-center justify-start gap-2">
                 <EyeOff className="h-4 w-4 text-muted-foreground" />
                 <span className="font-mono">---</span>
             </div>
         )
     }
-    return <p className={className}>{value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>;
+    return <span>{value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>;
   }
+  
+  const renderBalanceInP = (value: number, className?: string) => {
+    const content = renderBalance(value);
+    if (React.isValidElement(content)) {
+        return content;
+    }
+    return <p className={className}>{content}</p>;
+  }
+
 
   return (
     <div className="space-y-6">
@@ -349,7 +370,7 @@ export default function DashboardPage() {
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Inicial</span>
                 </div>
-                 {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : renderBalance(previousMonthLeftover, "text-sm md:text-base")}
+                 {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : renderBalanceInP(previousMonthLeftover, "text-sm md:text-base")}
             </div>
             <div className="flex-shrink-0 flex flex-col items-center gap-1">
                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
@@ -360,8 +381,8 @@ export default function DashboardPage() {
                 </div>
                  {isBalanceLoading ? <Skeleton className="h-7 w-28" /> : (
                     <Link href="/dashboard/transactions">
-                        <div className="cursor-pointer hover:underline">
-                            {renderBalance(monthlyNetBalance, "text-lg md:text-xl font-bold")}
+                        <div className="cursor-pointer hover:underline text-lg md:text-xl font-bold">
+                            {renderBalance(monthlyNetBalance)}
                         </div>
                     </Link>
                  )}
@@ -371,7 +392,7 @@ export default function DashboardPage() {
                     <Clock className="h-4 w-4"/>
                     <span>Previsto</span>
                 </div>
-                {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : renderBalance(forecastedBalance + previousMonthLeftover, "text-sm md:text-base")}
+                {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : renderBalanceInP(effectiveForecastedBalance, "text-sm md:text-base")}
             </div>
         </div>
 
@@ -452,7 +473,7 @@ export default function DashboardPage() {
                     </div>
                     <div>
                         <div className="font-bold text-right">{renderBalance(totalBalance)}</div>
-                        <div className="text-sm text-muted-foreground text-right">{renderBalance(forecastedBalance + previousMonthLeftover)}</div>
+                        <div className="text-sm text-muted-foreground text-right">{renderBalance(effectiveForecastedBalance)}</div>
                     </div>
                     <div className="w-10"></div>
                 </div>
@@ -586,17 +607,3 @@ export default function DashboardPage() {
   );
 
 }
-
-    
-
-    
-
-
-
-    
-
-    
-
-    
-
-    
