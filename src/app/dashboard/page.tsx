@@ -192,9 +192,8 @@ export default function DashboardPage() {
         let startingBalance = account.initialBalance;
 
         if (isFutureMonth && !preferences.includePreviousMonthBalance) {
-            // For future months without including past balance, only consider this month's transactions and start from 0
             relevantTransactions = allTransactions.filter(t => t.date >= startDate && t.date <= endDate);
-            startingBalance = 0; // Start from zero for future month projection
+            startingBalance = 0; 
         }
 
         const accountTransactions = relevantTransactions.filter(t => t.accountId === account.id && t.efetivado);
@@ -207,6 +206,42 @@ export default function DashboardPage() {
     });
     return balances;
   }, [accounts, allTransactions, selectedDate, getMonthDateRange, isFutureMonth, preferences.includePreviousMonthBalance]);
+
+  const accountForecasts = useMemo(() => {
+    const forecasts = new Map<string, number>();
+    const { startDate, endDate } = getMonthDateRange(selectedDate);
+
+    accounts.forEach(account => {
+        let relevantTransactions = allTransactions.filter(t => t.date <= endDate);
+        let startingBalance = account.initialBalance;
+
+        if (isFutureMonth && !preferences.includePreviousMonthBalance) {
+            relevantTransactions = allTransactions.filter(t => t.date >= startDate && t.date <= endDate);
+            startingBalance = 0;
+        }
+        
+        const currentMonthAllTransactions = transactionsForCurrentMonth.filter(t => t.accountId === account.id);
+        const forecastedFlow = currentMonthAllTransactions.reduce((acc, t) => {
+             if (t.type === 'income') return acc + t.amount;
+             if (t.type === 'expense') return acc - t.amount;
+             return acc;
+        }, 0);
+
+        // find balance until start of month
+        const balanceUntilStartOfMonth = relevantTransactions
+            .filter(t => t.date < startDate && t.accountId === account.id && t.efetivado)
+             .reduce((acc, t) => {
+                if (t.type === 'income') return acc + t.amount;
+                if (t.type === 'expense') return acc - t.amount;
+                return acc;
+            }, startingBalance);
+
+        forecasts.set(account.id, balanceUntilStartOfMonth + forecastedFlow);
+    });
+    return forecasts;
+
+  }, [accounts, allTransactions, transactionsForCurrentMonth, selectedDate, getMonthDateRange, isFutureMonth, preferences.includePreviousMonthBalance]);
+
 
   const totalBalance = useMemo(() => {
     return includedAccounts.reduce((sum, acc) => sum + (accountBalances.get(acc.id) ?? 0), 0);
@@ -469,38 +504,49 @@ export default function DashboardPage() {
         </div>
         
         <div className="space-y-2">
-            <div className="flex justify-between items-center px-4">
-                <h2 className="text-xl font-bold">Contas</h2>
-                <div className="flex items-center gap-2">
+            <div className="flex justify-between items-center px-1">
+                <h2 className="text-lg font-bold">Contas</h2>
+                <div className="flex items-center">
                     <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
                     <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-muted-foreground" /></Button>
                 </div>
             </div>
             <Card>
               <CardContent className="p-0">
-                {accounts.map(account => (
-                    <div key={account.id} className="flex items-center gap-4 px-4 py-3 border-b last:border-b-0">
-                        <div className={cn("flex-shrink-0", account.ignoreInTotals && "opacity-50")}>
-                            <BankIcon name={account.name} />
-                        </div>
-                        <div className="flex-1">
-                            <p className={cn("font-bold uppercase", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
-                        </div>
-                        <div className={cn("font-bold text-right", account.ignoreInTotals && "text-muted-foreground")}>
-                            {renderBalance(accountBalances.get(account.id) ?? 0)}
-                        </div>
-                         <Button variant="ghost" size="icon" className="text-muted-foreground -mr-2"><MoreVertical className="h-5 w-5" /></Button>
-                    </div>
-                ))}
+                <div className="space-y-0">
+                    {accounts.map((account, index) => {
+                        const balance = accountBalances.get(account.id) ?? 0;
+                        const forecast = accountForecasts.get(account.id) ?? 0;
+                        const showForecast = !account.ignoreInTotals && Math.abs(balance - forecast) > 0.01;
+                        return (
+                            <div key={account.id} className={cn("flex items-center gap-4 p-4", index < accounts.length -1 && "border-b")}>
+                                <div className={cn("flex-shrink-0", account.ignoreInTotals && "opacity-50")}>
+                                    <BankIcon name={account.name} />
+                                </div>
+                                <div className="flex-1">
+                                    <p className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
+                                    {showForecast && <p className="text-sm text-muted-foreground">Previsto</p>}
+                                </div>
+                                <div className="text-right">
+                                    <div className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>
+                                        {renderBalance(balance)}
+                                    </div>
+                                    {showForecast && <div className="text-sm text-muted-foreground">{renderBalance(forecast)}</div>}
+                                </div>
+                                 <Button variant="ghost" size="icon" className="text-muted-foreground -mr-2"><MoreVertical className="h-5 w-5" /></Button>
+                            </div>
+                        )
+                    })}
+                </div>
                  <div className="bg-muted/50 p-4 rounded-b-lg">
                      <div className="flex items-center gap-4">
                         <div className="w-8 h-8 flex-shrink-0"></div>
                         <div className="flex-1">
-                            <p className="font-bold">Total</p>
+                            <p className="font-bold text-lg">Total</p>
                              <p className="text-sm text-muted-foreground">Previsto</p>
                         </div>
                         <div className="text-right">
-                            <div className="font-bold">{renderBalance(totalBalance)}</div>
+                            <div className="font-bold text-lg">{renderBalance(totalBalance)}</div>
                             <div className="text-sm text-muted-foreground">{renderBalance(effectiveForecastedBalance)}</div>
                         </div>
                         <div className="w-10 flex-shrink-0"></div>
@@ -637,4 +683,4 @@ export default function DashboardPage() {
 
 }
 
-    
+  
