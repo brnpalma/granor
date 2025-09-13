@@ -130,7 +130,7 @@ export default function DashboardPage() {
             checkLoading();
         }));
         
-        unscribers.push(getUserPreferences(user.uid, (data) => {
+        unsubscribers.push(getUserPreferences(user.uid, (data) => {
             setPreferences(data);
             dataLoaded.preferences = true;
             checkLoading();
@@ -586,5 +586,7 @@ export default function DashboardPage() {
     
 
 
+
+    
 
     
