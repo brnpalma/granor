@@ -257,7 +257,7 @@ export default function DashboardPage() {
     });
   }, [creditCards, transactionsForCurrentMonth]);
   
- const balanceChartData = useMemo(() => {
+ const { data: balanceChartData, yAxisProps } = useMemo(() => {
     const { startDate, endDate } = getMonthDateRange(selectedDate);
     const today = endOfToday();
     const isCurrentMonth = isSameMonth(selectedDate, today);
@@ -281,12 +281,14 @@ export default function DashboardPage() {
         dailyChanges[dayKey] = (dailyChanges[dayKey] || 0) + change;
     });
     
-    // For future months, just show start and end points
     if (isFutureMonth) {
-        return [
+      const data = [
           { date: format(startDate, "dd/MM"), Saldo: initialAmount },
           { date: format(endDate, "dd/MM"), Saldo: initialAmount + forecastedBalance },
-        ];
+      ];
+      const yMin = Math.min(initialAmount, initialAmount + forecastedBalance);
+      const yMax = Math.max(initialAmount, initialAmount + forecastedBalance);
+      return { data, yAxisProps: { domain: [yMin, yMax] } };
     }
     
     let balance = initialAmount;
@@ -306,19 +308,17 @@ export default function DashboardPage() {
             };
         });
 
-    // Filter out days without transactions for past and current months
     if (isPastMonth || isCurrentMonth) {
         chartData = chartData.filter(item => item.hasTransaction);
     }
 
-     // Ensure first and last days are included if they have been filtered out
     if ((isPastMonth || isCurrentMonth) && chartData.length > 0) {
         const firstDayOfMonth = format(startDate, "dd/MM");
         
         if (chartData[0].date !== firstDayOfMonth) {
             chartData.unshift({
                 date: firstDayOfMonth,
-                Saldo: initialAmount, // This is correct as it's the starting balance
+                Saldo: initialAmount,
                 hasTransaction: false,
             });
         }
@@ -338,15 +338,40 @@ export default function DashboardPage() {
             });
         }
     } else if (chartData.length === 0 && (isPastMonth || isCurrentMonth)) {
-        // If no transactions, show a flat line
-         return [
-          { date: format(startDate, "dd/MM"), Saldo: initialAmount },
-          { date: format(chartEndDate, "dd/MM"), Saldo: initialAmount },
+         chartData = [
+          { date: format(startDate, "dd/MM"), Saldo: initialAmount, hasTransaction: false },
+          { date: format(chartEndDate, "dd/MM"), Saldo: initialAmount, hasTransaction: false },
         ];
     }
+    
+    const getYAxisProps = (data: typeof chartData) => {
+        if (!data || data.length === 0) return { domain: [0, 1000] };
 
+        const yValues = data.map(d => d.Saldo);
+        const yMin = Math.min(...yValues, initialAmount);
+        const yMax = Math.max(...yValues, initialAmount);
 
-    return chartData;
+        const step = yMax < 1000 ? 100 : 1000;
+        const buffer = step * 0.5;
+
+        const domainMin = Math.floor((yMin - buffer) / step) * step;
+        const domainMax = Math.ceil((yMax + buffer) / step) * step;
+
+        const ticks = [];
+        for (let i = domainMin; i <= domainMax; i += step) {
+            ticks.push(i);
+        }
+        
+        // Ensure domain includes the ticks
+        const finalDomain = [Math.min(domainMin, yMin), Math.max(domainMax, yMax)];
+
+        return {
+            domain: finalDomain,
+            ticks: ticks.length > 1 ? ticks : [domainMin, domainMax],
+        };
+    };
+
+    return { data: chartData, yAxisProps: getYAxisProps(chartData) };
 
 }, [includedTransactions, previousMonthLeftover, forecastedBalance, selectedDate, getMonthDateRange, preferences.includePreviousMonthBalance, isFutureMonth]);
 
@@ -487,9 +512,11 @@ export default function DashboardPage() {
                     <YAxis 
                         stroke="hsl(var(--muted-foreground))"
                         fontSize={12} 
-                        tickLine={false}                     axisLine={false}
+                        tickLine={false}
+                        axisLine={false}
                         tickFormatter={(value) => preferences.showBalance ? `${(value / 1000).toFixed(0)}k` : '---'}
-                        domain={['dataMin - 500', 'dataMax + 500']}
+                        allowDuplicatedCategory={false}
+                        {...yAxisProps}
                     />
                     <Tooltip
                         contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}
@@ -510,11 +537,9 @@ export default function DashboardPage() {
         <div className="space-y-2">
             <div className="flex justify-between items-center px-1">
                 <h2 className="text-lg font-bold">Contas</h2>
-                <div className="flex items-center">
-                    <Link href="/dashboard/accounts">
-                        <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
-                    </Link>
-                </div>
+                <Link href="/dashboard/accounts">
+                  <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
+                </Link>
             </div>
             <Card>
                 <CardContent className="p-0">
@@ -560,9 +585,9 @@ export default function DashboardPage() {
         <div className="space-y-2">
              <div className="flex justify-between items-center px-4">
                 <h2 className="text-xl font-bold">Cartões de crédito</h2>
-                <div className="flex items-center gap-2">
+                <Link href="/dashboard/credit-cards">
                     <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
-                </div>
+                </Link>
             </div>
             <Card>
               <CardContent className="p-2 space-y-4">
@@ -595,11 +620,9 @@ export default function DashboardPage() {
         <div className="space-y-2">
             <div className="flex justify-between items-center px-4">
                 <h2 className="text-xl font-bold">Orçamentos</h2>
-                <div className="flex items-center gap-2">
-                    <Link href="/dashboard/budgets">
-                        <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
-                    </Link>
-                </div>
+                <Link href="/dashboard/budgets">
+                    <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
+                </Link>
             </div>
             <Card>
                 <CardContent className="p-4 space-y-4">
@@ -634,11 +657,9 @@ export default function DashboardPage() {
         <div className="space-y-2">
             <div className="flex justify-between items-center px-4">
                 <h2 className="text-xl font-bold">Despesas por categoria</h2>
-                <div className="flex items-center gap-2">
-                    <Link href="/dashboard/reports">
-                        <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
-                    </Link>
-                </div>
+                <Link href="/dashboard/reports">
+                    <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
+                </Link>
             </div>
              <Card>
                 <CardContent className="p-4">
@@ -683,6 +704,7 @@ export default function DashboardPage() {
   
 
     
+
 
 
 
