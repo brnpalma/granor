@@ -23,7 +23,7 @@ import {
 } from "firebase/firestore";
 import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, UserPreferences } from "./types";
 import { useToast } from "@/hooks/use-toast";
-import { subMonths, startOfMonth } from 'date-fns';
+import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
 
 
 // Toast hook must be called from a component
@@ -201,7 +201,7 @@ export const addAccount = (userId: string | null, account: Omit<Account, "id">) 
     return addDataItem<Account>(userId, "accounts", account);
 };
 
-export const updateAccount = async (userId: string | null, accountId: string, accountData: Omit<Account, "id">) => {
+export const updateAccount = async (userId: string | null, accountId: string, accountData: Partial<Omit<Account, "id">>) => {
     const path = getCollectionPath(userId, "accounts");
     if (path) {
         try {
@@ -317,129 +317,24 @@ export const getCreditCards = (userId: string | null, callback: (cards: CreditCa
 // Transactions
 export const addTransaction = async (userId: string | null, transaction: Omit<Transaction, "id">) => {
     balanceCache.clear();
-    const path = getCollectionPath(userId, "transactions");
-    const accountPath = getCollectionPath(userId, "accounts");
-
-    if (path && accountPath && transaction.accountId) {
-        try {
-            await runTransaction(db, async (t) => {
-                const accountRef = doc(db, accountPath, transaction.accountId!);
-                const accountDoc = await t.get(accountRef);
-                if (!accountDoc.exists()) {
-                    throw new Error("Conta não encontrada!");
-                }
-
-                if (transaction.efetivado) {
-                    const currentBalance = accountDoc.data().balance;
-                    const newBalance = transaction.type === 'income' 
-                        ? currentBalance + transaction.amount 
-                        : currentBalance - transaction.amount;
-                    t.update(accountRef, { balance: newBalance });
-                }
-                
-                const transactionRef = doc(collection(db, path));
-                t.set(transactionRef, { ...transaction, date: Timestamp.fromDate(transaction.date) });
-            });
-        } catch (error) {
-            console.error("Error adding account transaction: ", error);
-            showToast({ title: "Erro", description: "Não foi possível adicionar a transação da conta.", variant: "destructive" });
-        }
-    } else { // Handle local data, or credit card transactions
-        await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
-            ...item,
-            date: item.date, 
-        }));
-        
-        if (!path && transaction.accountId && transaction.efetivado) {
-            const accounts = getLocalData<Account>('accounts');
-            const accountIndex = accounts.findIndex(a => a.id === transaction.accountId);
-            if (accountIndex > -1) {
-                const account = accounts[accountIndex];
-                const newBalance = transaction.type === 'income'
-                    ? account.balance + transaction.amount
-                    : account.balance - transaction.amount;
-                accounts[accountIndex] = { ...account, balance: newBalance };
-                setLocalData('accounts', accounts);
-            }
-        }
-    }
+    await addDataItem<Transaction>(userId, "transactions", transaction, (item) => ({
+        ...item,
+        date: Timestamp.fromDate(item.date),
+    }));
 };
 
-export const updateTransaction = async (userId: string, transactionId: string, dataToUpdate: Omit<Transaction, "id">) => {
+export const updateTransaction = async (userId: string, transactionId: string, dataToUpdate: Partial<Omit<Transaction, "id">>) => {
     balanceCache.clear();
     const transactionsPath = getCollectionPath(userId, "transactions");
-    const accountsPath = getCollectionPath(userId, "accounts");
-    if (!transactionsPath || !accountsPath) return;
+    if (!transactionsPath) return;
 
     const transactionRef = doc(db, transactionsPath, transactionId);
 
     try {
-        await runTransaction(db, async (t) => {
-            // 1. READ ALL DOCUMENTS FIRST
-            const transactionDoc = await t.get(transactionRef);
-            if (!transactionDoc.exists()) throw "Transaction does not exist!";
-
-            const originalTransactionData = transactionDoc.data() as Omit<Transaction, 'id'>;
-            const originalTransaction = { 
-                id: transactionDoc.id, 
-                ...originalTransactionData,
-                date: (originalTransactionData.date as unknown as Timestamp).toDate()
-            };
-            
-            const originalAccountRef = originalTransaction.accountId ? doc(db, accountsPath, originalTransaction.accountId) : null;
-            const newAccountRef = dataToUpdate.accountId ? doc(db, accountsPath, dataToUpdate.accountId) : null;
-
-            const originalAccountDoc = originalAccountRef ? await t.get(originalAccountRef) : null;
-            // Only read new account if it's different from the original one to avoid reading the same doc twice
-            const newAccountDoc = (newAccountRef && newAccountRef.path !== originalAccountRef?.path) ? await t.get(newAccountRef) : originalAccountDoc;
-
-            // --- ALL READS ARE DONE ---
-
-            // 2. PERFORM LOGIC AND CALCULATIONS
-            const wasEfetivado = originalTransaction.efetivado;
-            const isNowEfetivado = dataToUpdate.efetivado;
-            
-            let originalAccountBalance: number | null = null;
-            let newAccountBalance: number | null = null;
-
-            // Revert original transaction if it was an effective account transaction
-            if (originalAccountDoc?.exists() && wasEfetivado) {
-                const currentBalance = originalAccountDoc.data().balance;
-                originalAccountBalance = originalTransaction.type === 'income' 
-                    ? currentBalance - originalTransaction.amount 
-                    : currentBalance + originalTransaction.amount;
-            }
-
-            // Apply new transaction if it is an effective account transaction
-            if (newAccountDoc?.exists() && isNowEfetivado) {
-                // If we're updating the same account, use the already calculated reverted balance
-                const baseBalance = newAccountRef?.path === originalAccountRef?.path
-                    ? originalAccountBalance ?? newAccountDoc.data().balance
-                    : newAccountDoc.data().balance;
-                
-                newAccountBalance = dataToUpdate.type === 'income' 
-                    ? baseBalance + dataToUpdate.amount 
-                    : baseBalance - dataToUpdate.amount;
-            }
-
-            // --- ALL CALCULATIONS ARE DONE ---
-
-            // 3. PERFORM ALL WRITES LAST
-            if (originalAccountRef && originalAccountBalance !== null) {
-                // If the new transaction is on a different account, we just update the original account's balance
-                if(originalAccountRef.path !== newAccountRef?.path) {
-                    t.update(originalAccountRef, { balance: originalAccountBalance });
-                }
-            }
-
-            if (newAccountRef && newAccountBalance !== null) {
-                t.update(newAccountRef, { balance: newAccountBalance });
-            }
-            
-            // Update the transaction itself
-            const finalData = { ...dataToUpdate, date: Timestamp.fromDate(dataToUpdate.date) };
-            t.update(transactionRef, finalData);
-        });
+        const dataWithTimestamp = dataToUpdate.date 
+            ? { ...dataToUpdate, date: Timestamp.fromDate(dataToUpdate.date) }
+            : dataToUpdate;
+        await updateDoc(transactionRef, dataWithTimestamp);
     } catch (error) {
         console.error("Error updating transaction: ", error);
         showToast({ title: "Erro", description: "Não foi possível atualizar a transação.", variant: "destructive" });
@@ -453,18 +348,6 @@ export const deleteTransaction = async (userId: string | null, transactionId: st
     if (!transactionsPath) {
         // Handle local data deletion if needed
         let localTransactions = getLocalData<Transaction>('transactions');
-        const transactionToDelete = localTransactions.find(t => t.id === transactionId);
-        if (transactionToDelete && transactionToDelete.accountId) {
-            let localAccounts = getLocalData<Account>('accounts');
-            const accountIndex = localAccounts.findIndex(a => a.id === transactionToDelete.accountId);
-            if (accountIndex > -1) {
-                const account = localAccounts[accountIndex];
-                const amountToRevert = transactionToDelete.amount;
-                const newBalance = transactionToDelete.type === 'expense' ? account.balance + amountToRevert : account.balance - amountToRevert;
-                localAccounts[accountIndex] = { ...account, balance: newBalance };
-                setLocalData('accounts', localAccounts);
-            }
-        }
         localTransactions = localTransactions.filter(t => t.id !== transactionId);
         setLocalData('transactions', localTransactions);
         return;
@@ -473,36 +356,7 @@ export const deleteTransaction = async (userId: string | null, transactionId: st
     const transactionRef = doc(db, transactionsPath, transactionId);
 
     try {
-        await runTransaction(db, async (t) => {
-            const transactionDoc = await t.get(transactionRef);
-            if (!transactionDoc.exists()) {
-                throw "Transaction does not exist!";
-            }
-
-            const transactionData = transactionDoc.data() as Transaction;
-            transactionData.date = (transactionData.date as unknown as Timestamp).toDate();
-
-
-            // Only adjust balance if the transaction was 'efetivado'
-            if (transactionData.accountId && transactionData.efetivado) {
-                const accountPath = getCollectionPath(userId, 'accounts');
-                if (!accountPath) return;
-
-                const accountRef = doc(db, accountPath, transactionData.accountId);
-                const accountDoc = await t.get(accountRef);
-
-                if (accountDoc.exists()) {
-                    const currentBalance = accountDoc.data().balance;
-                    const amountToRevert = transactionData.amount;
-                    const newBalance = transactionData.type === 'expense'
-                        ? currentBalance + amountToRevert
-                        : currentBalance - amountToRevert;
-                    
-                    t.update(accountRef, { balance: newBalance });
-                }
-            }
-            t.delete(transactionRef);
-        });
+        await deleteDoc(transactionRef);
     } catch (error) {
         console.error("Error deleting transaction: ", error);
         showToast({ title: "Erro", description: "Não foi possível deletar a transação.", variant: "destructive" });
@@ -552,7 +406,7 @@ export const getTransactions = (
 
 export const getTransactionsOnce = async (
     userId: string,
-    dateRange: { startDate: Date; endDate: Date }
+    dateRange?: { startDate?: Date; endDate: Date }
 ): Promise<Transaction[]> => {
     const path = getCollectionPath(userId, "transactions");
     if (!path) return [];
@@ -560,10 +414,13 @@ export const getTransactionsOnce = async (
     try {
         let q = query(
             collection(db, path),
-            orderBy("date", "desc"),
-            where("date", ">=", Timestamp.fromDate(dateRange.startDate)),
-            where("date", "<=", Timestamp.fromDate(dateRange.endDate))
+            orderBy("date", "asc"), // ascending to calculate running balance
+            where("date", "<=", Timestamp.fromDate(dateRange?.endDate ?? new Date()))
         );
+
+        if(dateRange?.startDate) {
+            q = query(q, where("date", ">=", Timestamp.fromDate(dateRange.startDate)));
+        }
 
         const querySnapshot = await getDocs(q);
         const transactions: Transaction[] = [];
@@ -582,79 +439,52 @@ export const getTransactionsOnce = async (
     }
 };
 
-const getEarliestTransaction = async (userId: string): Promise<Transaction | null> => {
-    const path = getCollectionPath(userId, "transactions");
-    if (!path) return null;
-
-    try {
-        const q = query(collection(db, path), orderBy("date", "asc"), limit(1));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            const doc = querySnapshot.docs[0];
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                date: (data.date as Timestamp).toDate(),
-            } as Transaction;
-        }
-        return null;
-    } catch (error) {
-        console.error("Error fetching earliest transaction:", error);
-        return null;
-    }
-};
-
 // In-memory cache for balance calculations
 export const balanceCache = new Map<string, number>();
 
 export const findPreviousMonthBalance = async (
   userId: string,
   currentDate: Date,
-  getMonthDateRange: (date: Date) => { startDate: Date; endDate: Date }
 ): Promise<number> => {
-  const cacheKey = `${userId}-${currentDate.getFullYear()}-${currentDate.getMonth()}`;
-  if (balanceCache.has(cacheKey)) {
-    return balanceCache.get(cacheKey)!;
-  }
+    const previousMonthEndDate = endOfMonth(subMonths(currentDate, 1));
+    const cacheKey = `${userId}-${previousMonthEndDate.getFullYear()}-${previousMonthEndDate.getMonth()}`;
 
-  const earliestTransaction = await getEarliestTransaction(userId);
-  if (!earliestTransaction) {
-    balanceCache.set(cacheKey, 0);
-    return 0; // No transactions at all, so initial balance is 0
-  }
-
-  const earliestTransactionDate = startOfMonth(earliestTransaction.date);
-  let dateToSearch = subMonths(currentDate, 1);
-  const maxAttempts = 24; // Keep a safeguard
-  let attempts = 0;
-
-  while (attempts < maxAttempts) {
-    // Stop searching if the month to search is before the first ever transaction
-    if (dateToSearch < earliestTransactionDate) {
-      balanceCache.set(cacheKey, 0);
-      return 0;
+    if (balanceCache.has(cacheKey)) {
+        return balanceCache.get(cacheKey)!;
     }
 
-    const { startDate, endDate } = getMonthDateRange(dateToSearch);
-    const transactions = await getTransactionsOnce(userId, { startDate, endDate });
+    const accountsPath = getCollectionPath(userId, "accounts");
+    if(!accountsPath) return 0;
 
-    if (transactions.length > 0) {
-      const balance = transactions.reduce((acc, t) => {
-        if (t.type === 'income') return acc + t.amount;
-        if (t.type === 'expense') return acc - t.amount;
-        return acc;
-      }, 0);
-      balanceCache.set(cacheKey, balance);
-      return balance;
-    }
+    const accountsSnapshot = await getDocs(collection(db, accountsPath));
+    const initialBalances = accountsSnapshot.docs.reduce((sum, doc) => {
+        const account = doc.data() as Omit<Account, "id">;
+        if (!account.ignoreInTotals) {
+            return sum + account.initialBalance;
+        }
+        return sum;
+    }, 0);
 
-    dateToSearch = subMonths(dateToSearch, 1);
-    attempts++;
-  }
-  
-  balanceCache.set(cacheKey, 0);
-  return 0; // Return 0 if no transactions are found within the attempt limit
+    const allTransactionsUntilPreviousMonth = await getTransactionsOnce(userId, { endDate: previousMonthEndDate });
+    
+    const accountsInfo: Account[] = accountsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Account));
+    const includedAccountIds = new Set(accountsInfo.filter(a => !a.ignoreInTotals).map(a => a.id));
+
+    const finalBalance = allTransactionsUntilPreviousMonth.reduce((balance, t) => {
+        if (!t.accountId || !includedAccountIds.has(t.accountId) || !t.efetivado) {
+            return balance;
+        }
+        if (t.type === 'income') {
+            return balance + t.amount;
+        }
+        if (t.type === 'expense') {
+            return balance - t.amount;
+        }
+        return balance;
+    }, initialBalances);
+
+    balanceCache.set(cacheKey, finalBalance);
+    return finalBalance;
 };
 
 

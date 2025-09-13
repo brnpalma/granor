@@ -121,13 +121,13 @@ export default function TransactionsPage() {
 
       const fetchBalance = async () => {
           setIsBalanceLoading(true);
-          const balance = await findPreviousMonthBalance(user.uid, selectedDate, getMonthDateRange);
+          const balance = await findPreviousMonthBalance(user.uid, selectedDate);
           setInitialBalance(balance);
           setIsBalanceLoading(false);
       };
 
       fetchBalance();
-  }, [user, selectedDate, getMonthDateRange]);
+  }, [user, selectedDate]);
   
   const handleDeleteTransaction = async (transactionId: string) => {
     await deleteTransaction(user?.uid || null, transactionId);
@@ -286,7 +286,7 @@ export default function TransactionsPage() {
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                      Esta ação não pode ser desfeita. Isso removerá permanentemente a transação. Se for uma transação de conta, o saldo será ajustado.
+                                                      Esta ação não pode ser desfeita. Isso removerá permanentemente a transação.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>

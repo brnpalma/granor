@@ -46,8 +46,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { addAccount, getAccounts, deleteAccount, updateAccount } from "@/lib/firestore";
-import type { Account, AccountType } from "@/lib/types";
+import { addAccount, getAccounts, deleteAccount, updateAccount, getTransactionsOnce } from "@/lib/firestore";
+import type { Account, AccountType, Transaction } from "@/lib/types";
 import { accountTypes } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -56,6 +56,7 @@ import { cn } from "@/lib/utils";
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -63,14 +64,47 @@ export default function AccountsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !user?.uid) return;
+    
+    setIsLoading(true);
+    let dataLoaded = { accounts: false, transactions: false };
+
+    const checkLoading = () => {
+        if(Object.values(dataLoaded).every(Boolean)) {
+            setIsLoading(false);
+        }
+    }
 
     const unsubscribe = getAccounts(user?.uid || null, (data) => {
         setAccounts(data);
-        setIsLoading(false);
+        dataLoaded.accounts = true;
+        checkLoading();
     });
+
+    getTransactionsOnce(user.uid, { endDate: new Date() }).then(transactions => {
+        setAllTransactions(transactions);
+        dataLoaded.transactions = true;
+        checkLoading();
+    });
+
+
     return () => unsubscribe();
   }, [user]);
+
+  const accountBalances = useMemo(() => {
+    const balances = new Map<string, number>();
+    accounts.forEach(account => {
+        const accountTransactions = allTransactions.filter(t => t.accountId === account.id && t.efetivado);
+        const currentBalance = accountTransactions.reduce((acc, t) => {
+            if (t.type === 'income') return acc + t.amount;
+            if (t.type === 'expense') return acc - t.amount;
+            return acc;
+        }, account.initialBalance);
+        balances.set(account.id, currentBalance);
+    });
+    return balances;
+  }, [accounts, allTransactions]);
+
 
   const handleOpenDialogForEdit = (account: Account) => {
     setEditingAccount(account);
@@ -91,7 +125,9 @@ export default function AccountsPage() {
 
   const handleFormSubmit = async (accountData: Omit<Account, "id">, accountId?: string) => {
     if (accountId) {
-      await updateAccount(user?.uid || null, accountId, accountData);
+      // Don't update initialBalance when editing, only other fields
+      const { initialBalance, ...dataToUpdate } = accountData;
+      await updateAccount(user?.uid || null, accountId, dataToUpdate);
       toast({ title: "Conta atualizada!" });
     } else {
       await addAccount(user?.uid || null, accountData);
@@ -177,7 +213,7 @@ export default function AccountsPage() {
                                     </AlertDialog>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                           <p className={cn("font-bold text-sm mt-1", account.ignoreInTotals && "text-muted-foreground")}>{(typeof account.balance === 'number' ? account.balance : 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                           <p className={cn("font-bold text-sm mt-1", account.ignoreInTotals && "text-muted-foreground")}>{(accountBalances.get(account.id) ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                         </div>
                     </div>
                 ))}
@@ -210,7 +246,7 @@ function AccountForm({
         if (account) {
             setName(account.name);
             setType(account.type);
-            setBalance(String(account.balance));
+            setBalance(String(account.initialBalance));
             setIgnoreInTotals(account.ignoreInTotals || false);
         } else {
             setName("");
@@ -230,7 +266,7 @@ function AccountForm({
         await onSubmit({
             name,
             type: type as AccountType,
-            balance: parseFloat(balance) || 0,
+            initialBalance: parseFloat(balance) || 0,
             ignoreInTotals,
         }, account?.id);
 
@@ -261,8 +297,8 @@ function AccountForm({
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="balance">{isEditing ? "Saldo" : "Saldo Inicial (Opcional)"}</Label>
-                    <Input id="balance" type="number" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0,00" />
+                    <Label htmlFor="balance">{isEditing ? "Saldo Inicial" : "Saldo Inicial (Opcional)"}</Label>
+                    <Input id="balance" type="number" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0,00" disabled={isEditing} />
                 </div>
                 <div className="flex items-center space-x-2">
                     <Switch id="ignoreInTotals" checked={ignoreInTotals} onCheckedChange={setIgnoreInTotals} />

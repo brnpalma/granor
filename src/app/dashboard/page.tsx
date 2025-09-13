@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, MoreVertical, CheckCircle, Clock, Lock, EyeOff, LineChart } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
-import { getAccounts, getCreditCards, getBudgets, getTransactions, addCategory, getCategories, getUserPreferences, findPreviousMonthBalance } from "@/lib/firestore";
+import { getAccounts, getCreditCards, getBudgets, getTransactionsOnce, getCategories, getUserPreferences, findPreviousMonthBalance } from "@/lib/firestore";
 import type { Account, CreditCard as CreditCardType, Budget, Transaction, UserPreferences } from "@/lib/types";
 import { CategoryIcon, ItauLogo, NubankLogo, PicpayLogo, MercadoPagoLogo, BradescoLogo } from "@/components/icons";
 import Link from "next/link";
@@ -62,7 +62,7 @@ export default function DashboardPage() {
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true });
   const [isLoading, setIsLoading] = useState(true);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
@@ -75,11 +75,16 @@ export default function DashboardPage() {
   const includedAccounts = useMemo(() => accounts.filter(a => !a.ignoreInTotals), [accounts]);
   const includedAccountIds = useMemo(() => new Set(includedAccounts.map(a => a.id)), [includedAccounts]);
   
-  const includedTransactions = useMemo(() => {
-    return transactions.filter(t => !t.accountId || includedAccountIds.has(t.accountId));
-  }, [transactions, includedAccountIds]);
+  const transactionsForCurrentMonth = useMemo(() => {
+    const { startDate, endDate } = getMonthDateRange(selectedDate);
+    return allTransactions.filter(t => t.date >= startDate && t.date <= endDate);
+  }, [allTransactions, selectedDate, getMonthDateRange]);
 
-   // Effect to fetch all data for the current month
+  const includedTransactions = useMemo(() => {
+    return transactionsForCurrentMonth.filter(t => !t.accountId || includedAccountIds.has(t.accountId));
+  }, [transactionsForCurrentMonth, includedAccountIds]);
+
+   // Effect to fetch all data
     useEffect(() => {
         if (!user?.uid) {
             setIsLoading(false);
@@ -87,8 +92,6 @@ export default function DashboardPage() {
         }
 
         setIsLoading(true);
-
-        const { startDate, endDate } = getMonthDateRange(selectedDate);
         
         let dataLoaded = {
             accounts: false,
@@ -137,12 +140,14 @@ export default function DashboardPage() {
             checkLoading();
         }));
 
-        // Fetch current month transactions
-        unsubscribers.push(getTransactions(user.uid, (data) => {
-            setTransactions(data);
+        // Fetch all transactions up to the end of the selected month
+        const { endDate } = getMonthDateRange(selectedDate);
+        getTransactionsOnce(user.uid, { endDate }).then(transactions => {
+            setAllTransactions(transactions);
             dataLoaded.transactions = true;
             checkLoading();
-        }, { startDate, endDate }));
+        });
+
 
         const timer = setTimeout(() => {
             if (Object.values(dataLoaded).some(v => !v)) {
@@ -161,7 +166,7 @@ export default function DashboardPage() {
 
         const fetchBalance = async () => {
             setIsBalanceLoading(true);
-            const balance = await findPreviousMonthBalance(user.uid, selectedDate, getMonthDateRange);
+            const balance = await findPreviousMonthBalance(user.uid, selectedDate);
             setPreviousMonthLeftover(balance);
             setIsBalanceLoading(false);
         };
@@ -198,18 +203,32 @@ export default function DashboardPage() {
   }, [forecastedBalance, previousMonthLeftover, selectedDate, preferences.includePreviousMonthBalance]);
 
 
+  const accountBalances = useMemo(() => {
+    const balances = new Map<string, number>();
+    accounts.forEach(account => {
+        const accountTransactions = allTransactions.filter(t => t.accountId === account.id && t.efetivado);
+        const currentBalance = accountTransactions.reduce((acc, t) => {
+            if (t.type === 'income') return acc + t.amount;
+            if (t.type === 'expense') return acc - t.amount;
+            return acc;
+        }, account.initialBalance);
+        balances.set(account.id, currentBalance);
+    });
+    return balances;
+  }, [accounts, allTransactions]);
+
   const totalBalance = useMemo(() => {
-    return includedAccounts.reduce((sum, acc) => sum + acc.balance, 0);
-  }, [includedAccounts]);
-  
+    return includedAccounts.reduce((sum, acc) => sum + (accountBalances.get(acc.id) ?? 0), 0);
+  }, [includedAccounts, accountBalances]);
+
   const creditCardInvoices = useMemo(() => {
     return creditCards.map(card => {
-        const invoiceTotal = transactions
+        const invoiceTotal = transactionsForCurrentMonth
             .filter(t => t.creditCardId === card.id && t.type === 'expense')
             .reduce((sum, t) => sum + t.amount, 0);
         return { ...card, invoiceTotal };
     });
-  }, [creditCards, transactions]);
+  }, [creditCards, transactionsForCurrentMonth]);
   
  const balanceChartData = useMemo(() => {
     const { startDate, endDate } = getMonthDateRange(selectedDate);
@@ -462,7 +481,7 @@ export default function DashboardPage() {
                             <p className={cn("font-bold uppercase", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
                         </div>
                         <div className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>
-                            {renderBalance(account.balance)}
+                            {renderBalance(accountBalances.get(account.id) ?? 0)}
                         </div>
                          <Button variant="ghost" size="icon" className="text-muted-foreground"><MoreVertical className="h-5 w-5" /></Button>
                     </div>
