@@ -29,7 +29,7 @@ import { CategoryIcon, ItauLogo, NubankLogo, PicpayLogo, MercadoPagoLogo, Brades
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDate } from "@/hooks/use-date";
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, subMonths, startOfDay } from 'date-fns';
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, subMonths, startOfDay, isBefore, endOfToday } from 'date-fns';
 import { cn } from "@/lib/utils";
 
 
@@ -130,7 +130,7 @@ export default function DashboardPage() {
             checkLoading();
         }));
         
-        unsubscribers.push(getUserPreferences(user.uid, (data) => {
+        unscribers.push(getUserPreferences(user.uid, (data) => {
             setPreferences(data);
             dataLoaded.preferences = true;
             checkLoading();
@@ -204,52 +204,72 @@ export default function DashboardPage() {
   
   const balanceChartData = useMemo(() => {
     const { startDate, endDate } = getMonthDateRange(selectedDate);
+    const isPastMonth = isBefore(endDate, endOfToday());
+
     const monthTransactions = includedTransactions
       .filter((t) => t.accountId && t.efetivado)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
     if (monthTransactions.length === 0) {
-      if (previousMonthLeftover || forecastedBalance) {
         return [
-          {
-            date: format(startDate, "dd/MM"),
-            Saldo: previousMonthLeftover,
-          },
-          {
-            date: format(endDate, "dd/MM"),
-            Saldo: previousMonthLeftover + forecastedBalance,
-          },
+          { date: format(startDate, "dd/MM"), Saldo: previousMonthLeftover },
+          { date: format(endDate, "dd/MM"), Saldo: previousMonthLeftover + forecastedBalance },
         ];
-      }
-      return [];
     }
-
+    
     const dailyChanges: { [key: string]: number } = {};
     monthTransactions.forEach((t) => {
-      const dayKey = format(startOfDay(t.date), "yyyy-MM-dd");
-      const change = t.type === "income" ? t.amount : -t.amount;
-      dailyChanges[dayKey] = (dailyChanges[dayKey] || 0) + change;
+        const dayKey = format(startOfDay(t.date), "yyyy-MM-dd");
+        const change = t.type === "income" ? t.amount : -t.amount;
+        dailyChanges[dayKey] = (dailyChanges[dayKey] || 0) + change;
     });
-
-    const sortedDays = Object.keys(dailyChanges).sort();
-    let lastBalance = previousMonthLeftover || 0;
     
-    const chartData = sortedDays.map((dayKey) => {
-      lastBalance += dailyChanges[dayKey];
-      return {
-        date: format(new Date(`${dayKey}T00:00:00`), "dd/MM"),
-        Saldo: lastBalance,
-      };
-    });
+    let balance = previousMonthLeftover;
+    
+    const allDays = eachDayOfInterval({ start: startDate, end: endDate });
+
+    const chartData = allDays
+        .map(day => {
+            const dayKey = format(day, "yyyy-MM-dd");
+            if (dailyChanges[dayKey]) {
+                balance += dailyChanges[dayKey];
+            }
+            return {
+                date: format(day, "dd/MM"),
+                Saldo: balance,
+                hasTransaction: !!dailyChanges[dayKey],
+            };
+        })
+        .filter(item => isPastMonth ? item.hasTransaction : true);
+
+     // Ensure first and last days are included if they have been filtered out
+    if (isPastMonth && chartData.length > 0) {
+        const firstDayOfMonth = format(startDate, "dd/MM");
+        const lastDayOfMonth = format(endDate, "dd/MM");
+
+        if (chartData[0].date !== firstDayOfMonth) {
+            chartData.unshift({
+                date: firstDayOfMonth,
+                Saldo: previousMonthLeftover,
+                hasTransaction: false,
+            });
+        }
+        
+        let lastKnownBalance = chartData[chartData.length -1].Saldo;
+
+        if (chartData[chartData.length - 1].date !== lastDayOfMonth) {
+             chartData.push({
+                date: lastDayOfMonth,
+                Saldo: lastKnownBalance,
+                hasTransaction: false,
+            });
+        }
+    }
+
 
     return chartData;
-  }, [
-    includedTransactions,
-    previousMonthLeftover,
-    forecastedBalance,
-    selectedDate,
-    getMonthDateRange,
-  ]);
+
+}, [includedTransactions, previousMonthLeftover, forecastedBalance, selectedDate, getMonthDateRange]);
 
 
   const chartColors = useMemo(() => {
@@ -565,3 +585,6 @@ export default function DashboardPage() {
 
     
 
+
+
+    
