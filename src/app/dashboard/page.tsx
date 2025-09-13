@@ -25,33 +25,13 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { getAccounts, getCreditCards, getBudgets, getTransactionsOnce, getCategories, getUserPreferences, findPreviousMonthBalance } from "@/lib/firestore";
 import type { Account, CreditCard as CreditCardType, Budget, Transaction, UserPreferences } from "@/lib/types";
-import { CategoryIcon, ItauLogo, NubankLogo, PicpayLogo, MercadoPagoLogo, BradescoLogo } from "@/components/icons";
+import { CategoryIcon } from "@/components/icons";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDate } from "@/hooks/use-date";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, subMonths, startOfDay, isBefore, endOfToday, isSameMonth, isFuture } from 'date-fns';
 import { cn } from "@/lib/utils";
-
-
-const BankIcon = ({ name }: { name: string }) => {
-    const lowerCaseName = name.toLowerCase();
-    if (lowerCaseName.includes("itaú") || lowerCaseName.includes("itau")) {
-        return <ItauLogo />;
-    }
-    if (lowerCaseName.includes("nubank")) {
-        return <NubankLogo />;
-    }
-    if (lowerCaseName.includes("picpay")) {
-        return <PicpayLogo />;
-    }
-    if (lowerCaseName.includes("mercado pago")) {
-        return <MercadoPagoLogo />;
-    }
-     if (lowerCaseName.includes("bradesco")) {
-        return <BradescoLogo />;
-    }
-    return <CategoryIcon category="Outros" className="h-8 w-8 text-muted-foreground" />;
-};
+import { BankIcon } from "@/components/icons";
 
 
 export default function DashboardPage() {
@@ -215,6 +195,8 @@ export default function DashboardPage() {
             // For future months without including past balance, only consider this month's transactions and start from 0
             relevantTransactions = allTransactions.filter(t => t.date >= startDate && t.date <= endDate);
             startingBalance = 0;
+        } else {
+             relevantTransactions = allTransactions.filter(t => t.date <= endDate);
         }
 
         const accountTransactions = relevantTransactions.filter(t => t.accountId === account.id && t.efetivado);
@@ -481,33 +463,34 @@ export default function DashboardPage() {
                 </div>
             </div>
             <Card>
-              <CardContent className="p-2 space-y-4">
+              <CardContent className="p-0">
                 {accounts.map(account => (
-                    <div key={account.id} className="flex items-center gap-4">
+                    <div key={account.id} className="flex items-center gap-4 p-4 border-b last:border-b-0">
                         <div className={cn(account.ignoreInTotals && "opacity-50")}>
                             <BankIcon name={account.name} />
                         </div>
                         <div className="flex-1">
                             <p className={cn("font-bold uppercase", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
                         </div>
-                        <div className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>
+                        <div className={cn("font-bold text-right", account.ignoreInTotals && "text-muted-foreground")}>
                             {renderBalance(accountBalances.get(account.id) ?? 0)}
                         </div>
-                         <Button variant="ghost" size="icon" className="text-muted-foreground"><MoreVertical className="h-5 w-5" /></Button>
+                         <Button variant="ghost" size="icon" className="text-muted-foreground -mr-2"><MoreVertical className="h-5 w-5" /></Button>
                     </div>
                 ))}
-                 <div className="border-t border-border my-2"></div>
-                 <div className="flex items-center gap-4">
-                    <div className="w-8 h-8"></div>
-                    <div className="flex-1">
-                        <p className="font-bold">Total</p>
-                         <p className="text-sm text-muted-foreground">Previsto</p>
+                 <div className="bg-muted/50 p-4">
+                     <div className="flex items-center gap-4">
+                        <div className="w-8 h-8"></div>
+                        <div className="flex-1">
+                            <p className="font-bold">Total</p>
+                             <p className="text-sm text-muted-foreground">Previsto</p>
+                        </div>
+                        <div className="text-right">
+                            <div className="font-bold">{renderBalance(totalBalance)}</div>
+                            <div className="text-sm text-muted-foreground">{renderBalance(effectiveForecastedBalance)}</div>
+                        </div>
+                        <div className="w-10"></div>
                     </div>
-                    <div>
-                        <div className="font-bold text-right">{renderBalance(totalBalance)}</div>
-                        <div className="text-sm text-muted-foreground text-right">{renderBalance(effectiveForecastedBalance)}</div>
-                    </div>
-                    <div className="w-10"></div>
                 </div>
               </CardContent>
             </Card>
@@ -639,5 +622,3 @@ export default function DashboardPage() {
   );
 
 }
-
-    
