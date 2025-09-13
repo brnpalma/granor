@@ -361,6 +361,9 @@ export default function DashboardPage() {
     return <p className={className}>{content}</p>;
   }
 
+  const isFutureMonth = isFuture(startOfMonth(selectedDate));
+  const displayedInitialBalance = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : previousMonthLeftover;
+
 
   return (
     <div className="space-y-6">
@@ -370,7 +373,7 @@ export default function DashboardPage() {
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Inicial</span>
                 </div>
-                 {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : renderBalanceInP(previousMonthLeftover, "text-sm md:text-base")}
+                 {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : renderBalanceInP(displayedInitialBalance, "text-sm md:text-base")}
             </div>
             <div className="flex-shrink-0 flex flex-col items-center gap-1">
                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
