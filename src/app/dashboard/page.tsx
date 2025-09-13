@@ -562,7 +562,6 @@ export default function DashboardPage() {
                 <h2 className="text-xl font-bold">Cartões de crédito</h2>
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
-                    <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-muted-foreground" /></Button>
                 </div>
             </div>
             <Card>
@@ -601,7 +600,6 @@ export default function DashboardPage() {
                     <Link href="/dashboard/budgets">
                         <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
                     </Link>
-                    <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-muted-foreground" /></Button>
                 </div>
             </div>
             <Card>
@@ -687,6 +685,7 @@ export default function DashboardPage() {
   
 
     
+
 
 
 
