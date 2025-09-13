@@ -182,7 +182,7 @@ export default function DashboardPage() {
     return forecastedBalance + initialAmount;
   }, [forecastedBalance, previousMonthLeftover, selectedDate, preferences.includePreviousMonthBalance]);
 
-  const isFutureMonth = isFuture(startOfMonth(selectedDate));
+  const isFutureMonth = useMemo(() => isFuture(startOfMonth(selectedDate)), [selectedDate]);
 
   const accountBalances = useMemo(() => {
     const balances = new Map<string, number>();
@@ -262,8 +262,7 @@ export default function DashboardPage() {
     const today = endOfToday();
     const isCurrentMonth = isSameMonth(selectedDate, today);
     const isPastMonth = isBefore(endDate, today);
-    const isFutureMonth = isFuture(startDate);
-
+    
     const initialAmount = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : previousMonthLeftover;
     
     let chartEndDate = isCurrentMonth ? today : endDate;
@@ -349,7 +348,7 @@ export default function DashboardPage() {
 
     return chartData;
 
-}, [includedTransactions, previousMonthLeftover, forecastedBalance, selectedDate, getMonthDateRange, preferences.includePreviousMonthBalance]);
+}, [includedTransactions, previousMonthLeftover, forecastedBalance, selectedDate, getMonthDateRange, preferences.includePreviousMonthBalance, isFutureMonth]);
 
 
   const chartColors = useMemo(() => {
@@ -406,7 +405,7 @@ export default function DashboardPage() {
     }
     if (!preferences.showBalance) {
         return (
-            <div className="flex items-center justify-start gap-2">
+            <div className="flex items-center justify-end gap-2">
                 <EyeOff className="h-4 w-4 text-muted-foreground" />
                 <span className="font-mono">---</span>
             </div>
@@ -417,10 +416,14 @@ export default function DashboardPage() {
   
   const renderBalanceInP = (value: number, className?: string) => {
     const content = renderBalance(value);
+    
+    const finalClassName = cn(className, !preferences.showBalance && "flex justify-center");
+    
     if (React.isValidElement(content)) {
-        return content;
+         if(preferences.showBalance) return <p className={className}>{content}</p>
+        return <div className="flex justify-center">{content}</div>
     }
-    return <p className={className}>{content}</p>;
+    return <p className={finalClassName}>{content}</p>;
   }
 
   const displayedInitialBalance = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : previousMonthLeftover;
@@ -530,8 +533,8 @@ export default function DashboardPage() {
                                             <p className="text-sm text-muted-foreground">Previsto</p>
                                         </div>
                                         <div className={cn("text-right", account.ignoreInTotals && "text-muted-foreground")}>
-                                            <div className="font-bold">{renderBalance(balance)}</div>
-                                            <div className="text-sm text-muted-foreground">{renderBalance(forecast)}</div>
+                                            <div className="font-bold flex justify-end">{renderBalance(balance)}</div>
+                                            <div className="text-sm text-muted-foreground flex justify-end">{renderBalance(forecast)}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -545,8 +548,8 @@ export default function DashboardPage() {
                                 <p className="text-muted-foreground">Previsto</p>
                             </div>
                             <div className="text-right">
-                                <div className="font-bold">{renderBalance(totalBalance)}</div>
-                                <div className="text-muted-foreground">{renderBalance(effectiveForecastedBalance)}</div>
+                                <div className="font-bold flex justify-end">{renderBalance(totalBalance)}</div>
+                                <div className="text-muted-foreground flex justify-end">{renderBalance(effectiveForecastedBalance)}</div>
                             </div>
                         </div>
                     </div>
@@ -684,6 +687,7 @@ export default function DashboardPage() {
   
 
     
+
 
 
 
