@@ -24,7 +24,7 @@ import { ExternalLink, MoreVertical, CheckCircle, Clock, Lock, EyeOff, LineChart
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { getAccounts, getCreditCards, getBudgets, getTransactionsOnce, getCategories, getUserPreferences, findPreviousMonthBalance } from "@/lib/firestore";
-import type { Account, CreditCard as CreditCardType, Budget, Transaction, UserPreferences } from "@/lib/types";
+import type { Account, CreditCard as CreditCardType, Budget, Transaction, UserPreferences, Category } from "@/lib/types";
 import { CategoryIcon } from "@/components/icons";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -188,15 +188,13 @@ export default function DashboardPage() {
     const { startDate, endDate } = getMonthDateRange(selectedDate);
     
     accounts.forEach(account => {
-        let relevantTransactions = allTransactions;
+        let relevantTransactions = allTransactions.filter(t => t.date <= endDate);
         let startingBalance = account.initialBalance;
 
         if (isFutureMonth && !preferences.includePreviousMonthBalance) {
             // For future months without including past balance, only consider this month's transactions and start from 0
             relevantTransactions = allTransactions.filter(t => t.date >= startDate && t.date <= endDate);
-            startingBalance = 0;
-        } else {
-             relevantTransactions = allTransactions.filter(t => t.date <= endDate);
+            startingBalance = 0; // Start from zero for future month projection
         }
 
         const accountTransactions = relevantTransactions.filter(t => t.accountId === account.id && t.efetivado);
@@ -232,8 +230,11 @@ export default function DashboardPage() {
 
     const initialAmount = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : previousMonthLeftover;
     
-    const chartEndDate = isCurrentMonth ? today : endDate;
-
+    let chartEndDate = isCurrentMonth ? today : endDate;
+    if (isPastMonth) {
+        chartEndDate = endOfMonth(selectedDate);
+    }
+    
     const monthTransactions = includedTransactions
       .filter((t) => t.accountId && t.efetivado)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -245,10 +246,11 @@ export default function DashboardPage() {
         dailyChanges[dayKey] = (dailyChanges[dayKey] || 0) + change;
     });
     
-    if (monthTransactions.length === 0 && !isPastMonth && !isCurrentMonth) {
+    // For future months, just show start and end points
+    if (isFutureMonth) {
         return [
           { date: format(startDate, "dd/MM"), Saldo: initialAmount },
-          { date: format(chartEndDate, "dd/MM"), Saldo: initialAmount + forecastedBalance },
+          { date: format(endDate, "dd/MM"), Saldo: initialAmount + forecastedBalance },
         ];
     }
     
@@ -256,7 +258,7 @@ export default function DashboardPage() {
     
     const allDays = eachDayOfInterval({ start: startDate, end: chartEndDate });
 
-    const chartData = allDays
+    let chartData = allDays
         .map(day => {
             const dayKey = format(day, "yyyy-MM-dd");
             if (dailyChanges[dayKey]) {
@@ -267,33 +269,45 @@ export default function DashboardPage() {
                 Saldo: balance,
                 hasTransaction: !!dailyChanges[dayKey],
             };
-        })
-        .filter(item => isPastMonth || isCurrentMonth ? item.hasTransaction : true);
+        });
 
-     // Ensure first and last days are included for past months if they have been filtered out
+    // Filter out days without transactions for past and current months
+    if (isPastMonth || isCurrentMonth) {
+        chartData = chartData.filter(item => item.hasTransaction);
+    }
+
+     // Ensure first and last days are included if they have been filtered out
     if ((isPastMonth || isCurrentMonth) && chartData.length > 0) {
         const firstDayOfMonth = format(startDate, "dd/MM");
         
         if (chartData[0].date !== firstDayOfMonth) {
             chartData.unshift({
                 date: firstDayOfMonth,
-                Saldo: initialAmount,
+                Saldo: initialAmount, // This is correct as it's the starting balance
                 hasTransaction: false,
             });
         }
         
-        let lastKnownBalance = chartData[chartData.length -1].Saldo;
-        const lastDayInInterval = isCurrentMonth ? today : endDate;
-        const lastDayOfMonthFormatted = format(lastDayInInterval, "dd/MM");
+        const lastKnownBalance = allDays.reduce((bal, day) => {
+            const dayKey = format(day, "yyyy-MM-dd");
+            return bal + (dailyChanges[dayKey] || 0);
+        }, initialAmount);
 
+        const lastDayInIntervalFormatted = format(chartEndDate, "dd/MM");
 
-        if (chartData[chartData.length - 1].date !== lastDayOfMonthFormatted) {
+        if (chartData[chartData.length - 1].date !== lastDayInIntervalFormatted) {
              chartData.push({
-                date: lastDayOfMonthFormatted,
+                date: lastDayInIntervalFormatted,
                 Saldo: lastKnownBalance,
                 hasTransaction: false,
             });
         }
+    } else if (chartData.length === 0 && (isPastMonth || isCurrentMonth)) {
+        // If no transactions, show a flat line
+         return [
+          { date: format(startDate, "dd/MM"), Saldo: initialAmount },
+          { date: format(chartEndDate, "dd/MM"), Saldo: initialAmount },
+        ];
     }
 
 
@@ -465,8 +479,8 @@ export default function DashboardPage() {
             <Card>
               <CardContent className="p-0">
                 {accounts.map(account => (
-                    <div key={account.id} className="flex items-center gap-4 p-4 border-b last:border-b-0">
-                        <div className={cn(account.ignoreInTotals && "opacity-50")}>
+                    <div key={account.id} className="flex items-center gap-4 px-4 py-3 border-b last:border-b-0">
+                        <div className={cn("flex-shrink-0", account.ignoreInTotals && "opacity-50")}>
                             <BankIcon name={account.name} />
                         </div>
                         <div className="flex-1">
@@ -478,9 +492,9 @@ export default function DashboardPage() {
                          <Button variant="ghost" size="icon" className="text-muted-foreground -mr-2"><MoreVertical className="h-5 w-5" /></Button>
                     </div>
                 ))}
-                 <div className="bg-muted/50 p-4">
+                 <div className="bg-muted/50 p-4 rounded-b-lg">
                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-8"></div>
+                        <div className="w-8 h-8 flex-shrink-0"></div>
                         <div className="flex-1">
                             <p className="font-bold">Total</p>
                              <p className="text-sm text-muted-foreground">Previsto</p>
@@ -489,7 +503,7 @@ export default function DashboardPage() {
                             <div className="font-bold">{renderBalance(totalBalance)}</div>
                             <div className="text-sm text-muted-foreground">{renderBalance(effectiveForecastedBalance)}</div>
                         </div>
-                        <div className="w-10"></div>
+                        <div className="w-10 flex-shrink-0"></div>
                     </div>
                 </div>
               </CardContent>
@@ -622,3 +636,5 @@ export default function DashboardPage() {
   );
 
 }
+
+    
