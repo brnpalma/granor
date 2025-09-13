@@ -1,5 +1,7 @@
 
 
+export type RecurrenceEditScope = "single" | "future" | "all";
+
 export interface UserPreferences {
   showBalance: boolean;
   includePreviousMonthBalance: boolean;

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, Suspense } from 'react';
@@ -6,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { getAccounts, getCategories, getCreditCards, addTransaction, updateTransaction, getTransactionById } from '@/lib/firestore';
-import type { Transaction, Account, Category, CreditCard as CreditCardType, Recurrence, RecurrencePeriod } from '@/lib/types';
+import type { Transaction, Account, Category, CreditCard as CreditCardType, Recurrence, RecurrencePeriod, RecurrenceEditScope } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +16,16 @@ import { Switch }from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus, Minus, ArrowRightLeft, PlusCircle } from 'lucide-react';
 
@@ -129,6 +140,7 @@ function TransactionForm() {
     
     const [isRecurring, setIsRecurring] = useState(false);
     const [recurrence, setRecurrence] = useState<Recurrence>({ period: 'mensal', quantity: 2, startInstallment: 1 });
+    const [originalTransaction, setOriginalTransaction] = useState<Transaction | null>(null);
     const [isRecurrenceDialogOpen, setIsRecurrenceDialogOpen] = useState(false);
 
 
@@ -140,6 +152,7 @@ function TransactionForm() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [showEditScopeDialog, setShowEditScopeDialog] = useState(false);
 
 
     useEffect(() => {
@@ -154,6 +167,7 @@ function TransactionForm() {
             setIsEditing(true);
             getTransactionById(user.uid, transactionId).then(t => {
                 if (t) {
+                    setOriginalTransaction(t);
                     setDescription(t.description);
                     setAmount(String(t.amount));
                     setDate(t.date);
@@ -182,9 +196,9 @@ function TransactionForm() {
     }, [user, transactionId, typeParam, isCreditCardParam]);
     
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (scope?: RecurrenceEditScope) => {
         setIsSaving(true);
+        setShowEditScopeDialog(false);
 
         const parsedAmount = parseFloat(amount);
         if (!user?.uid || !description || isNaN(parsedAmount) || parsedAmount <= 0 || !date || !type || !category || (!accountId && !creditCardId)) {
@@ -214,7 +228,11 @@ function TransactionForm() {
 
         try {
             if (isEditing && transactionId) {
-                await updateTransaction(user.uid, transactionId, transactionData);
+                if (originalTransaction?.isRecurring && scope) {
+                    await updateTransaction(user.uid, transactionId, transactionData, scope, originalTransaction);
+                } else {
+                    await updateTransaction(user.uid, transactionId, transactionData, "single");
+                }
                 toast({ title: "Transação atualizada!" });
             } else {
                 await addTransaction(user.uid, transactionData);
@@ -229,6 +247,15 @@ function TransactionForm() {
         }
     };
     
+    const handleSaveClick = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (isEditing && originalTransaction?.isRecurring) {
+            setShowEditScopeDialog(true);
+        } else {
+            handleSubmit();
+        }
+    };
+
     const handleSaveRecurrence = (newRecurrence: Recurrence) => {
         setRecurrence(newRecurrence);
         setIsRecurring(true);
@@ -263,7 +290,7 @@ function TransactionForm() {
                     <ArrowLeft className="h-6 w-6" />
                 </Button>
                 <h1 className="text-lg font-semibold">{pageTitle}</h1>
-                <Button onClick={handleSubmit} className={cn(saveButtonColor)} disabled={isSaving}>
+                <Button onClick={handleSaveClick} className={cn(saveButtonColor)} disabled={isSaving}>
                     {isSaving ? "Salvando..." : "Salvar"}
                 </Button>
             </header>
@@ -276,6 +303,7 @@ function TransactionForm() {
                         className="border-0 focus-visible:ring-0 text-base p-0"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
+                        disabled={isEditing && !!originalTransaction?.isRecurring}
                     />
                 </div>
                 
@@ -311,7 +339,7 @@ function TransactionForm() {
 
                 <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                     <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start font-normal h-auto p-3 border">
+                        <Button variant="outline" className="w-full justify-start font-normal h-auto p-3 border" disabled={isEditing && !!originalTransaction?.isRecurring}>
                             <div className="flex items-center justify-between w-full">
                                 <div className='flex items-center gap-4'>
                                     <CalendarIcon className="h-5 w-5 text-muted-foreground" />
@@ -418,6 +446,24 @@ function TransactionForm() {
                 recurrence={recurrence}
                 onSave={handleSaveRecurrence}
             />
+            {showEditScopeDialog && (
+              <AlertDialog open={showEditScopeDialog} onOpenChange={setShowEditScopeDialog}>
+                  <AlertDialogContent>
+                      <AlertDialogHeader>
+                          <AlertDialogTitle>Editar transação recorrente</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              Você está editando uma transação recorrente. Como deseja aplicar as alterações?
+                          </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="flex-col gap-2">
+                           <AlertDialogAction onClick={() => handleSubmit("single")}>Salvar somente esta transação</AlertDialogAction>
+                           <AlertDialogAction onClick={() => handleSubmit("future")}>Salvar esta e as futuras</AlertDialogAction>
+                           <AlertDialogAction onClick={() => handleSubmit("all")}>Salvar todas as transações</AlertDialogAction>
+                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      </AlertDialogFooter>
+                  </AlertDialogContent>
+              </AlertDialog>
+            )}
         </div>
     );
 }

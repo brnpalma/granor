@@ -21,7 +21,7 @@ import {
   setDoc,
   limit,
 } from "firebase/firestore";
-import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, UserPreferences, RecurrencePeriod } from "./types";
+import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, UserPreferences, RecurrencePeriod, RecurrenceEditScope } from "./types";
 import { useToast } from "@/hooks/use-toast";
 import { subMonths, startOfMonth, endOfMonth, addDays, addWeeks, addMonths, addYears } from 'date-fns';
 
@@ -371,44 +371,94 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
     }
 };
 
-export const updateTransaction = async (userId: string, transactionId: string, dataToUpdate: Partial<Omit<Transaction, "id">>) => {
-    balanceCache.clear();
-    const transactionsPath = getCollectionPath(userId, "transactions");
-    if (!transactionsPath) return;
+export const updateTransaction = async (
+  userId: string,
+  transactionId: string,
+  dataToUpdate: Partial<Omit<Transaction, "id">>,
+  scope: RecurrenceEditScope = "single",
+  originalTransaction?: Transaction
+) => {
+  balanceCache.clear();
+  const transactionsPath = getCollectionPath(userId, "transactions");
+  if (!transactionsPath) return;
 
-    const transactionRef = doc(db, transactionsPath, transactionId);
+  try {
+    const batch = writeBatch(db);
+    const mainTransactionRef = doc(db, transactionsPath, transactionId);
 
-    try {
-        const dataWithTimestamp = dataToUpdate.date 
-            ? { ...dataToUpdate, date: Timestamp.fromDate(dataToUpdate.date) }
-            : dataToUpdate;
-        await updateDoc(transactionRef, dataWithTimestamp);
-    } catch (error) {
-        console.error("Error updating transaction: ", error);
-        showToast({ title: "Erro", description: "Não foi possível atualizar a transação.", variant: "destructive" });
+    if (scope === "single" || !originalTransaction?.recurrenceId) {
+      const dataWithTimestamp = dataToUpdate.date
+        ? { ...dataToUpdate, date: Timestamp.fromDate(dataToUpdate.date) }
+        : dataToUpdate;
+      batch.update(mainTransactionRef, dataWithTimestamp);
+    } else {
+      const q = query(
+        collection(db, transactionsPath),
+        where("recurrenceId", "==", originalTransaction.recurrenceId)
+      );
+      const querySnapshot = await getDocs(q);
+
+      let transactionsToUpdate = querySnapshot.docs;
+
+      if (scope === "future") {
+        transactionsToUpdate = transactionsToUpdate.filter(
+          (doc) => (doc.data().date as Timestamp).toDate() >= originalTransaction.date
+        );
+      }
+
+      // These fields are unique per installment and should not be bulk-updated
+      const { date, description, ...sharedData } = dataToUpdate;
+      
+      transactionsToUpdate.forEach((doc) => {
+        const transactionRef = doc.ref;
+        batch.update(transactionRef, sharedData);
+      });
     }
+
+    await batch.commit();
+  } catch (error) {
+    console.error("Error updating transaction(s): ", error);
+    showToast({ title: "Erro", description: "Não foi possível atualizar a(s) transação(ões).", variant: "destructive" });
+  }
 };
 
 
-export const deleteTransaction = async (userId: string | null, transactionId: string) => {
-    balanceCache.clear();
-    const transactionsPath = getCollectionPath(userId, 'transactions');
-    if (!transactionsPath) {
-        // Handle local data deletion if needed
-        let localTransactions = getLocalData<Transaction>('transactions');
-        localTransactions = localTransactions.filter(t => t.id !== transactionId);
-        setLocalData('transactions', localTransactions);
-        return;
-    }
+export const deleteTransaction = async (
+  userId: string | null,
+  transactionId: string,
+  scope: RecurrenceEditScope = "single",
+  transaction?: Transaction
+) => {
+  balanceCache.clear();
+  const transactionsPath = getCollectionPath(userId, 'transactions');
+  if (!transactionsPath) return;
 
-    const transactionRef = doc(db, transactionsPath, transactionId);
+  try {
+    const batch = writeBatch(db);
 
-    try {
-        await deleteDoc(transactionRef);
-    } catch (error) {
-        console.error("Error deleting transaction: ", error);
-        showToast({ title: "Erro", description: "Não foi possível deletar a transação.", variant: "destructive" });
+    if (scope === 'single' || !transaction?.recurrenceId) {
+      const transactionRef = doc(db, transactionsPath, transactionId);
+      batch.delete(transactionRef);
+    } else {
+      const q = query(collection(db, transactionsPath), where('recurrenceId', '==', transaction.recurrenceId));
+      const querySnapshot = await getDocs(q);
+
+      let docsToDelete = querySnapshot.docs;
+
+      if (scope === 'future') {
+        docsToDelete = docsToDelete.filter(doc => (doc.data().date as Timestamp).toDate() >= transaction.date);
+      }
+      
+      docsToDelete.forEach(doc => {
+        batch.delete(doc.ref);
+      });
     }
+    
+    await batch.commit();
+  } catch (error) {
+    console.error("Error deleting transaction(s): ", error);
+    showToast({ title: "Erro", description: "Não foi possível deletar a(s) transação(ões).", variant: "destructive" });
+  }
 };
 
 export const getTransactionById = async (userId: string, transactionId: string): Promise<Transaction | null> => {
@@ -587,7 +637,7 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
                 // To prevent duplicates, we check if Firestore is already populated.
                 const firestoreDocs = await getDocs(collection(db, firestorePath));
                 if (firestoreDocs.size > 0) {
-                    console.log(`Firestore already has data for ${collectionName}. Skipping migration.`);
+                    console.log(`Firestore has data for ${collectionName}. Skipping migration.`);
                     continue;
                 }
                 

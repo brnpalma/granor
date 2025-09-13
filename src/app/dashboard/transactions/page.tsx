@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { CreditCard, Edit, MoreVertical, EyeOff } from "lucide-react";
+import { CreditCard, Edit, MoreVertical, EyeOff, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -30,7 +30,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { deleteTransaction, getTransactions, getAccounts, getCreditCards, updateTransaction, findPreviousMonthBalance, getUserPreferences } from "@/lib/firestore";
-import type { Transaction, Account, CreditCard as CreditCardType, UserPreferences } from "@/lib/types";
+import type { Transaction, Account, CreditCard as CreditCardType, UserPreferences, RecurrenceEditScope } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
@@ -38,7 +38,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useDate } from "@/hooks/use-date";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
 import { isFuture, startOfMonth } from "date-fns";
 
 
@@ -60,6 +59,9 @@ export default function TransactionsPage() {
   const { toast } = useToast();
   const { selectedDate, getMonthDateRange } = useDate();
   const router = useRouter();
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
 
 
   useEffect(() => {
@@ -129,14 +131,22 @@ export default function TransactionsPage() {
       fetchBalance();
   }, [user, selectedDate]);
   
-  const handleDeleteTransaction = async (transactionId: string) => {
-    await deleteTransaction(user?.uid || null, transactionId);
+  const handleDeleteTransaction = async (scope: RecurrenceEditScope) => {
+    if (!transactionToDelete) return;
+    await deleteTransaction(user?.uid || null, transactionToDelete.id, scope, transactionToDelete);
     toast({ title: "Transação removida!" });
+    setTransactionToDelete(null);
+    setDeleteDialogOpen(false);
+  }
+
+  const openDeleteDialog = (transaction: Transaction) => {
+      setTransactionToDelete(transaction);
+      setDeleteDialogOpen(true);
   }
 
   const handleToggleEfetivado = async (transaction: Transaction) => {
       if (!user?.uid) return;
-      await updateTransaction(user.uid, transaction.id, { ...transaction, efetivado: !transaction.efetivado });
+      await updateTransaction(user.uid, transaction.id, { efetivado: !transaction.efetivado });
       toast({ title: `Transação ${!transaction.efetivado ? 'efetivada' : 'marcada como pendente'}.` });
   }
 
@@ -200,16 +210,18 @@ export default function TransactionsPage() {
   }, [selectedDate, preferences.includePreviousMonthBalance, initialBalance]);
 
   const finalBalance = useMemo(() => {
-      const includedAccountsIds = new Set(accounts.filter(a => !a.ignoreInTotals).map(a => a.id));
-      const monthlyFlow = transactions
-          .filter(t => t.efetivado && (!t.accountId || includedAccountsIds.has(t.accountId)))
-          .reduce((acc, t) => {
-              if (t.type === 'income') return acc + t.amount;
-              if (t.type === 'expense') return acc - t.amount;
-              return acc;
-          }, 0);
-      return displayedInitialBalance + monthlyFlow;
-  }, [transactions, displayedInitialBalance, accounts]);
+    const isFutureMonth = isFuture(startOfMonth(selectedDate));
+    const effectiveInitialBalance = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : initialBalance;
+    const includedAccountsIds = new Set(accounts.filter(a => !a.ignoreInTotals).map(a => a.id));
+    const monthlyFlow = transactions
+        .filter(t => t.efetivado && (!t.accountId || includedAccountsIds.has(t.accountId)))
+        .reduce((acc, t) => {
+            if (t.type === 'income') return acc + t.amount;
+            if (t.type === 'expense') return acc - t.amount;
+            return acc;
+        }, 0);
+    return effectiveInitialBalance + monthlyFlow;
+}, [transactions, initialBalance, accounts, selectedDate, preferences.includePreviousMonthBalance]);
 
 
   if (isLoading) {
@@ -289,26 +301,10 @@ export default function TransactionsPage() {
                                             <span>Editar</span>
                                         </DropdownMenuItem>
                                          {!t.isBudget && (
-                                         <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                    <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                                                    <span className="text-destructive">Remover</span>
-                                                </DropdownMenuItem>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                      Esta ação não pode ser desfeita. Isso removerá permanentemente a transação.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteTransaction(t.id)}>Remover</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
+                                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDeleteDialog(t); }}>
+                                                <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                                                <span className="text-destructive">Remover</span>
+                                            </DropdownMenuItem>
                                          )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
@@ -341,8 +337,34 @@ export default function TransactionsPage() {
                 )}
             </div>
         )}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Remover Transação</AlertDialogTitle>
+                    {transactionToDelete?.isRecurring ? (
+                        <AlertDialogDescription>
+                            Esta é uma transação recorrente. Como você gostaria de removê-la?
+                        </AlertDialogDescription>
+                    ) : (
+                        <AlertDialogDescription>
+                            Você tem certeza que quer remover esta transação? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                    )}
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-col gap-2">
+                    {transactionToDelete?.isRecurring ? (
+                        <>
+                            <AlertDialogAction onClick={() => handleDeleteTransaction("single")}>Remover somente esta</AlertDialogAction>
+                            <AlertDialogAction onClick={() => handleDeleteTransaction("future")}>Remover esta e as futuras</AlertDialogAction>
+                            <AlertDialogAction onClick={() => handleDeleteTransaction("all")}>Remover todas as parcelas</AlertDialogAction>
+                        </>
+                    ) : (
+                        <AlertDialogAction onClick={() => handleDeleteTransaction("single")}>Remover</AlertDialogAction>
+                    )}
+                    <AlertDialogCancel onClick={() => setTransactionToDelete(null)}>Cancelar</AlertDialogCancel>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
-
-    
