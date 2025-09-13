@@ -152,7 +152,7 @@ export default function DashboardPage() {
         };
 
         fetchBalance();
-    }, [user, selectedDate, getMonthDateRange]);
+    }, [user, selectedDate]);
     
     useEffect(() => {
         const effectiveIncome = includedTransactions.filter(t => t.type === 'income' && t.efetivado).reduce((sum, t) => sum + t.amount, 0);
@@ -513,36 +513,40 @@ export default function DashboardPage() {
                 </div>
             </div>
             <Card>
-                <CardContent className="p-0">
-                    <div>
-                        {accounts.map((account, index) => {
-                            const balance = accountBalances.get(account.id) ?? 0;
-                            return (
-                                <div key={account.id} className={cn("flex items-center justify-between p-4", index < accounts.length -1 && "border-b")}>
-                                    <div className="flex items-center gap-4">
-                                        <div className={cn("flex-shrink-0", account.ignoreInTotals && "opacity-50")}>
-                                            <BankIcon name={account.name} />
-                                        </div>
-                                        <p className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
+                <CardContent className="p-4 space-y-2">
+                    {accounts.map((account) => {
+                        const balance = accountBalances.get(account.id) ?? 0;
+                        const forecast = accountForecasts.get(account.id) ?? 0;
+                        return (
+                            <div key={account.id} className={cn("flex items-center")}>
+                                <div className="flex items-center gap-4 flex-1">
+                                    <div className={cn("flex-shrink-0", account.ignoreInTotals && "opacity-50")}>
+                                        <BankIcon name={account.name} />
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className={cn("font-bold text-right", account.ignoreInTotals && "text-muted-foreground")}>
-                                            {renderBalance(balance)}
-                                        </div>
-                                        <Button variant="ghost" size="icon" className="text-muted-foreground -mr-2"><MoreVertical className="h-5 w-5" /></Button>
+                                    <div className="flex-1">
+                                        <p className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
+                                        <p className="text-sm text-muted-foreground">Previsto: {renderBalance(forecast)}</p>
                                     </div>
                                 </div>
-                            )
-                        })}
-                    </div>
-                    <div className="bg-muted/50 p-4 rounded-b-lg grid grid-cols-2">
-                        <div>
-                            <p className="font-bold text-lg">Total</p>
-                            <p className="text-sm text-muted-foreground">Previsto</p>
-                        </div>
-                        <div className="text-right">
-                            <div className="font-bold text-lg">{renderBalance(totalBalance)}</div>
-                            <div className="text-sm text-muted-foreground">{renderBalance(effectiveForecastedBalance)}</div>
+                                <div className="flex items-center gap-4">
+                                    <div className={cn("font-bold text-right", account.ignoreInTotals && "text-muted-foreground")}>
+                                        {renderBalance(balance)}
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="text-muted-foreground -mr-2"><MoreVertical className="h-5 w-5" /></Button>
+                                </div>
+                            </div>
+                        )
+                    })}
+                     <div className="bg-muted/50 p-4 rounded-lg mt-2">
+                        <div className="grid grid-cols-2 text-sm">
+                            <div>
+                                <p className="font-bold">Total</p>
+                                <p className="text-muted-foreground">Previsto</p>
+                            </div>
+                            <div className="text-right">
+                                <div className="font-bold">{renderBalance(totalBalance)}</div>
+                                <div className="text-muted-foreground">{renderBalance(effectiveForecastedBalance)}</div>
+                            </div>
                         </div>
                     </div>
                 </CardContent>
