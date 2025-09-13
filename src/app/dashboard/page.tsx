@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -512,47 +513,39 @@ export default function DashboardPage() {
                 </div>
             </div>
             <Card>
-              <CardContent className="p-0">
-                <div className="space-y-0">
-                    {accounts.map((account, index) => {
-                        const balance = accountBalances.get(account.id) ?? 0;
-                        const forecast = accountForecasts.get(account.id) ?? 0;
-                        const showForecast = !account.ignoreInTotals && Math.abs(balance - forecast) > 0.01;
-                        return (
-                            <div key={account.id} className={cn("flex items-center gap-4 p-4", index < accounts.length -1 && "border-b")}>
-                                <div className={cn("flex-shrink-0", account.ignoreInTotals && "opacity-50")}>
-                                    <BankIcon name={account.name} />
-                                </div>
-                                <div className="flex-1">
-                                    <p className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
-                                    {showForecast && <p className="text-sm text-muted-foreground">Previsto</p>}
-                                </div>
-                                <div className="text-right">
-                                    <div className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>
-                                        {renderBalance(balance)}
+                <CardContent className="p-0">
+                    <div>
+                        {accounts.map((account, index) => {
+                            const balance = accountBalances.get(account.id) ?? 0;
+                            return (
+                                <div key={account.id} className={cn("flex items-center justify-between p-4", index < accounts.length -1 && "border-b")}>
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn("flex-shrink-0", account.ignoreInTotals && "opacity-50")}>
+                                            <BankIcon name={account.name} />
+                                        </div>
+                                        <p className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
                                     </div>
-                                    {showForecast && <div className="text-sm text-muted-foreground">{renderBalance(forecast)}</div>}
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn("font-bold text-right", account.ignoreInTotals && "text-muted-foreground")}>
+                                            {renderBalance(balance)}
+                                        </div>
+                                        <Button variant="ghost" size="icon" className="text-muted-foreground -mr-2"><MoreVertical className="h-5 w-5" /></Button>
+                                    </div>
                                 </div>
-                                 <Button variant="ghost" size="icon" className="text-muted-foreground -mr-2"><MoreVertical className="h-5 w-5" /></Button>
-                            </div>
-                        )
-                    })}
-                </div>
-                 <div className="bg-muted/50 p-4 rounded-b-lg">
-                     <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 flex-shrink-0"></div>
-                        <div className="flex-1">
+                            )
+                        })}
+                    </div>
+                    <div className="bg-muted/50 p-4 rounded-b-lg grid grid-cols-2">
+                        <div>
                             <p className="font-bold text-lg">Total</p>
-                             <p className="text-sm text-muted-foreground">Previsto</p>
+                            <p className="text-sm text-muted-foreground">Previsto</p>
                         </div>
                         <div className="text-right">
                             <div className="font-bold text-lg">{renderBalance(totalBalance)}</div>
                             <div className="text-sm text-muted-foreground">{renderBalance(effectiveForecastedBalance)}</div>
                         </div>
-                        <div className="w-10 flex-shrink-0"></div>
                     </div>
-                </div>
-              </CardContent>
+                </CardContent>
             </Card>
         </div>
         
@@ -684,3 +677,5 @@ export default function DashboardPage() {
 }
 
   
+
+    
