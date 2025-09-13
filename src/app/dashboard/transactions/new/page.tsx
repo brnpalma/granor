@@ -33,21 +33,25 @@ function RecurrenceDialog({
   open,
   onOpenChange,
   recurrence,
+  isFixed,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   recurrence: Recurrence;
-  onSave: (recurrence: Recurrence) => void;
+  isFixed: boolean;
+  onSave: (recurrence: Recurrence, isFixed: boolean) => void;
 }) {
   const [tempRecurrence, setTempRecurrence] = useState<Recurrence>(recurrence);
+  const [tempIsFixed, setTempIsFixed] = useState(isFixed);
 
   useEffect(() => {
     setTempRecurrence(recurrence);
-  }, [recurrence, open]);
+    setTempIsFixed(isFixed);
+  }, [recurrence, isFixed, open]);
 
   const handleSave = () => {
-    onSave(tempRecurrence);
+    onSave(tempRecurrence, tempIsFixed);
     onOpenChange(false);
   };
   
@@ -67,46 +71,57 @@ function RecurrenceDialog({
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="flex items-center justify-between">
-            <div className='flex items-center gap-4'>
-                <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
-                <Label>Parcela inicial</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={() => handleStartInstallmentChange(-1)}><Minus className="h-4 w-4" /></Button>
-              <span className="font-bold w-4 text-center">{tempRecurrence.startInstallment}</span>
-              <Button variant="ghost" size="icon" onClick={() => handleStartInstallmentChange(1)}><Plus className="h-4 w-4" /></Button>
-            </div>
+              <Label htmlFor="fixed-monthly-switch" className='flex items-center gap-4 cursor-pointer'>
+                  <Repeat className="h-5 w-5 text-muted-foreground" />
+                  <span>Fixa Mensal</span>
+              </Label>
+              <Switch id="fixed-monthly-switch" checked={tempIsFixed} onCheckedChange={setTempIsFixed} />
           </div>
-           <div className="flex items-center justify-between">
-            <div className='flex items-center gap-4'>
-                <PlusCircle className="h-5 w-5 text-muted-foreground" />
-                <Label>Quantidade</Label>
+
+          <div className={cn("space-y-4", tempIsFixed && "opacity-50")}>
+            <div className="flex items-center justify-between">
+              <div className='flex items-center gap-4'>
+                  <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
+                  <Label>Parcela inicial</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => handleStartInstallmentChange(-1)} disabled={tempIsFixed}><Minus className="h-4 w-4" /></Button>
+                <span className="font-bold w-4 text-center">{tempRecurrence.startInstallment}</span>
+                <Button variant="ghost" size="icon" onClick={() => handleStartInstallmentChange(1)} disabled={tempIsFixed}><Plus className="h-4 w-4" /></Button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={() => handleQuantityChange(-1)}><Minus className="h-4 w-4" /></Button>
-               <span className="font-bold w-4 text-center">{tempRecurrence.quantity}</span>
-              <Button variant="ghost" size="icon" onClick={() => handleQuantityChange(1)}><Plus className="h-4 w-4" /></Button>
+            <div className="flex items-center justify-between">
+              <div className='flex items-center gap-4'>
+                  <PlusCircle className="h-5 w-5 text-muted-foreground" />
+                  <Label>Quantidade</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => handleQuantityChange(-1)} disabled={tempIsFixed}><Minus className="h-4 w-4" /></Button>
+                <span className="font-bold w-4 text-center">{tempRecurrence.quantity}</span>
+                <Button variant="ghost" size="icon" onClick={() => handleQuantityChange(1)} disabled={tempIsFixed}><Plus className="h-4 w-4" /></Button>
+              </div>
             </div>
-          </div>
-           <div className="flex items-center justify-between">
-            <div className='flex items-center gap-4'>
-                <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                <Label>Periodicidade</Label>
+            <div className="flex items-center justify-between">
+              <div className='flex items-center gap-4'>
+                  <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                  <Label>Periodicidade</Label>
+              </div>
+              <Select 
+                  value={tempRecurrence.period} 
+                  onValueChange={(value: RecurrencePeriod) => setTempRecurrence(prev => ({ ...prev, period: value}))}
+                  disabled={tempIsFixed}
+              >
+                  <SelectTrigger className="w-[120px] border-0 focus:ring-0">
+                      <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="diária">Diária</SelectItem>
+                      <SelectItem value="semanal">Semanal</SelectItem>
+                      <SelectItem value="mensal">Mensal</SelectItem>
+                      <SelectItem value="anual">Anual</SelectItem>
+                  </SelectContent>
+              </Select>
             </div>
-             <Select 
-                value={tempRecurrence.period} 
-                onValueChange={(value: RecurrencePeriod) => setTempRecurrence(prev => ({ ...prev, period: value}))}
-             >
-                <SelectTrigger className="w-[120px] border-0 focus:ring-0">
-                    <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="diária">Diária</SelectItem>
-                    <SelectItem value="semanal">Semanal</SelectItem>
-                    <SelectItem value="mensal">Mensal</SelectItem>
-                    <SelectItem value="anual">Anual</SelectItem>
-                </SelectContent>
-            </Select>
           </div>
         </div>
         <DialogFooter>
@@ -139,6 +154,7 @@ function TransactionForm() {
     const [efetivado, setEfetivado] = useState(true);
     
     const [isRecurring, setIsRecurring] = useState(false);
+    const [isFixed, setIsFixed] = useState(false);
     const [recurrence, setRecurrence] = useState<Recurrence>({ period: 'mensal', quantity: 2, startInstallment: 1 });
     const [originalTransaction, setOriginalTransaction] = useState<Transaction | null>(null);
     const [isRecurrenceDialogOpen, setIsRecurrenceDialogOpen] = useState(false);
@@ -177,6 +193,7 @@ function TransactionForm() {
                     setAccountId(t.accountId);
                     setCreditCardId(t.creditCardId);
                     setIsRecurring(t.isRecurring || false);
+                    setIsFixed(t.isFixed || false);
                     if (t.recurrence) {
                         setRecurrence(t.recurrence);
                     }
@@ -215,8 +232,9 @@ function TransactionForm() {
             category,
             efetivado,
             isBudget: false,
-            isRecurring,
-            recurrence: isRecurring ? recurrence : undefined
+            isRecurring: isRecurring && !isFixed,
+            isFixed: isFixed,
+            recurrence: isRecurring && !isFixed ? recurrence : undefined
         };
 
         if (creditCardId) {
@@ -256,9 +274,14 @@ function TransactionForm() {
         }
     };
 
-    const handleSaveRecurrence = (newRecurrence: Recurrence) => {
-        setRecurrence(newRecurrence);
-        setIsRecurring(true);
+    const handleSaveRecurrence = (newRecurrence: Recurrence, newIsFixed: boolean) => {
+        setIsFixed(newIsFixed);
+        if (newIsFixed) {
+            setIsRecurring(false);
+        } else {
+            setRecurrence(newRecurrence);
+            setIsRecurring(true);
+        }
     };
 
     if (isLoading) {
@@ -279,7 +302,9 @@ function TransactionForm() {
         ? "bg-green-500 hover:bg-green-600 text-white"
         : "bg-red-500 hover:bg-red-600 text-white";
         
-    const recurrenceText = isRecurring 
+    const recurrenceText = isFixed
+        ? "Fixa Mensal"
+        : isRecurring
         ? `${recurrence.period.charAt(0).toUpperCase() + recurrence.period.slice(1)}, ${recurrence.quantity} parcelas`
         : "Não recorrente";
 
@@ -327,12 +352,15 @@ function TransactionForm() {
                         <span className="text-muted-foreground">{recurrenceText}</span>
                     </div>
                 </Button>
-                 {isRecurring && !isEditing && (
+                 {(isRecurring || isFixed) && !isEditing && (
                     <div className="flex items-center justify-between gap-4 p-3 rounded-lg border -mt-1">
                         <div className="flex items-center gap-4">
                             <Label htmlFor="is-recurring-switch">Desativar repetição</Label>
                         </div>
-                        <Switch id="is-recurring-switch" checked={!isRecurring} onCheckedChange={(checked) => setIsRecurring(!checked)} />
+                        <Switch id="is-recurring-switch" checked={!isRecurring && !isFixed} onCheckedChange={(checked) => {
+                            setIsRecurring(!checked);
+                            setIsFixed(!checked);
+                        }} />
                     </div>
                  )}
 
@@ -444,6 +472,7 @@ function TransactionForm() {
                 open={isRecurrenceDialogOpen}
                 onOpenChange={setIsRecurrenceDialogOpen}
                 recurrence={recurrence}
+                isFixed={isFixed}
                 onSave={handleSaveRecurrence}
             />
             {showEditScopeDialog && (
@@ -476,5 +505,3 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
-
-    

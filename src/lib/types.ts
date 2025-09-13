@@ -61,6 +61,7 @@ export interface Transaction {
   creditCardId?: string; // Optional: for credit card transactions
   isBudget?: boolean;
   isRecurring?: boolean;
+  isFixed?: boolean;
   recurrence?: Recurrence;
   recurrenceId?: string;
 }

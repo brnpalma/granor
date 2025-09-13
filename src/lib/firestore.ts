@@ -331,7 +331,7 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
     if (!transactionsPath) return;
 
     try {
-        if (transaction.isRecurring && transaction.recurrence) {
+        if (transaction.isRecurring && transaction.recurrence && !transaction.isFixed) {
             const batch = writeBatch(db);
             const recurrenceId = doc(collection(db, 'transactions')).id; // Generate a unique ID for the group
             const { quantity, period, startInstallment } = transaction.recurrence;
@@ -358,7 +358,7 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
             await batch.commit();
 
         } else {
-            // Single transaction
+            // Single transaction (or fixed)
              const { date, ...restOfTransaction } = transaction;
             await addDoc(collection(db, transactionsPath), {
                 ...restOfTransaction,
@@ -491,16 +491,50 @@ export const getTransactions = (
     callback: (transactions: Transaction[]) => void,
     dateRange?: { startDate: Date; endDate: Date }
 ) => {
-    return getDataSubscription<Transaction>(userId, "transactions", callback, {
-        orderField: "date",
-        orderDirection: "desc",
-        dateRange,
-        postProcess: (data) => ({
-            ...data,
-            date: (data.date as Timestamp).toDate(),
-        }),
+    const path = getCollectionPath(userId, "transactions");
+    if (!path) return () => {};
+
+    // First subscription for date-ranged transactions
+    let dateRangeQuery = query(collection(db, path), orderBy("date", "desc"));
+    if (dateRange) {
+        dateRangeQuery = query(dateRangeQuery,
+            where("date", ">=", Timestamp.fromDate(dateRange.startDate)),
+            where("date", "<=", Timestamp.fromDate(dateRange.endDate))
+        );
+    }
+    const unsubDateRange = onSnapshot(dateRangeQuery, (dateRangeSnapshot) => {
+        const dateRangeTransactions: Transaction[] = dateRangeSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            date: (doc.data().date as Timestamp).toDate(),
+        } as Transaction));
+
+        // Second query for fixed transactions
+        const fixedQuery = query(collection(db, path), where("isFixed", "==", true));
+        getDocs(fixedQuery).then(fixedSnapshot => {
+            const fixedTransactions: Transaction[] = fixedSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                date: (doc.data().date as Timestamp).toDate(),
+            } as Transaction));
+
+            // Combine and remove duplicates (a fixed transaction might be in the date range)
+            const combined = [...dateRangeTransactions, ...fixedTransactions];
+            const uniqueTransactions = Array.from(new Map(combined.map(t => [t.id, t])).values());
+            
+            callback(uniqueTransactions);
+        });
+
+    }, (error) => {
+        console.error("Error fetching transactions:", error);
+        callback([]);
     });
+
+    // The logic to combine snapshots makes it tricky to return a single clean unsubscribe.
+    // For now, we only return the main one. In a more complex app, this might need a manager.
+    return unsubDateRange;
 };
+
 
 export const getTransactionsOnce = async (
     userId: string,
