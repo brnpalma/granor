@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/chart";
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Pie, PieChart, Cell, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, MoreVertical, CheckCircle, Clock, Lock, EyeOff, LineChart } from 'lucide-react';
+import { ExternalLink, CheckCircle, Clock, Lock, EyeOff, LineChart, MoreVertical } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { getAccounts, getCreditCards, getBudgets, getTransactionsOnce, getCategories, getUserPreferences, findPreviousMonthBalance } from "@/lib/firestore";
@@ -508,8 +508,9 @@ export default function DashboardPage() {
             <div className="flex justify-between items-center px-1">
                 <h2 className="text-lg font-bold">Contas</h2>
                 <div className="flex items-center">
-                    <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
-                    <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-muted-foreground" /></Button>
+                    <Link href="/dashboard/accounts">
+                        <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
+                    </Link>
                 </div>
             </div>
             <Card>
@@ -523,22 +524,21 @@ export default function DashboardPage() {
                                     <div className={cn("flex-shrink-0", account.ignoreInTotals && "opacity-50")}>
                                         <BankIcon name={account.name} />
                                     </div>
-                                    <div className="flex-1">
-                                        <p className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
-                                        <p className="text-sm text-muted-foreground">Previsto</p>
+                                    <div className="flex-1 grid grid-cols-2">
+                                        <div>
+                                            <p className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
+                                            <p className="text-sm text-muted-foreground">Previsto</p>
+                                        </div>
+                                        <div className={cn("text-right", account.ignoreInTotals && "text-muted-foreground")}>
+                                            <div className="font-bold">{renderBalance(balance)}</div>
+                                            <div className="text-sm text-muted-foreground">{renderBalance(forecast)}</div>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                     <div className={cn("text-right", account.ignoreInTotals && "text-muted-foreground")}>
-                                        <div className="font-bold">{renderBalance(balance)}</div>
-                                        <div className="text-sm text-muted-foreground">{renderBalance(forecast)}</div>
-                                    </div>
-                                    <Button variant="ghost" size="icon" className="text-muted-foreground -mr-2"><MoreVertical className="h-5 w-5" /></Button>
                                 </div>
                             </div>
                         )
                     })}
-                     <div className="bg-muted/50 p-4 rounded-lg m-2">
+                     <div className="bg-muted/50 p-4 m-2 rounded-lg">
                         <div className="grid grid-cols-2 text-sm">
                             <div>
                                 <p className="font-bold">Total</p>
@@ -684,4 +684,5 @@ export default function DashboardPage() {
   
 
     
+
 
