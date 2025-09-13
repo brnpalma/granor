@@ -198,7 +198,7 @@ function Header() {
                             <Settings className="h-5 w-5" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" className="w-72">
                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
                             <Label htmlFor="show-balance-switch" className="flex items-center gap-2 cursor-pointer">
                                 {preferences.showBalance ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -214,7 +214,7 @@ function Header() {
                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
                             <Label htmlFor="include-previous-balance-switch" className="flex items-center gap-2 cursor-pointer">
                                 <Merge className="h-4 w-4" />
-                                <span>Somar saldo anterior</span>
+                                <span>Somar saldo anterior em meses futuros</span>
                             </Label>
                             <Switch
                                 id="include-previous-balance-switch"
