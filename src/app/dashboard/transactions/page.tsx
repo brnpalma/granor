@@ -206,6 +206,19 @@ export default function TransactionsPage() {
   const isFutureMonth = isFuture(startOfMonth(selectedDate));
   const displayedInitialBalance = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : initialBalance;
 
+  const finalBalance = useMemo(() => {
+      const includedAccountsIds = new Set(accounts.filter(a => !a.ignoreInTotals).map(a => a.id));
+      const monthlyFlow = transactions
+          .filter(t => t.efetivado && (!t.accountId || includedAccountsIds.has(t.accountId)))
+          .reduce((acc, t) => {
+              if (t.type === 'income') return acc + t.amount;
+              if (t.type === 'expense') return acc - t.amount;
+              return acc;
+          }, 0);
+      return displayedInitialBalance + monthlyFlow;
+  }, [transactions, displayedInitialBalance, accounts]);
+
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -317,6 +330,16 @@ export default function TransactionsPage() {
             </div>
         ))}
       </div>
+        {groupedTransactions.length > 0 && (
+            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg mt-4">
+                <p className="text-sm font-medium text-muted-foreground">Saldo Final</p>
+                {isBalanceLoading ? (
+                    <Skeleton className="h-6 w-28" />
+                ) : (
+                    <p className="text-lg font-bold">{renderBalance(finalBalance)}</p>
+                )}
+            </div>
+        )}
     </div>
   );
 }
