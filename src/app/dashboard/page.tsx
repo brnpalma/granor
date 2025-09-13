@@ -532,7 +532,7 @@ export default function DashboardPage() {
                                             <p className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
                                             <p className="text-sm text-muted-foreground">Previsto</p>
                                         </div>
-                                        <div className={cn("text-right", account.ignoreInTotals && "text-muted-foreground")}>
+                                        <div className={cn("text-right flex flex-col items-end", account.ignoreInTotals && "text-muted-foreground")}>
                                             <div className="font-bold flex justify-end">{renderBalance(balance)}</div>
                                             <div className="text-sm text-muted-foreground flex justify-end">{renderBalance(forecast)}</div>
                                         </div>
@@ -541,7 +541,7 @@ export default function DashboardPage() {
                             </div>
                         )
                     })}
-                     <div className="bg-muted/50 p-3 m-2 rounded-lg">
+                     <div className="p-3 m-2 rounded-lg bg-muted/50">
                         <div className="grid grid-cols-2 text-sm">
                             <div>
                                 <p className="font-bold">Total</p>
@@ -585,7 +585,6 @@ export default function DashboardPage() {
                                 </div>
                                 <p className="text-sm text-muted-foreground">{dueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}</p>
                             </div>
-                            <Button variant="ghost" size="icon" className="text-muted-foreground"><MoreVertical className="h-5 w-5" /></Button>
                         </div>
                     )
                 })}
@@ -639,7 +638,6 @@ export default function DashboardPage() {
                     <Link href="/dashboard/reports">
                         <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
                     </Link>
-                    <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5 text-muted-foreground" /></Button>
                 </div>
             </div>
              <Card>
@@ -685,6 +683,7 @@ export default function DashboardPage() {
   
 
     
+
 
 
 
