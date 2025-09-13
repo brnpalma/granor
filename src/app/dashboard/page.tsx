@@ -206,7 +206,7 @@ export default function DashboardPage() {
     const { startDate, endDate } = getMonthDateRange(selectedDate);
     const today = endOfToday();
     const isCurrentMonth = isSameMonth(selectedDate, today);
-    const isPastMonth = isBefore(endDate, today) && !isCurrentMonth;
+    const isPastMonth = isBefore(endDate, today);
     
     const chartEndDate = isCurrentMonth ? today : endDate;
 
@@ -244,13 +244,12 @@ export default function DashboardPage() {
                 hasTransaction: !!dailyChanges[dayKey],
             };
         })
-        .filter(item => isPastMonth ? item.hasTransaction : true);
+        .filter(item => isPastMonth || isCurrentMonth ? item.hasTransaction : true);
 
      // Ensure first and last days are included for past months if they have been filtered out
-    if (isPastMonth && chartData.length > 0) {
+    if ((isPastMonth || isCurrentMonth) && chartData.length > 0) {
         const firstDayOfMonth = format(startDate, "dd/MM");
-        const lastDayOfMonth = format(endDate, "dd/MM");
-
+        
         if (chartData[0].date !== firstDayOfMonth) {
             chartData.unshift({
                 date: firstDayOfMonth,
@@ -260,10 +259,13 @@ export default function DashboardPage() {
         }
         
         let lastKnownBalance = chartData[chartData.length -1].Saldo;
+        const lastDayInInterval = isCurrentMonth ? today : endDate;
+        const lastDayOfMonthFormatted = format(lastDayInInterval, "dd/MM");
 
-        if (chartData[chartData.length - 1].date !== lastDayOfMonth) {
+
+        if (chartData[chartData.length - 1].date !== lastDayOfMonthFormatted) {
              chartData.push({
-                date: lastDayOfMonth,
+                date: lastDayOfMonthFormatted,
                 Saldo: lastKnownBalance,
                 hasTransaction: false,
             });
@@ -590,6 +592,8 @@ export default function DashboardPage() {
     
 
 
+
+    
 
     
 
