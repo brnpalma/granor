@@ -193,18 +193,11 @@ export default function TransactionsPage() {
       };
     });
   }, [transactions]);
-
-
-  if (isLoading) {
-    return (
-      <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  const isFutureMonth = isFuture(startOfMonth(selectedDate));
-  const displayedInitialBalance = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : initialBalance;
+  
+  const displayedInitialBalance = useMemo(() => {
+    const isFutureMonth = isFuture(startOfMonth(selectedDate));
+    return (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : initialBalance;
+  }, [selectedDate, preferences.includePreviousMonthBalance, initialBalance]);
 
   const finalBalance = useMemo(() => {
       const includedAccountsIds = new Set(accounts.filter(a => !a.ignoreInTotals).map(a => a.id));
@@ -218,6 +211,14 @@ export default function TransactionsPage() {
       return displayedInitialBalance + monthlyFlow;
   }, [transactions, displayedInitialBalance, accounts]);
 
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -343,3 +344,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    
