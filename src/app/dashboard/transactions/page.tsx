@@ -39,6 +39,7 @@ import { useDate } from "@/hooks/use-date";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
+import { isFuture, startOfMonth } from "date-fns";
 
 
 type GroupedTransactions = {
@@ -52,7 +53,7 @@ export default function TransactionsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
   const [initialBalance, setInitialBalance] = useState(0);
-  const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true });
+  const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true });
   const [isLoading, setIsLoading] = useState(true);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   const { user } = useAuth();
@@ -202,6 +203,9 @@ export default function TransactionsPage() {
     );
   }
 
+  const isFutureMonth = isFuture(startOfMonth(selectedDate));
+  const displayedInitialBalance = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : initialBalance;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -213,7 +217,7 @@ export default function TransactionsPage() {
           {isBalanceLoading ? (
               <Skeleton className="h-6 w-28" />
           ) : (
-              <p className="text-lg font-bold">{renderBalance(initialBalance)}</p>
+              <p className="text-lg font-bold">{renderBalance(displayedInitialBalance)}</p>
           )}
       </div>
 
@@ -316,5 +320,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    
