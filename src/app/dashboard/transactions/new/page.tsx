@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, Suspense } from 'react';
@@ -234,8 +233,11 @@ function TransactionForm() {
             isBudget: false,
             isRecurring: isRecurring && !isFixed,
             isFixed: isFixed,
-            recurrence: isRecurring && !isFixed ? recurrence : undefined
         };
+
+        if (transactionData.isRecurring) {
+            transactionData.recurrence = recurrence;
+        }
 
         if (creditCardId) {
             transactionData.creditCardId = creditCardId;
@@ -505,3 +507,5 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
+
+    
