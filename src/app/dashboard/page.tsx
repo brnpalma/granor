@@ -513,31 +513,32 @@ export default function DashboardPage() {
                 </div>
             </div>
             <Card>
-                <CardContent className="p-4 space-y-2">
-                    {accounts.map((account) => {
+                <CardContent className="p-0">
+                    {accounts.map((account, index) => {
                         const balance = accountBalances.get(account.id) ?? 0;
                         const forecast = accountForecasts.get(account.id) ?? 0;
                         return (
-                            <div key={account.id} className={cn("flex items-center")}>
+                            <div key={account.id} className={cn("flex items-center p-4", accounts.length -1 !== index && "border-b")}>
                                 <div className="flex items-center gap-4 flex-1">
                                     <div className={cn("flex-shrink-0", account.ignoreInTotals && "opacity-50")}>
                                         <BankIcon name={account.name} />
                                     </div>
                                     <div className="flex-1">
                                         <p className={cn("font-bold", account.ignoreInTotals && "text-muted-foreground")}>{account.name}</p>
-                                        <p className="text-sm text-muted-foreground">Previsto: {renderBalance(forecast)}</p>
+                                        <p className="text-sm text-muted-foreground">Previsto</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">
-                                    <div className={cn("font-bold text-right", account.ignoreInTotals && "text-muted-foreground")}>
-                                        {renderBalance(balance)}
+                                     <div className={cn("text-right", account.ignoreInTotals && "text-muted-foreground")}>
+                                        <div className="font-bold">{renderBalance(balance)}</div>
+                                        <div className="text-sm text-muted-foreground">{renderBalance(forecast)}</div>
                                     </div>
                                     <Button variant="ghost" size="icon" className="text-muted-foreground -mr-2"><MoreVertical className="h-5 w-5" /></Button>
                                 </div>
                             </div>
                         )
                     })}
-                     <div className="bg-muted/50 p-4 rounded-lg mt-2">
+                     <div className="bg-muted/50 p-4 rounded-lg m-2">
                         <div className="grid grid-cols-2 text-sm">
                             <div>
                                 <p className="font-bold">Total</p>
@@ -683,3 +684,4 @@ export default function DashboardPage() {
   
 
     
+
