@@ -415,10 +415,13 @@ export const updateTransaction = async (
         } else if (originalTransaction?.isFixed && scope === 'single' && dataToUpdate.date) {
             // Create a one-off override for a fixed transaction
             const monthKey = `${dataToUpdate.date.getFullYear()}-${dataToUpdate.date.getMonth()}`;
-            const {id, ...newTransactionData} = { ...dataToUpdate, isFixed: false, isRecurring: false, recurrenceId: originalTransaction.id };
+            const newTransactionData = { ...dataToUpdate, isFixed: false, isRecurring: false, recurrenceId: originalTransaction.id };
+            if('id' in newTransactionData) delete (newTransactionData as any).id;
+            
             const overrideId = await addTransaction(userId, newTransactionData, true);
+
             if (overrideId) {
-                const originalDocRef = doc(db, transactionsPath, transactionId);
+                const originalDocRef = doc(db, transactionsPath, originalTransaction.id);
                 await updateDoc(originalDocRef, { overrides: { ...(originalTransaction.overrides || {}), [monthKey]: overrideId } });
             }
         } else if (originalTransaction?.isFixed && scope === 'future' && dataToUpdate.date) {
@@ -450,7 +453,7 @@ export const deleteTransaction = async (
   if (!transactionsPath) return;
 
   try {
-    const originalDocId = transaction?.recurrenceId || transactionId;
+    const originalDocId = transaction?.recurrenceId || (transaction?.isFixed ? transaction.id : null) || transactionId;
     const originalDocRef = doc(db, transactionsPath, originalDocId);
 
     // Deleting a single instance of a non-fixed recurring transaction
@@ -462,18 +465,14 @@ export const deleteTransaction = async (
     // Deleting a single projected instance of a fixed transaction
     if (transaction?.isFixed && transaction.id.includes('-projected-') && scope === 'single') {
         const monthKey = `${transaction.date.getFullYear()}-${transaction.date.getMonth()}`;
-        const docSnap = await getDoc(originalDocRef);
-        if (docSnap.exists()) {
-            const originalData = docSnap.data() as Transaction;
-            await updateDoc(originalDocRef, {
-                overrides: { ...(originalData.overrides || {}), [monthKey]: 'deleted' }
-            });
-        }
+        await updateDoc(originalDocRef, {
+            [`overrides.${monthKey}`]: 'deleted'
+        });
         return;
     }
 
-    // Deleting a single original transaction (non-recurring or fixed)
-    if (scope === 'single') {
+    // Deleting a single original transaction (non-recurring)
+    if (!transaction?.isFixed && !transaction?.isRecurring && scope === 'single') {
         await deleteDoc(doc(db, transactionsPath, transactionId));
         return;
     }
@@ -568,7 +567,7 @@ export const getTransactions = (
     
     const fixedQuery = query(
         collection(db, path),
-        where("isFixed", "==", true),
+        where("isFixed", "==", true)
     );
 
 
@@ -594,47 +593,42 @@ export const getTransactions = (
                 const originalYear = originalDate.getFullYear();
                 const originalMonth = originalDate.getMonth();
 
-                const isFutureMonth = selectedYear > originalYear || (selectedYear === originalYear && selectedMonth > originalMonth);
-                const isCurrentMonth = selectedYear === originalYear && selectedMonth === originalMonth;
-                const isAfterStartDate = isFutureMonth || isCurrentMonth;
-
+                const isAfterStartDate = selectedYear > originalYear || (selectedYear === originalYear && selectedMonth >= originalMonth);
                 if (!isAfterStartDate) return;
                 
                 const isBeforeEndDate = !t.endDate || selectedYear < t.endDate.getFullYear() || (selectedYear === t.endDate.getFullYear() && selectedMonth <= t.endDate.getMonth());
                 if (!isBeforeEndDate) return;
-
+                
                 const monthKey = `${selectedYear}-${selectedMonth}`;
-                if (t.overrides && t.overrides[monthKey] === 'deleted') {
-                    return;
+                if (t.overrides && t.overrides[monthKey]) {
+                    if (t.overrides[monthKey] !== 'deleted') {
+                         // An override exists, so we should not show the original projected transaction.
+                         // The override itself is a normal transaction and will be fetched by dateRangeQuery.
+                    }
+                    return; // Either handled by override or deleted for this month
                 }
                 
-                if (t.overrides && t.overrides[monthKey] && !processedIds.has(t.overrides[monthKey])) {
-                    // This override transaction should be in the dateRangeSnapshot, so do nothing here to avoid dupes
-                    return;
-                }
-                
-                if (isCurrentMonth) {
+                const isOriginalMonth = selectedYear === originalYear && selectedMonth === originalMonth;
+                if(isOriginalMonth) {
                      if (!processedIds.has(t.id)) {
                         combinedResults.push(t);
                         processedIds.add(t.id);
                     }
-                    return; // Already included
+                    return;
                 }
-                
-                if (isFutureMonth) {
-                    const projectedDate = new Date(selectedYear, selectedMonth, originalDate.getDate());
-                    const projectedId = `${t.id}-projected-${monthKey}`;
-    
-                    if (!processedIds.has(projectedId)) {
-                        combinedResults.push({
-                            ...t,
-                            id: projectedId,
-                            date: projectedDate,
-                            efetivado: false,
-                            recurrenceId: t.id,
-                        });
-                        processedIds.add(projectedId);
-                    }
+
+                const projectedDate = new Date(selectedYear, selectedMonth, originalDate.getDate());
+                const projectedId = `${t.id}-projected-${monthKey}`;
+
+                if (!processedIds.has(projectedId)) {
+                    combinedResults.push({
+                        ...t,
+                        id: projectedId,
+                        date: projectedDate,
+                        efetivado: false,
+                        recurrenceId: t.id,
+                    });
+                    processedIds.add(projectedId);
                 }
             });
             
