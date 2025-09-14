@@ -330,6 +330,12 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
     if (!transactionsPath) return;
 
     try {
+        const { date, ...restOfTransaction } = transaction;
+        const dataToAdd: any = {
+            ...restOfTransaction,
+            date: Timestamp.fromDate(date),
+        };
+
         if (transaction.isRecurring && transaction.recurrence && !transaction.isFixed) {
             const batch = writeBatch(db);
             const recurrenceId = doc(collection(db, 'transactions')).id; // Generate a unique ID for the group
@@ -358,12 +364,7 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
 
         } else {
             // Single transaction (or fixed)
-            const { date, ...restOfTransaction } = transaction;
-            const dataToAdd: any = {
-                ...restOfTransaction,
-                date: Timestamp.fromDate(date),
-            };
-            if(transaction.isRecurring){
+            if (transaction.isRecurring && !transaction.isFixed) {
                 dataToAdd.recurrence = transaction.recurrence;
             }
             await addDoc(collection(db, transactionsPath), dataToAdd);
@@ -495,9 +496,7 @@ export const getTransactions = (
     const path = getCollectionPath(userId, "transactions");
     if (!path || !dateRange) return () => {};
 
-    // Query for all relevant transactions in one go.
-    // 1. Normal/recurring transactions within the month.
-    // 2. Fixed transactions that started on or before the end of the current month.
+    // Query for all relevant transactions up to the end of the selected month
     const relevantTransactionsQuery = query(
         collection(db, path),
         where("date", "<=", Timestamp.fromDate(dateRange.endDate))
@@ -513,41 +512,46 @@ export const getTransactions = (
         const transactionsForMonth: Transaction[] = [];
         const processedFixedIds = new Set<string>();
 
-        const currentMonthStartDate = dateRange.startDate;
+        const selectedYear = dateRange.startDate.getFullYear();
+        const selectedMonth = dateRange.startDate.getMonth();
 
         allTransactions.forEach(t => {
+            // Handle fixed transactions
             if (t.isFixed) {
-                // It's a fixed transaction, project it into the current month if applicable.
                 const originalDate = t.date;
+                const originalYear = originalDate.getFullYear();
+                const originalMonth = originalDate.getMonth();
 
-                // Check if the current month is on or after the transaction's start month.
-                if (isAfter(currentMonthStartDate, endOfMonth(originalDate)) || isSameMonth(currentMonthStartDate, originalDate)) {
-                     // Only add if it hasn't been added (handles the original month case)
-                    if (!processedFixedIds.has(t.id)) {
-                         const projectedDate = new Date(currentMonthStartDate);
-                         projectedDate.setDate(originalDate.getDate());
+                const shouldAppear = 
+                    (selectedYear > originalYear) || 
+                    (selectedYear === originalYear && selectedMonth >= originalMonth);
 
-                        // Don't show if the original date is the same month (it will be caught by the other condition)
-                        if(!isSameMonth(projectedDate, originalDate)){
-                            transactionsForMonth.push({
-                                ...t,
-                                date: projectedDate,
-                                efetivado: false, // Future projections are not effective by default
-                            });
-                        }
-                         processedFixedIds.add(t.id);
+                if (shouldAppear) {
+                    const isOriginalMonth = selectedYear === originalYear && selectedMonth === originalMonth;
+                    
+                    if (!isOriginalMonth) {
+                         const projectedDate = new Date(selectedYear, selectedMonth, originalDate.getDate());
+                         transactionsForMonth.push({
+                            ...t,
+                            date: projectedDate,
+                            efetivado: false, // Future projections are not effective by default
+                        });
                     }
+                    processedFixedIds.add(t.id);
                 }
             }
             
-            // Add normal and original recurring/fixed transactions for the current month
+            // Handle regular transactions for the current month
             if (t.date >= dateRange.startDate && t.date <= dateRange.endDate) {
-                 if (!processedFixedIds.has(t.id)) {
-                    transactionsForMonth.push(t);
-                    if (t.isFixed) {
-                        processedFixedIds.add(t.id);
+                 if (t.isFixed) {
+                    // If it's the original month for a fixed transaction, it's already handled by this condition
+                    // We just need to make sure we don't add it again if it was already projected
+                     if (processedFixedIds.has(t.id)) {
+                        transactionsForMonth.push(t);
                     }
-                }
+                 } else {
+                     transactionsForMonth.push(t);
+                 }
             }
         });
 
