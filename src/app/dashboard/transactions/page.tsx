@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -150,13 +149,12 @@ export default function TransactionsPage() {
 
     // If it's a projection of a fixed transaction, create a new one instead of updating.
     if (transaction.isFixed && transaction.id.includes('-projected-')) {
+        const { id, recurrenceId, ...rest } = transaction;
         const newTransaction: Omit<Transaction, "id"> = {
-            ...transaction,
-            id: '', // Firestore will generate an ID
+            ...rest,
             efetivado: true,
             isFixed: false, // This instance is now a concrete, non-fixed transaction
             isRecurring: false,
-            recurrenceId: undefined, // It's a unique entry now
             description: transaction.description // Keep original description
         };
         
@@ -403,7 +401,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    
-
-    
