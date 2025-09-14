@@ -61,6 +61,7 @@ export default function TransactionsPage() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+  const [isTogglingEfetivado, setIsTogglingEfetivado] = useState<string[]>([]);
 
 
   useEffect(() => {
@@ -146,41 +147,44 @@ export default function TransactionsPage() {
 
   const handleToggleEfetivado = async (transaction: Transaction) => {
     if (!user?.uid) return;
-
-    // If it's a projection of a fixed transaction, create a new one instead of updating.
-    if (transaction.isFixed && transaction.id.includes('-projected-')) {
-        const { id, recurrenceId, ...rest } = transaction;
-        const newTransaction: Omit<Transaction, "id"> = {
-            ...rest,
-            efetivado: true,
-            isFixed: false, // This instance is now a concrete, non-fixed transaction
-            isRecurring: false,
-            description: transaction.description // Keep original description
-        };
-        
-        // Let's find the original fixed transaction to update its overrides
-        const originalId = transaction.recurrenceId; // We stored originalId in recurrenceId for projections
-        if(originalId) {
-            const addedTransactionId = await addTransaction(user.uid, newTransaction, true);
-            if (addedTransactionId) {
-                 const monthKey = `${transaction.date.getFullYear()}-${transaction.date.getMonth()}`;
-                 await updateTransaction(user.uid, originalId, { 
-                    overrides: { [monthKey]: addedTransactionId } 
-                 }, 'all');
+    setIsTogglingEfetivado(prev => [...prev, transaction.id]);
+    try {
+        if (transaction.isFixed && transaction.id.includes('-projected-')) {
+            const { id, recurrenceId, ...rest } = transaction;
+            const newTransaction: Omit<Transaction, "id"> = {
+                ...rest,
+                efetivado: true,
+                isFixed: false,
+                isRecurring: false,
+                description: transaction.description,
+            };
+            
+            const originalId = transaction.recurrenceId;
+            if(originalId) {
+                const addedTransactionId = await addTransaction(user.uid, newTransaction, true);
+                if (addedTransactionId) {
+                     const monthKey = `${transaction.date.getFullYear()}-${transaction.date.getMonth()}`;
+                     await updateTransaction(user.uid, originalId, { 
+                        overrides: { [monthKey]: addedTransactionId } 
+                     }, 'all');
+                }
             }
+        } else {
+          await updateTransaction(user.uid, transaction.id, { efetivado: !transaction.efetivado });
         }
-    } else {
-      // This is a regular transaction or the original fixed transaction that was somehow not effective
-      await updateTransaction(user.uid, transaction.id, { efetivado: !transaction.efetivado });
-    }
 
-    toast({ title: `Transação ${!transaction.efetivado ? 'efetivada' : 'marcada como pendente'}.` });
-    clearBalanceCache();
+        toast({ title: `Transação ${!transaction.efetivado ? 'efetivada' : 'marcada como pendente'}.` });
+        clearBalanceCache();
+    } catch(error) {
+        console.error("Error toggling efetivado: ", error);
+        toast({ title: "Erro ao atualizar transação.", variant: "destructive" });
+    } finally {
+        setIsTogglingEfetivado(prev => prev.filter(id => id !== transaction.id));
+    }
   }
 
   const handleEditTransaction = (transaction: Transaction) => {
       let url = `/dashboard/transactions/new?id=${transaction.id}`;
-      // For fixed transaction projections, we want to edit the original but specify the month
       if (transaction.isFixed && transaction.id.includes('-projected-')) {
           url = `/dashboard/transactions/new?id=${transaction.recurrenceId}&overrideDate=${transaction.date.toISOString()}`;
       }
@@ -302,6 +306,7 @@ export default function TransactionsPage() {
                 <div className="space-y-1">
                     {group.transactions.map((t, transIndex) => {
                       const isIgnored = isTransactionIgnored(t);
+                      const isToggling = isTogglingEfetivado.includes(t.id);
 
                       return (
                         <div key={t.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
@@ -350,7 +355,9 @@ export default function TransactionsPage() {
                                     {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                                 </p>
                                 {!t.efetivado && (
-                                    <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => handleToggleEfetivado(t)}>Efetivar</Button>
+                                    <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => handleToggleEfetivado(t)} disabled={isToggling}>
+                                        {isToggling ? "Aguarde..." : "Efetivar"}
+                                    </Button>
                                 )}
                             </div>
                         </div>
@@ -401,3 +408,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    
