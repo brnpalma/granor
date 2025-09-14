@@ -264,7 +264,12 @@ function TransactionForm() {
 
         try {
             if (isEditing && transactionId) {
-                await updateTransaction(user.uid, transactionId, transactionData, scope, originalTransaction);
+                let dataToUpdate: Partial<Transaction> = { ...transactionData };
+                // When editing all instances of a fixed transaction, do not change the start date.
+                if (scope === 'all' && originalTransaction?.isFixed) {
+                   delete dataToUpdate.date;
+                }
+                await updateTransaction(user.uid, transactionId, dataToUpdate, scope, originalTransaction);
                 toast({ title: "Transação atualizada!" });
             } else {
                 await addTransaction(user.uid, transactionData);
