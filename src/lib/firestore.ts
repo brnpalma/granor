@@ -337,9 +337,7 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
             ...restOfTransaction,
             date: Timestamp.fromDate(date),
         };
-        // Remove undefined fields to avoid Firestore errors
-        if (dataToAdd.recurrence === undefined) delete dataToAdd.recurrence;
-
+        
         if (transaction.isRecurring && transaction.recurrence && !transaction.isFixed) {
             const batch = writeBatch(db);
             const recurrenceId = doc(collection(db, 'transactions')).id; // Generate a unique ID for the group
@@ -359,8 +357,8 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
                     isRecurring: true,
                 };
                  // Ensure date is a Timestamp
-                const { date: installmentDate, ...restOfInstallment } = installmentTransaction;
-                batch.set(newDocRef, { ...restOfInstallment, date: Timestamp.fromDate(installmentDate) });
+                const { date: installmentDate, recurrence: installmentRecurrence, ...restOfInstallment } = installmentTransaction;
+                batch.set(newDocRef, { ...restOfInstallment, date: Timestamp.fromDate(installmentDate), recurrence: installmentRecurrence || null });
 
                 currentDate = getNextDate(currentDate, period);
             }
@@ -368,6 +366,7 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
 
         } else {
             // Single transaction (or fixed)
+            if (dataToAdd.recurrence === undefined) delete dataToAdd.recurrence;
             const docRef = await addDoc(collection(db, transactionsPath), dataToAdd);
             if(returnId) return docRef.id;
         }
@@ -518,7 +517,6 @@ export const getTransactions = (
     // Query for regular and recurring transactions in the current month
     const dateRangeQuery = query(
         collection(db, path),
-        where("isFixed", "==", false),
         where("date", ">=", Timestamp.fromDate(dateRange.startDate)),
         where("date", "<=", Timestamp.fromDate(dateRange.endDate))
     );
@@ -526,8 +524,7 @@ export const getTransactions = (
     // Query for all fixed transactions that started on or before the end of the current month
     const fixedQuery = query(
         collection(db, path),
-        where("isFixed", "==", true),
-        where("date", "<=", Timestamp.fromDate(dateRange.endDate))
+        where("isFixed", "==", true)
     );
 
     let combinedResults: Transaction[] = [];
@@ -552,8 +549,10 @@ export const getTransactions = (
 
         for (const doc of fixedSnapshot.docs) {
             const t = { id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate(), endDate: doc.data().endDate ? (doc.data().endDate as Timestamp).toDate() : null } as Transaction;
-            
             const originalDate = t.date;
+
+             if(originalDate > dateRange.endDate) continue;
+
             const isAfterStartDate = selectedYear > originalDate.getFullYear() || (selectedYear === originalDate.getFullYear() && selectedMonth >= originalDate.getMonth());
             const isBeforeEndDate = !t.endDate || selectedYear < t.endDate.getFullYear() || (selectedYear === t.endDate.getFullYear() && selectedMonth <= t.endDate.getMonth());
 
