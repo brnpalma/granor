@@ -226,9 +226,15 @@ function TransactionForm() {
         setIsSaving(true);
         setShowEditScopeDialog(false);
 
-        const parsedAmount = parseFloat(amount);
-        if (!user?.uid || !description || isNaN(parsedAmount) || parsedAmount <= 0 || !date || !type || !category || (!accountId && !creditCardId)) {
+        if (!user?.uid || !description || !amount || !date || !type || !category || (!accountId && !creditCardId)) {
             toast({ title: "Por favor, preencha todos os campos obrigatórios", variant: 'destructive' });
+            setIsSaving(false);
+            return;
+        }
+        
+        const parsedAmount = parseFloat(amount);
+        if (isNaN(parsedAmount) || parsedAmount <= 0) {
+             toast({ title: "O valor da transação é inválido.", variant: 'destructive' });
             setIsSaving(false);
             return;
         }
@@ -258,11 +264,7 @@ function TransactionForm() {
 
         try {
             if (isEditing && transactionId) {
-                if ((originalTransaction?.isRecurring || originalTransaction?.isFixed) && scope) {
-                    await updateTransaction(user.uid, transactionId, transactionData, scope, originalTransaction);
-                } else {
-                    await updateTransaction(user.uid, transactionId, transactionData, "single");
-                }
+                await updateTransaction(user.uid, transactionId, transactionData, scope, originalTransaction);
                 toast({ title: "Transação atualizada!" });
             } else {
                 await addTransaction(user.uid, transactionData);

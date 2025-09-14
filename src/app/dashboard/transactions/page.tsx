@@ -150,7 +150,7 @@ export default function TransactionsPage() {
     setIsTogglingEfetivado(prev => [...prev, transaction.id]);
     try {
         if (transaction.isFixed && transaction.id.includes('-projected-')) {
-            const { id, recurrenceId, ...rest } = transaction;
+            const { id, ...rest } = transaction;
             const newTransaction: Omit<Transaction, "id"> = {
                 ...rest,
                 efetivado: true,
@@ -166,7 +166,7 @@ export default function TransactionsPage() {
                      const monthKey = `${transaction.date.getFullYear()}-${transaction.date.getMonth()}`;
                      await updateTransaction(user.uid, originalId, { 
                         overrides: { [monthKey]: addedTransactionId } 
-                     }, 'all');
+                     }, 'all', transaction);
                 }
             }
         } else {
@@ -184,9 +184,9 @@ export default function TransactionsPage() {
   }
 
   const handleEditTransaction = (transaction: Transaction) => {
-      let url = `/dashboard/transactions/new?id=${transaction.id}`;
+      let url = `/dashboard/transactions/new?id=${transaction.recurrenceId || transaction.id}`;
       if (transaction.isFixed && transaction.id.includes('-projected-')) {
-          url = `/dashboard/transactions/new?id=${transaction.recurrenceId}&overrideDate=${transaction.date.toISOString()}`;
+          url += `&overrideDate=${transaction.date.toISOString()}`;
       }
       router.push(url);
   }

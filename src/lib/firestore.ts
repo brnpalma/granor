@@ -396,7 +396,7 @@ export const updateTransaction = async (
         }
 
         // Handle recurring transactions
-        if ((originalTransaction?.isRecurring || originalTransaction?.isFixed) && scope !== "single" && originalTransaction?.recurrenceId) {
+        if (originalTransaction?.isRecurring && scope !== "single" && originalTransaction?.recurrenceId) {
              const batch = writeBatch(db);
              const q = query(collection(db, transactionsPath), where("recurrenceId", "==", originalTransaction.recurrenceId));
              const querySnapshot = await getDocs(q);
@@ -443,34 +443,71 @@ export const deleteTransaction = async (
   userId: string | null,
   transactionId: string,
   scope: RecurrenceEditScope = "single",
-  transaction?: Transaction
+  transaction?: Transaction | null
 ) => {
   const transactionsPath = getCollectionPath(userId, 'transactions');
   if (!transactionsPath) return;
 
   try {
-    const batch = writeBatch(db);
+    const originalDocRef = doc(db, transactionsPath, transaction?.recurrenceId || transactionId);
 
-    if (scope === 'single' || !(transaction?.isRecurring || transaction?.isFixed) ) {
-      const transactionRef = doc(db, transactionsPath, transactionId);
-      batch.delete(transactionRef);
-    } else {
-        const recurrenceId = transaction.isFixed ? transaction.id : transaction.recurrenceId;
-        const q = query(collection(db, transactionsPath), where(transaction.isFixed ? 'id' : 'recurrenceId', '==', recurrenceId));
-        const querySnapshot = await getDocs(q);
-
-        let docsToDelete = querySnapshot.docs;
-
-        if (scope === 'future') {
-            docsToDelete = docsToDelete.filter(doc => (doc.data().date as Timestamp).toDate() >= transaction.date);
-        }
-        
-        docsToDelete.forEach(doc => {
-            batch.delete(doc.ref);
-        });
+    // Case 1: Deleting a single instance of a non-fixed recurring transaction
+    if (transaction?.isRecurring && scope === 'single') {
+        await deleteDoc(doc(db, transactionsPath, transactionId));
+        return;
     }
     
-    await batch.commit();
+    // Case 2: Deleting a single projected instance of a fixed transaction
+    if (transaction?.isFixed && transaction.id.includes('-projected-') && scope === 'single') {
+        const monthKey = `${transaction.date.getFullYear()}-${transaction.date.getMonth()}`;
+        await updateDoc(originalDocRef, {
+            overrides: { ...(transaction.overrides || {}), [monthKey]: 'deleted' }
+        });
+        return;
+    }
+
+    // Case 3: Deleting a single original transaction that is fixed or non-recurring
+    if (scope === 'single') {
+        await deleteDoc(doc(db, transactionsPath, transactionId));
+        return;
+    }
+
+    // Case 4: Deleting ALL instances of a recurring/fixed transaction
+    if (scope === 'all') {
+        const recurrenceId = transaction?.isFixed ? transaction.id : transaction?.recurrenceId;
+        if (!recurrenceId) {
+             await deleteDoc(doc(db, transactionsPath, transactionId));
+             return;
+        }
+        const q = query(collection(db, transactionsPath), where(transaction?.isFixed ? 'id' : 'recurrenceId', '==', recurrenceId));
+        const querySnapshot = await getDocs(q);
+        const batch = writeBatch(db);
+        querySnapshot.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        return;
+    }
+
+    // Case 5: Deleting FUTURE instances of a recurring/fixed transaction
+    if (scope === 'future') {
+        if (transaction?.isFixed) {
+            // Set an end date on the original fixed transaction
+            const newEndDate = endOfMonth(subMonths(transaction.date, 1));
+            await updateDoc(originalDocRef, { endDate: Timestamp.fromDate(newEndDate) });
+        } else if (transaction?.isRecurring && transaction.recurrenceId) {
+            // Delete all future recurring transactions from the batch
+            const q = query(collection(db, transactionsPath), where('recurrenceId', '==', transaction.recurrenceId));
+            const querySnapshot = await getDocs(q);
+            const batch = writeBatch(db);
+            querySnapshot.docs.forEach(doc => {
+                if ((doc.data().date as Timestamp).toDate() >= transaction.date) {
+                    batch.delete(doc.ref);
+                }
+            });
+            await batch.commit();
+        }
+        return;
+    }
+
   } catch (error) {
     console.error("Error deleting transaction(s): ", error);
     showToast({ title: "Erro", description: "Não foi possível deletar a(s) transação(ões).", variant: "destructive" });
@@ -521,10 +558,10 @@ export const getTransactions = (
         where("date", "<=", Timestamp.fromDate(dateRange.endDate))
     );
 
-    // Query for all fixed transactions that started on or before the end of the current month
+    // Query for all fixed transactions that could possibly apply to this month
     const fixedQuery = query(
         collection(db, path),
-        where("isFixed", "==", true)
+        where("isFixed", "==", true),
     );
 
     let combinedResults: Transaction[] = [];
@@ -537,6 +574,7 @@ export const getTransactions = (
         combinedResults = [];
         processedIds.clear();
 
+        // Add all transactions that naturally fall into the month
         dateRangeSnapshot.forEach(doc => {
             const t = { id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate() } as Transaction;
             combinedResults.push(t);
@@ -551,19 +589,22 @@ export const getTransactions = (
             const t = { id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate(), endDate: doc.data().endDate ? (doc.data().endDate as Timestamp).toDate() : null } as Transaction;
             const originalDate = t.date;
 
-             if(originalDate > dateRange.endDate) continue;
-
+            // Check if this month has a specific override (e.g., it was individually deleted or modified)
+            if (t.overrides && t.overrides[monthKey]) {
+                if (t.overrides[monthKey] !== 'deleted' && !processedIds.has(t.overrides[monthKey])) {
+                    // It was modified, and the modification is already in combinedResults from the first query.
+                }
+                // If 'deleted' or already present, we do nothing.
+                continue; 
+            }
+             
+            // Check if the fixed transaction is active for the selected month
             const isAfterStartDate = selectedYear > originalDate.getFullYear() || (selectedYear === originalDate.getFullYear() && selectedMonth >= originalDate.getMonth());
             const isBeforeEndDate = !t.endDate || selectedYear < t.endDate.getFullYear() || (selectedYear === t.endDate.getFullYear() && selectedMonth <= t.endDate.getMonth());
 
             if (isAfterStartDate && isBeforeEndDate) {
-                 if (t.overrides && t.overrides[monthKey]) {
-                    // This month has an override, so we'll fetch that specific transaction instead of projecting this one.
-                    // The override should already be in combinedResults from the first query.
-                    continue; 
-                 }
-                
-                // If it's the original month, the transaction is already included by the first query
+                // If it's the original month, the transaction is already included by the first query.
+                // We just need to make sure we don't add it again if it was already processed.
                 if(isSameMonth(originalDate, dateRange.startDate)) {
                     if (!processedIds.has(t.id)) {
                         combinedResults.push(t);
@@ -582,7 +623,7 @@ export const getTransactions = (
                         id: projectedId,
                         date: projectedDate,
                         efetivado: false,
-                        recurrenceId: t.id, // Store original ID for editing
+                        recurrenceId: t.id, // Store original ID for editing/deleting
                     });
                     processedIds.add(projectedId);
                 }
