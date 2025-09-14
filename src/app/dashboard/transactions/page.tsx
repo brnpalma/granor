@@ -146,31 +146,47 @@ export default function TransactionsPage() {
   }
 
   const handleToggleEfetivado = async (transaction: Transaction) => {
-      if (!user?.uid) return;
+    if (!user?.uid) return;
 
-       if (transaction.isFixed && !isSameMonth(transaction.date, selectedDate)) {
-        // This is a projected fixed transaction. We need to create a new one instead of updating.
+    // If it's a projection of a fixed transaction, create a new one instead of updating.
+    if (transaction.isFixed && transaction.id.includes('-projected-')) {
         const newTransaction: Omit<Transaction, "id"> = {
             ...transaction,
-            date: new Date(selectedDate.getFullYear(), selectedDate.getMonth(), transaction.date.getDate()),
+            id: '', // Firestore will generate an ID
             efetivado: true,
-            isFixed: true, // It's a realization of a fixed transaction
-            isRecurring: false, // This specific instance is not recurring anymore
+            isFixed: false, // This instance is now a concrete, non-fixed transaction
+            isRecurring: false,
             recurrenceId: undefined, // It's a unique entry now
             description: transaction.description // Keep original description
         };
-        await addTransaction(user.uid, newTransaction);
-      } else {
-        // This is a regular transaction or the original fixed transaction
-        await updateTransaction(user.uid, transaction.id, { efetivado: !transaction.efetivado });
-      }
+        
+        // Let's find the original fixed transaction to update its overrides
+        const originalId = transaction.recurrenceId; // We stored originalId in recurrenceId for projections
+        if(originalId) {
+            const addedTransactionId = await addTransaction(user.uid, newTransaction, true);
+            if (addedTransactionId) {
+                 const monthKey = `${transaction.date.getFullYear()}-${transaction.date.getMonth()}`;
+                 await updateTransaction(user.uid, originalId, { 
+                    overrides: { [monthKey]: addedTransactionId } 
+                 }, 'all');
+            }
+        }
+    } else {
+      // This is a regular transaction or the original fixed transaction that was somehow not effective
+      await updateTransaction(user.uid, transaction.id, { efetivado: !transaction.efetivado });
+    }
 
-      toast({ title: `Transação ${!transaction.efetivado ? 'efetivada' : 'marcada como pendente'}.` });
-      clearBalanceCache();
+    toast({ title: `Transação ${!transaction.efetivado ? 'efetivada' : 'marcada como pendente'}.` });
+    clearBalanceCache();
   }
 
   const handleEditTransaction = (transaction: Transaction) => {
-      router.push(`/dashboard/transactions/new?id=${transaction.id}`);
+      let url = `/dashboard/transactions/new?id=${transaction.id}`;
+      // For fixed transaction projections, we want to edit the original but specify the month
+      if (transaction.isFixed && transaction.id.includes('-projected-')) {
+          url = `/dashboard/transactions/new?id=${transaction.recurrenceId}&overrideDate=${transaction.date.toISOString()}`;
+      }
+      router.push(url);
   }
   
   const getSourceName = (t: Transaction) => {
@@ -360,9 +376,9 @@ export default function TransactionsPage() {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Remover Transação</AlertDialogTitle>
-                    {transactionToDelete?.isRecurring ? (
+                    {(transactionToDelete?.isRecurring || transactionToDelete?.isFixed) ? (
                         <AlertDialogDescription>
-                            Esta é uma transação recorrente. Como você gostaria de removê-la?
+                            Esta é uma transação recorrente/fixa. Como você gostaria de removê-la?
                         </AlertDialogDescription>
                     ) : (
                         <AlertDialogDescription>
@@ -371,7 +387,7 @@ export default function TransactionsPage() {
                     )}
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col gap-2">
-                    {transactionToDelete?.isRecurring ? (
+                    {(transactionToDelete?.isRecurring || transactionToDelete?.isFixed) ? (
                         <>
                             <AlertDialogAction className={cn(buttonVariants({ variant: "destructive" }))} onClick={() => handleDeleteTransaction("single")}>Remover somente esta</AlertDialogAction>
                             <AlertDialogAction className={cn(buttonVariants({ variant: "destructive" }))} onClick={() => handleDeleteTransaction("future")}>Remover esta e as futuras</AlertDialogAction>
@@ -387,5 +403,7 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    
 
     

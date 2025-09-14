@@ -64,6 +64,8 @@ export interface Transaction {
   isFixed?: boolean;
   recurrence?: Recurrence;
   recurrenceId?: string;
+  endDate?: Date;
+  overrides?: { [monthKey: string]: string }; // e.g. { "2024-6": "override-doc-id" }
 }
 
 export interface Budget {
@@ -78,3 +80,5 @@ export interface SavingsGoal {
   targetAmount: number;
   currentAmount: number;
 }
+
+    

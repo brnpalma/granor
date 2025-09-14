@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus, Minus, ArrowRightLeft, PlusCircle } from 'lucide-react';
+import { startOfMonth } from 'date-fns';
 
 function RecurrenceDialog({
   open,
@@ -142,10 +143,12 @@ function TransactionForm() {
     const transactionId = searchParams.get('id');
     const typeParam = searchParams.get('type') as 'income' | 'expense' | null;
     const isCreditCardParam = searchParams.get('isCreditCard') === 'true';
+    const overrideDateParam = searchParams.get('overrideDate');
+
 
     const [description, setDescription] = useState("");
     const [amount, setAmount] = useState("");
-    const [date, setDate] = useState<Date | undefined>(new Date());
+    const [date, setDate] = useState<Date | undefined>(overrideDateParam ? new Date(overrideDateParam) : new Date());
     const [type, setType] = useState<'income' | 'expense' | null>(typeParam);
     const [category, setCategory] = useState("");
     const [accountId, setAccountId] = useState<string | undefined>();
@@ -185,7 +188,14 @@ function TransactionForm() {
                     setOriginalTransaction(t);
                     setDescription(t.description);
                     setAmount(String(t.amount));
-                    setDate(t.date);
+                    // If we are overriding a specific month, use that month's date
+                    if (overrideDateParam) {
+                       const overrideDate = new Date(overrideDateParam);
+                       const originalDay = t.date.getDate();
+                       setDate(new Date(overrideDate.getFullYear(), overrideDate.getMonth(), originalDay));
+                    } else {
+                       setDate(t.date);
+                    }
                     setType(t.type);
                     setCategory(t.category);
                     setEfetivado(t.efetivado);
@@ -209,7 +219,7 @@ function TransactionForm() {
 
         return () => unsubs.forEach(u => u());
 
-    }, [user, transactionId, typeParam, isCreditCardParam]);
+    }, [user, transactionId, typeParam, isCreditCardParam, overrideDateParam]);
     
 
     const handleSubmit = async (scope?: RecurrenceEditScope) => {
@@ -248,7 +258,7 @@ function TransactionForm() {
 
         try {
             if (isEditing && transactionId) {
-                if (originalTransaction?.isRecurring && scope) {
+                if ((originalTransaction?.isRecurring || originalTransaction?.isFixed) && scope) {
                     await updateTransaction(user.uid, transactionId, transactionData, scope, originalTransaction);
                 } else {
                     await updateTransaction(user.uid, transactionId, transactionData, "single");
@@ -269,7 +279,7 @@ function TransactionForm() {
     
     const handleSaveClick = (e: React.FormEvent) => {
         e.preventDefault();
-        if (isEditing && originalTransaction?.isRecurring) {
+        if (isEditing && (originalTransaction?.isRecurring || originalTransaction?.isFixed)) {
             setShowEditScopeDialog(true);
         } else {
             handleSubmit();
@@ -481,9 +491,9 @@ function TransactionForm() {
               <AlertDialog open={showEditScopeDialog} onOpenChange={setShowEditScopeDialog}>
                   <AlertDialogContent>
                       <AlertDialogHeader>
-                          <AlertDialogTitle>Editar transação recorrente</AlertDialogTitle>
+                          <AlertDialogTitle>Editar Transação</AlertDialogTitle>
                           <AlertDialogDescription>
-                              Você está editando uma transação recorrente. Como deseja aplicar as alterações?
+                              Você está editando uma transação recorrente/fixa. Como deseja aplicar as alterações?
                           </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter className="flex-col gap-2">

@@ -70,7 +70,8 @@ const addDataItem = async <T extends DataType>(
     const path = getCollectionPath(userId, collectionName);
     if (path) {
         try {
-            await addDoc(collection(db, path), postProcess(item));
+            const docRef = await addDoc(collection(db, path), postProcess(item));
+            return docRef.id;
         } catch (error) {
             console.error(`Error adding ${collectionName}: `, error);
             showToast({ title: "Erro", description: `Não foi possível adicionar ${collectionName}.`, variant: "destructive" });
@@ -79,6 +80,7 @@ const addDataItem = async <T extends DataType>(
         const localData = getLocalData<T>(collectionName);
         const newItem = { ...item, id: new Date().toISOString() } as T;
         setLocalData<T>(collectionName, [...localData, newItem]);
+        return newItem.id;
     }
 };
 
@@ -325,7 +327,7 @@ const getNextDate = (currentDate: Date, period: RecurrencePeriod): Date => {
     }
 };
 
-export const addTransaction = async (userId: string, transaction: Omit<Transaction, "id">) => {
+export const addTransaction = async (userId: string, transaction: Omit<Transaction, "id">, returnId: boolean = false) => {
     const transactionsPath = getCollectionPath(userId, "transactions");
     if (!transactionsPath) return;
 
@@ -335,6 +337,8 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
             ...restOfTransaction,
             date: Timestamp.fromDate(date),
         };
+        // Remove undefined fields to avoid Firestore errors
+        if (dataToAdd.recurrence === undefined) delete dataToAdd.recurrence;
 
         if (transaction.isRecurring && transaction.recurrence && !transaction.isFixed) {
             const batch = writeBatch(db);
@@ -364,7 +368,8 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
 
         } else {
             // Single transaction (or fixed)
-            await addDoc(collection(db, transactionsPath), dataToAdd);
+            const docRef = await addDoc(collection(db, transactionsPath), dataToAdd);
+            if(returnId) return docRef.id;
         }
     } catch (error) {
         console.error("Error adding transaction(s): ", error);
@@ -377,50 +382,61 @@ export const updateTransaction = async (
   transactionId: string,
   dataToUpdate: Partial<Omit<Transaction, "id">>,
   scope: RecurrenceEditScope = "single",
-  originalTransaction?: Transaction
+  originalTransaction?: Transaction | null
 ) => {
-  const transactionsPath = getCollectionPath(userId, "transactions");
-  if (!transactionsPath) return;
+    const transactionsPath = getCollectionPath(userId, "transactions");
+    if (!transactionsPath) return;
 
-  try {
-    const batch = writeBatch(db);
-    const mainTransactionRef = doc(db, transactionsPath, transactionId);
-
-    if (scope === "single" || !originalTransaction?.recurrenceId) {
-      const dataWithTimestamp: any = { ...dataToUpdate };
-       if (dataToUpdate.date) {
+    try {
+        const dataWithTimestamp: any = { ...dataToUpdate };
+        if (dataToUpdate.date) {
             dataWithTimestamp.date = Timestamp.fromDate(dataToUpdate.date);
-       }
-      batch.update(mainTransactionRef, dataWithTimestamp);
-    } else {
-      const q = query(
-        collection(db, transactionsPath),
-        where("recurrenceId", "==", originalTransaction.recurrenceId)
-      );
-      const querySnapshot = await getDocs(q);
+        }
+        if ('overrides' in dataToUpdate && originalTransaction?.overrides) {
+            dataWithTimestamp.overrides = { ...originalTransaction.overrides, ...dataToUpdate.overrides };
+        }
 
-      let transactionsToUpdate = querySnapshot.docs;
+        // Handle recurring transactions
+        if ((originalTransaction?.isRecurring || originalTransaction?.isFixed) && scope !== "single" && originalTransaction?.recurrenceId) {
+             const batch = writeBatch(db);
+             const q = query(collection(db, transactionsPath), where("recurrenceId", "==", originalTransaction.recurrenceId));
+             const querySnapshot = await getDocs(q);
+             let transactionsToUpdate = querySnapshot.docs;
 
-      if (scope === "future") {
-        transactionsToUpdate = transactionsToUpdate.filter(
-          (doc) => (doc.data().date as Timestamp).toDate() >= originalTransaction.date
-        );
-      }
+             if (scope === "future") {
+                 transactionsToUpdate = transactionsToUpdate.filter(d => (d.data().date as Timestamp).toDate() >= originalTransaction.date);
+             }
+             const { date, description, ...sharedData } = dataToUpdate;
+             transactionsToUpdate.forEach(docToUpdate => {
+                 batch.update(docToUpdate.ref, sharedData);
+             });
+             await batch.commit();
 
-      // These fields are unique per installment and should not be bulk-updated
-      const { date, description, ...sharedData } = dataToUpdate;
-      
-      transactionsToUpdate.forEach((doc) => {
-        const transactionRef = doc.ref;
-        batch.update(transactionRef, sharedData);
-      });
+        } else if (originalTransaction?.isFixed && scope === 'single' && dataToUpdate.date) {
+            // Create a one-off override for a fixed transaction
+            const monthKey = `${dataToUpdate.date.getFullYear()}-${dataToUpdate.date.getMonth()}`;
+            const {id, ...newTransactionData} = { ...dataToUpdate, isFixed: false, isRecurring: false, recurrenceId: originalTransaction.id };
+            const overrideId = await addTransaction(userId, newTransactionData, true);
+            if (overrideId) {
+                const originalDocRef = doc(db, transactionsPath, transactionId);
+                await updateDoc(originalDocRef, { overrides: { ...(originalTransaction.overrides || {}), [monthKey]: overrideId } });
+            }
+        } else if (originalTransaction?.isFixed && scope === 'future' && dataToUpdate.date) {
+             // End the current fixed transaction and create a new one starting from this month
+             const oldDocRef = doc(db, transactionsPath, transactionId);
+             await updateDoc(oldDocRef, { endDate: Timestamp.fromDate(subMonths(dataToUpdate.date, 1)) });
+             
+             const { id, ...newFixedTransaction } = { ...originalTransaction, ...dataToUpdate, id: '', date: dataToUpdate.date, endDate: null, overrides: {} };
+             await addTransaction(userId, newFixedTransaction);
+        
+        } else { // 'all' scope for fixed, or any other single update
+            const mainTransactionRef = doc(db, transactionsPath, transactionId);
+            await updateDoc(mainTransactionRef, dataWithTimestamp);
+        }
+    } catch (error) {
+        console.error("Error updating transaction(s): ", error);
+        showToast({ title: "Erro", description: "Não foi possível atualizar a(s) transação(ões).", variant: "destructive" });
     }
-
-    await batch.commit();
-  } catch (error) {
-    console.error("Error updating transaction(s): ", error);
-    showToast({ title: "Erro", description: "Não foi possível atualizar a(s) transação(ões).", variant: "destructive" });
-  }
 };
 
 
@@ -436,22 +452,23 @@ export const deleteTransaction = async (
   try {
     const batch = writeBatch(db);
 
-    if (scope === 'single' || !transaction?.recurrenceId) {
+    if (scope === 'single' || !(transaction?.isRecurring || transaction?.isFixed) ) {
       const transactionRef = doc(db, transactionsPath, transactionId);
       batch.delete(transactionRef);
     } else {
-      const q = query(collection(db, transactionsPath), where('recurrenceId', '==', transaction.recurrenceId));
-      const querySnapshot = await getDocs(q);
+        const recurrenceId = transaction.isFixed ? transaction.id : transaction.recurrenceId;
+        const q = query(collection(db, transactionsPath), where(transaction.isFixed ? 'id' : 'recurrenceId', '==', recurrenceId));
+        const querySnapshot = await getDocs(q);
 
-      let docsToDelete = querySnapshot.docs;
+        let docsToDelete = querySnapshot.docs;
 
-      if (scope === 'future') {
-        docsToDelete = docsToDelete.filter(doc => (doc.data().date as Timestamp).toDate() >= transaction.date);
-      }
-      
-      docsToDelete.forEach(doc => {
-        batch.delete(doc.ref);
-      });
+        if (scope === 'future') {
+            docsToDelete = docsToDelete.filter(doc => (doc.data().date as Timestamp).toDate() >= transaction.date);
+        }
+        
+        docsToDelete.forEach(doc => {
+            batch.delete(doc.ref);
+        });
     }
     
     await batch.commit();
@@ -475,6 +492,7 @@ export const getTransactionById = async (userId: string, transactionId: string):
                 id: docSnap.id,
                 ...data,
                 date: (data.date as Timestamp).toDate(),
+                endDate: data.endDate ? (data.endDate as Timestamp).toDate() : undefined,
             } as Transaction;
         } else {
             return null;
@@ -497,80 +515,91 @@ export const getTransactions = (
         return () => {};
     }
 
-    const allTransactionsQuery = query(
+    // Query for regular and recurring transactions in the current month
+    const dateRangeQuery = query(
         collection(db, path),
-        where("date", "<=", Timestamp.fromDate(dateRange.endDate)),
-        orderBy("date", "desc")
+        where("isFixed", "==", false),
+        where("date", ">=", Timestamp.fromDate(dateRange.startDate)),
+        where("date", "<=", Timestamp.fromDate(dateRange.endDate))
     );
 
-    const unsubscribe = onSnapshot(allTransactionsQuery, (snapshot) => {
-        const transactions: Transaction[] = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            date: (doc.data().date as Timestamp).toDate(),
-        } as Transaction));
+    // Query for all fixed transactions that started on or before the end of the current month
+    const fixedQuery = query(
+        collection(db, path),
+        where("isFixed", "==", true),
+        where("date", "<=", Timestamp.fromDate(dateRange.endDate))
+    );
 
-        const transactionsForMonth: Transaction[] = [];
-        const fixedTransactionsProjections = new Map<string, Transaction>();
+    let combinedResults: Transaction[] = [];
+    const processedIds = new Set<string>();
+
+    const handleSnapshot = async () => {
+        const dateRangeSnapshot = await getDocs(dateRangeQuery);
+        const fixedSnapshot = await getDocs(fixedQuery);
+
+        combinedResults = [];
+        processedIds.clear();
+
+        dateRangeSnapshot.forEach(doc => {
+            const t = { id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate() } as Transaction;
+            combinedResults.push(t);
+            processedIds.add(t.id);
+        });
 
         const selectedYear = dateRange.startDate.getFullYear();
         const selectedMonth = dateRange.startDate.getMonth();
+        const monthKey = `${selectedYear}-${selectedMonth}`;
 
-        for (const t of transactions) {
+        for (const doc of fixedSnapshot.docs) {
+            const t = { id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate(), endDate: doc.data().endDate ? (doc.data().endDate as Timestamp).toDate() : null } as Transaction;
+            
             const originalDate = t.date;
-            const originalYear = originalDate.getFullYear();
-            const originalMonth = originalDate.getMonth();
+            const isAfterStartDate = selectedYear > originalDate.getFullYear() || (selectedYear === originalDate.getFullYear() && selectedMonth >= originalDate.getMonth());
+            const isBeforeEndDate = !t.endDate || selectedYear < t.endDate.getFullYear() || (selectedYear === t.endDate.getFullYear() && selectedMonth <= t.endDate.getMonth());
 
-            if (t.isFixed) {
-                const isAfterOrSameMonth = (selectedYear > originalYear) || (selectedYear === originalYear && selectedMonth >= originalMonth);
+            if (isAfterStartDate && isBeforeEndDate) {
+                 if (t.overrides && t.overrides[monthKey]) {
+                    // This month has an override, so we'll fetch that specific transaction instead of projecting this one.
+                    // The override should already be in combinedResults from the first query.
+                    continue; 
+                 }
                 
-                if (isAfterOrSameMonth) {
-                    const projectedDate = new Date(selectedYear, selectedMonth, originalDate.getDate());
-                    
-                    const projectionId = `${t.id}-${selectedYear}-${selectedMonth}`;
-                    
-                    if (!fixedTransactionsProjections.has(projectionId)) {
-                         fixedTransactionsProjections.set(projectionId, {
-                            ...t,
-                            id: projectionId, // Give it a temporary unique ID for the UI
-                            date: projectedDate,
-                            efetivado: false, // Projections are not effective by default
-                        });
+                // If it's the original month, the transaction is already included by the first query
+                if(isSameMonth(originalDate, dateRange.startDate)) {
+                    if (!processedIds.has(t.id)) {
+                        combinedResults.push(t);
+                        processedIds.add(t.id);
                     }
+                    continue;
                 }
-            } else if (originalYear === selectedYear && originalMonth === selectedMonth) {
-                transactionsForMonth.push(t);
-            }
-        }
-        
-        // Filter out projections that have already been made effective
-        for(const t of transactions) {
-            if (isSameMonth(t.date, dateRange.startDate) && !t.isFixed) {
-                // This transaction might be an effective version of a projection
-                const originalDay = t.date.getDate();
-                // A bit of a hacky way to find the original fixed transaction
-                const potentialOriginalId = Array.from(fixedTransactionsProjections.values()).find(p => p.date.getDate() === originalDay && p.description === t.description)?.id.split('-')[0];
-                
-                if (potentialOriginalId) {
-                     const projectionId = `${potentialOriginalId}-${selectedYear}-${selectedMonth}`;
-                     if(fixedTransactionsProjections.has(projectionId)) {
-                        fixedTransactionsProjections.delete(projectionId);
-                     }
+
+                // Project for future months
+                const projectedDate = new Date(selectedYear, selectedMonth, originalDate.getDate());
+                const projectedId = `${t.id}-projected-${monthKey}`;
+
+                if (!processedIds.has(projectedId)) {
+                    combinedResults.push({
+                        ...t,
+                        id: projectedId,
+                        date: projectedDate,
+                        efetivado: false,
+                        recurrenceId: t.id, // Store original ID for editing
+                    });
+                    processedIds.add(projectedId);
                 }
             }
         }
-
-
-        transactionsForMonth.push(...Array.from(fixedTransactionsProjections.values()));
         
-        callback(transactionsForMonth.sort((a, b) => b.date.getTime() - a.date.getTime()));
+        callback(combinedResults);
+    };
 
-    }, (error) => {
-        console.error("Error fetching transactions:", error);
-        callback([]);
-    });
+    const unsubDateRange = onSnapshot(dateRangeQuery, handleSnapshot);
+    const unsubFixed = onSnapshot(fixedQuery, handleSnapshot);
 
-    return unsubscribe;
+    return () => {
+        unsubDateRange();
+        unsubFixed();
+    };
 };
 
 
@@ -733,3 +762,5 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
     }
 };
+
+    
