@@ -233,16 +233,18 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
+    const { clearBalanceCache } = useDate();
     
     const showHeader = !pathname.startsWith('/dashboard/transactions/new');
 
     useEffect(() => {
         setIsLoading(true);
+        clearBalanceCache();
         const timer = setTimeout(() => {
             setIsLoading(false);
         }, 300); // Small delay to allow the new page to start its own loading
         return () => clearTimeout(timer);
-    }, [pathname]);
+    }, [pathname, clearBalanceCache]);
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-background">

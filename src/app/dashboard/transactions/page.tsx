@@ -57,7 +57,7 @@ export default function TransactionsPage() {
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
-  const { selectedDate, getMonthDateRange } = useDate();
+  const { selectedDate, getMonthDateRange, clearBalanceCache } = useDate();
   const router = useRouter();
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -137,6 +137,7 @@ export default function TransactionsPage() {
     toast({ title: "Transação removida!" });
     setTransactionToDelete(null);
     setDeleteDialogOpen(false);
+    clearBalanceCache(); // Force re-fetch of balance
   }
 
   const openDeleteDialog = (transaction: Transaction) => {

@@ -1,7 +1,9 @@
 
+
 "use client";
 
 import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
+import { balanceCache } from '@/lib/firestore';
 
 interface DateContextType {
   selectedDate: Date;
@@ -9,12 +11,17 @@ interface DateContextType {
   goToNextMonth: () => void;
   goToPreviousMonth: () => void;
   getMonthDateRange: (date: Date) => { startDate: Date; endDate: Date };
+  clearBalanceCache: () => void;
 }
 
 const DateContext = createContext<DateContextType | undefined>(undefined);
 
 export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const clearBalanceCache = useCallback(() => {
+    balanceCache.clear();
+  }, []);
 
   const goToNextMonth = () => {
     setSelectedDate(currentDate => {
@@ -46,7 +53,8 @@ export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     goToNextMonth,
     goToPreviousMonth,
     getMonthDateRange,
-  }), [selectedDate, getMonthDateRange]);
+    clearBalanceCache,
+  }), [selectedDate, getMonthDateRange, clearBalanceCache]);
 
   return <DateContext.Provider value={value}>{children}</DateContext.Provider>;
 };

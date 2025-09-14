@@ -23,7 +23,7 @@ import {
 } from "firebase/firestore";
 import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, UserPreferences, RecurrencePeriod, RecurrenceEditScope } from "./types";
 import { useToast } from "@/hooks/use-toast";
-import { subMonths, startOfMonth, endOfMonth, addDays, addWeeks, addMonths, addYears } from 'date-fns';
+import { subMonths, startOfMonth, endOfMonth, addDays, addWeeks, addMonths, addYears, isAfter, isSameMonth } from 'date-fns';
 
 
 // Toast hook must be called from a component
@@ -326,7 +326,6 @@ const getNextDate = (currentDate: Date, period: RecurrencePeriod): Date => {
 };
 
 export const addTransaction = async (userId: string, transaction: Omit<Transaction, "id">) => {
-    balanceCache.clear();
     const transactionsPath = getCollectionPath(userId, "transactions");
     if (!transactionsPath) return;
 
@@ -359,11 +358,15 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
 
         } else {
             // Single transaction (or fixed)
-             const { date, ...restOfTransaction } = transaction;
-            await addDoc(collection(db, transactionsPath), {
+            const { date, ...restOfTransaction } = transaction;
+            const dataToAdd: any = {
                 ...restOfTransaction,
                 date: Timestamp.fromDate(date),
-            });
+            };
+            if(transaction.isRecurring){
+                dataToAdd.recurrence = transaction.recurrence;
+            }
+            await addDoc(collection(db, transactionsPath), dataToAdd);
         }
     } catch (error) {
         console.error("Error adding transaction(s): ", error);
@@ -378,7 +381,6 @@ export const updateTransaction = async (
   scope: RecurrenceEditScope = "single",
   originalTransaction?: Transaction
 ) => {
-  balanceCache.clear();
   const transactionsPath = getCollectionPath(userId, "transactions");
   if (!transactionsPath) return;
 
@@ -429,7 +431,6 @@ export const deleteTransaction = async (
   scope: RecurrenceEditScope = "single",
   transaction?: Transaction
 ) => {
-  balanceCache.clear();
   const transactionsPath = getCollectionPath(userId, 'transactions');
   if (!transactionsPath) return;
 
@@ -492,47 +493,72 @@ export const getTransactions = (
     dateRange?: { startDate: Date; endDate: Date }
 ) => {
     const path = getCollectionPath(userId, "transactions");
-    if (!path) return () => {};
+    if (!path || !dateRange) return () => {};
 
-    // First subscription for date-ranged transactions
-    let dateRangeQuery = query(collection(db, path), orderBy("date", "desc"));
-    if (dateRange) {
-        dateRangeQuery = query(dateRangeQuery,
-            where("date", ">=", Timestamp.fromDate(dateRange.startDate)),
-            where("date", "<=", Timestamp.fromDate(dateRange.endDate))
-        );
-    }
-    const unsubDateRange = onSnapshot(dateRangeQuery, (dateRangeSnapshot) => {
-        const dateRangeTransactions: Transaction[] = dateRangeSnapshot.docs.map(doc => ({
+    // Query for all relevant transactions in one go.
+    // 1. Normal/recurring transactions within the month.
+    // 2. Fixed transactions that started on or before the end of the current month.
+    const relevantTransactionsQuery = query(
+        collection(db, path),
+        where("date", "<=", Timestamp.fromDate(dateRange.endDate))
+    );
+    
+    const unsubscribe = onSnapshot(relevantTransactionsQuery, (snapshot) => {
+        const allTransactions: Transaction[] = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
             date: (doc.data().date as Timestamp).toDate(),
         } as Transaction));
 
-        // Second query for fixed transactions
-        const fixedQuery = query(collection(db, path), where("isFixed", "==", true));
-        getDocs(fixedQuery).then(fixedSnapshot => {
-            const fixedTransactions: Transaction[] = fixedSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                date: (doc.data().date as Timestamp).toDate(),
-            } as Transaction));
+        const transactionsForMonth: Transaction[] = [];
+        const processedFixedIds = new Set<string>();
 
-            // Combine and remove duplicates (a fixed transaction might be in the date range)
-            const combined = [...dateRangeTransactions, ...fixedTransactions];
-            const uniqueTransactions = Array.from(new Map(combined.map(t => [t.id, t])).values());
+        const currentMonthStartDate = dateRange.startDate;
+
+        allTransactions.forEach(t => {
+            if (t.isFixed) {
+                // It's a fixed transaction, project it into the current month if applicable.
+                const originalDate = t.date;
+
+                // Check if the current month is on or after the transaction's start month.
+                if (isAfter(currentMonthStartDate, endOfMonth(originalDate)) || isSameMonth(currentMonthStartDate, originalDate)) {
+                     // Only add if it hasn't been added (handles the original month case)
+                    if (!processedFixedIds.has(t.id)) {
+                         const projectedDate = new Date(currentMonthStartDate);
+                         projectedDate.setDate(originalDate.getDate());
+
+                        // Don't show if the original date is the same month (it will be caught by the other condition)
+                        if(!isSameMonth(projectedDate, originalDate)){
+                            transactionsForMonth.push({
+                                ...t,
+                                date: projectedDate,
+                                efetivado: false, // Future projections are not effective by default
+                            });
+                        }
+                         processedFixedIds.add(t.id);
+                    }
+                }
+            }
             
-            callback(uniqueTransactions);
+            // Add normal and original recurring/fixed transactions for the current month
+            if (t.date >= dateRange.startDate && t.date <= dateRange.endDate) {
+                 if (!processedFixedIds.has(t.id)) {
+                    transactionsForMonth.push(t);
+                    if (t.isFixed) {
+                        processedFixedIds.add(t.id);
+                    }
+                }
+            }
         });
+
+        callback(transactionsForMonth.sort((a, b) => b.date.getTime() - a.date.getTime()));
 
     }, (error) => {
         console.error("Error fetching transactions:", error);
         callback([]);
     });
 
-    // The logic to combine snapshots makes it tricky to return a single clean unsubscribe.
-    // For now, we only return the main one. In a more complex app, this might need a manager.
-    return unsubDateRange;
+    return unsubscribe;
 };
 
 
