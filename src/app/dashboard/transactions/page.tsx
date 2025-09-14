@@ -29,7 +29,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { deleteTransaction, getTransactions, getAccounts, getCreditCards, updateTransaction, findPreviousMonthBalance, getUserPreferences } from "@/lib/firestore";
+import { addTransaction, deleteTransaction, getTransactions, getAccounts, getCreditCards, updateTransaction, findPreviousMonthBalance, getUserPreferences } from "@/lib/firestore";
 import type { Transaction, Account, CreditCard as CreditCardType, UserPreferences, RecurrenceEditScope } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
@@ -38,7 +38,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useDate } from "@/hooks/use-date";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
-import { isFuture, startOfMonth } from "date-fns";
+import { isFuture, startOfMonth, isSameMonth } from "date-fns";
 
 
 type GroupedTransactions = {
@@ -147,8 +147,26 @@ export default function TransactionsPage() {
 
   const handleToggleEfetivado = async (transaction: Transaction) => {
       if (!user?.uid) return;
-      await updateTransaction(user.uid, transaction.id, { efetivado: !transaction.efetivado });
+
+       if (transaction.isFixed && !isSameMonth(transaction.date, selectedDate)) {
+        // This is a projected fixed transaction. We need to create a new one instead of updating.
+        const newTransaction: Omit<Transaction, "id"> = {
+            ...transaction,
+            date: new Date(selectedDate.getFullYear(), selectedDate.getMonth(), transaction.date.getDate()),
+            efetivado: true,
+            isFixed: true, // It's a realization of a fixed transaction
+            isRecurring: false, // This specific instance is not recurring anymore
+            recurrenceId: undefined, // It's a unique entry now
+            description: transaction.description // Keep original description
+        };
+        await addTransaction(user.uid, newTransaction);
+      } else {
+        // This is a regular transaction or the original fixed transaction
+        await updateTransaction(user.uid, transaction.id, { efetivado: !transaction.efetivado });
+      }
+
       toast({ title: `Transação ${!transaction.efetivado ? 'efetivada' : 'marcada como pendente'}.` });
+      clearBalanceCache();
   }
 
   const handleEditTransaction = (transaction: Transaction) => {

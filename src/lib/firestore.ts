@@ -355,8 +355,8 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
                     isRecurring: true,
                 };
                  // Ensure date is a Timestamp
-                const { date, ...restOfTransaction } = installmentTransaction;
-                batch.set(newDocRef, { ...restOfTransaction, date: Timestamp.fromDate(date) });
+                const { date: installmentDate, ...restOfInstallment } = installmentTransaction;
+                batch.set(newDocRef, { ...restOfInstallment, date: Timestamp.fromDate(installmentDate) });
 
                 currentDate = getNextDate(currentDate, period);
             }
@@ -364,9 +364,6 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
 
         } else {
             // Single transaction (or fixed)
-            if (transaction.isRecurring && !transaction.isFixed) {
-                dataToAdd.recurrence = transaction.recurrence;
-            }
             await addDoc(collection(db, transactionsPath), dataToAdd);
         }
     } catch (error) {
@@ -390,9 +387,10 @@ export const updateTransaction = async (
     const mainTransactionRef = doc(db, transactionsPath, transactionId);
 
     if (scope === "single" || !originalTransaction?.recurrenceId) {
-      const dataWithTimestamp = dataToUpdate.date
-        ? { ...dataToUpdate, date: Timestamp.fromDate(dataToUpdate.date) }
-        : dataToUpdate;
+      const dataWithTimestamp: any = { ...dataToUpdate };
+       if (dataToUpdate.date) {
+            dataWithTimestamp.date = Timestamp.fromDate(dataToUpdate.date);
+       }
       batch.update(mainTransactionRef, dataWithTimestamp);
     } else {
       const q = query(
@@ -489,72 +487,82 @@ export const getTransactionById = async (userId: string, transactionId: string):
 
 
 export const getTransactions = (
-    userId: string | null,
+    userId: string,
     callback: (transactions: Transaction[]) => void,
-    dateRange?: { startDate: Date; endDate: Date }
+    dateRange: { startDate: Date; endDate: Date }
 ) => {
     const path = getCollectionPath(userId, "transactions");
-    if (!path || !dateRange) return () => {};
+    if (!path) {
+        callback([]);
+        return () => {};
+    }
 
-    // Query for all relevant transactions up to the end of the selected month
-    const relevantTransactionsQuery = query(
+    const allTransactionsQuery = query(
         collection(db, path),
-        where("date", "<=", Timestamp.fromDate(dateRange.endDate))
+        where("date", "<=", Timestamp.fromDate(dateRange.endDate)),
+        orderBy("date", "desc")
     );
-    
-    const unsubscribe = onSnapshot(relevantTransactionsQuery, (snapshot) => {
-        const allTransactions: Transaction[] = snapshot.docs.map(doc => ({
+
+    const unsubscribe = onSnapshot(allTransactionsQuery, (snapshot) => {
+        const transactions: Transaction[] = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
             date: (doc.data().date as Timestamp).toDate(),
         } as Transaction));
 
         const transactionsForMonth: Transaction[] = [];
-        const processedFixedIds = new Set<string>();
+        const fixedTransactionsProjections = new Map<string, Transaction>();
 
         const selectedYear = dateRange.startDate.getFullYear();
         const selectedMonth = dateRange.startDate.getMonth();
 
-        allTransactions.forEach(t => {
-            // Handle fixed transactions
+        for (const t of transactions) {
+            const originalDate = t.date;
+            const originalYear = originalDate.getFullYear();
+            const originalMonth = originalDate.getMonth();
+
             if (t.isFixed) {
-                const originalDate = t.date;
-                const originalYear = originalDate.getFullYear();
-                const originalMonth = originalDate.getMonth();
-
-                const shouldAppear = 
-                    (selectedYear > originalYear) || 
-                    (selectedYear === originalYear && selectedMonth >= originalMonth);
-
-                if (shouldAppear) {
-                    const isOriginalMonth = selectedYear === originalYear && selectedMonth === originalMonth;
+                const isAfterOrSameMonth = (selectedYear > originalYear) || (selectedYear === originalYear && selectedMonth >= originalMonth);
+                
+                if (isAfterOrSameMonth) {
+                    const projectedDate = new Date(selectedYear, selectedMonth, originalDate.getDate());
                     
-                    if (!isOriginalMonth) {
-                         const projectedDate = new Date(selectedYear, selectedMonth, originalDate.getDate());
-                         transactionsForMonth.push({
+                    const projectionId = `${t.id}-${selectedYear}-${selectedMonth}`;
+                    
+                    if (!fixedTransactionsProjections.has(projectionId)) {
+                         fixedTransactionsProjections.set(projectionId, {
                             ...t,
+                            id: projectionId, // Give it a temporary unique ID for the UI
                             date: projectedDate,
-                            efetivado: false, // Future projections are not effective by default
+                            efetivado: false, // Projections are not effective by default
                         });
                     }
-                    processedFixedIds.add(t.id);
+                }
+            } else if (originalYear === selectedYear && originalMonth === selectedMonth) {
+                transactionsForMonth.push(t);
+            }
+        }
+        
+        // Filter out projections that have already been made effective
+        for(const t of transactions) {
+            if (isSameMonth(t.date, dateRange.startDate) && !t.isFixed) {
+                // This transaction might be an effective version of a projection
+                const originalDay = t.date.getDate();
+                // A bit of a hacky way to find the original fixed transaction
+                const potentialOriginalId = Array.from(fixedTransactionsProjections.values()).find(p => p.date.getDate() === originalDay && p.description === t.description)?.id.split('-')[0];
+                
+                if (potentialOriginalId) {
+                     const projectionId = `${potentialOriginalId}-${selectedYear}-${selectedMonth}`;
+                     if(fixedTransactionsProjections.has(projectionId)) {
+                        fixedTransactionsProjections.delete(projectionId);
+                     }
                 }
             }
-            
-            // Handle regular transactions for the current month
-            if (t.date >= dateRange.startDate && t.date <= dateRange.endDate) {
-                 if (t.isFixed) {
-                    // If it's the original month for a fixed transaction, it's already handled by this condition
-                    // We just need to make sure we don't add it again if it was already projected
-                     if (processedFixedIds.has(t.id)) {
-                        transactionsForMonth.push(t);
-                    }
-                 } else {
-                     transactionsForMonth.push(t);
-                 }
-            }
-        });
+        }
 
+
+        transactionsForMonth.push(...Array.from(fixedTransactionsProjections.values()));
+        
         callback(transactionsForMonth.sort((a, b) => b.date.getTime() - a.date.getTime()));
 
     }, (error) => {

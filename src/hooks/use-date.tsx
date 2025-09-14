@@ -24,6 +24,7 @@ export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const goToNextMonth = () => {
+    clearBalanceCache();
     setSelectedDate(currentDate => {
       const newDate = new Date(currentDate);
       newDate.setMonth(newDate.getMonth() + 1);
@@ -32,6 +33,7 @@ export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const goToPreviousMonth = () => {
+    clearBalanceCache();
     setSelectedDate(currentDate => {
       const newDate = new Date(currentDate);
       newDate.setMonth(newDate.getMonth() - 1);
@@ -54,7 +56,7 @@ export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     goToPreviousMonth,
     getMonthDateRange,
     clearBalanceCache,
-  }), [selectedDate, getMonthDateRange, clearBalanceCache]);
+  }), [selectedDate, getMonthDateRange, clearBalanceCache, goToNextMonth, goToPreviousMonth]);
 
   return <DateContext.Provider value={value}>{children}</DateContext.Provider>;
 };
