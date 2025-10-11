@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { PlusCircle, Trash2, Edit, Check } from "lucide-react";
+import { PlusCircle, Trash2, Edit, Check, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -291,7 +291,7 @@ function CategoryForm({
             return;
         }
 
-        await onSubmit({ name, type, icon: 'MoreHorizontal', color }, category?.id);
+        await onSubmit({ name, type, icon: 'Box', color }, category?.id);
 
         onSubmitted();
     };

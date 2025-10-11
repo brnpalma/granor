@@ -19,6 +19,7 @@ import {
   PlusCircle,
   Calendar,
   CreditCard,
+  Box,
 } from "lucide-react";
 import Image from 'next/image';
 
@@ -37,6 +38,7 @@ const iconMap: Record<string, React.ComponentType<LucideProps>> = {
   "Parcela inicial": ArrowRightLeft,
   "Quantidade": PlusCircle,
   "Periodicidade": Calendar,
+  Box: Box,
 };
 
 interface CategoryIconProps extends LucideProps {
@@ -45,14 +47,14 @@ interface CategoryIconProps extends LucideProps {
 }
 
 export function CategoryIcon({ category, icon, ...props }: CategoryIconProps) {
-  let IconComponent: React.ComponentType<LucideProps> = MoreHorizontal;
+  let IconComponent: React.ComponentType<LucideProps> = Box;
 
   if (icon && iconMap[icon]) {
       IconComponent = iconMap[icon];
   } else if (category && (iconMap as Record<string, React.ComponentType<LucideProps>>)[category]) {
       IconComponent = (iconMap as Record<string, React.ComponentType<LucideProps>>)[category];
   } else {
-    IconComponent = MoreHorizontal;
+    IconComponent = Box;
   }
   
   return <IconComponent {...props} />;
