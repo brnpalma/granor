@@ -30,6 +30,7 @@ export interface Account {
   type: AccountType;
   initialBalance: number;
   ignoreInTotals?: boolean;
+  color?: string;
 }
 
 export interface CreditCard {
@@ -80,5 +81,3 @@ export interface SavingsGoal {
   targetAmount: number;
   currentAmount: number;
 }
-
-    

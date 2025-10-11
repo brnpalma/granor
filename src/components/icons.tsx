@@ -110,7 +110,7 @@ export const NubankLogo = (props: React.SVGProps<SVGSVGElement>) => (
   </div>
 );
 
-export const BankIcon = ({ name }: { name: string }) => {
+export const BankIcon = ({ name, color }: { name: string; color?: string }) => {
     const lowerCaseName = name.toLowerCase();
     if (lowerCaseName.includes("itaú") || lowerCaseName.includes("itau")) {
         return <ItauLogo />;
@@ -128,7 +128,7 @@ export const BankIcon = ({ name }: { name: string }) => {
         return <BradescoLogo />;
     }
     if (lowerCaseName.includes("carteira")) {
-        return <div className="bg-muted rounded-full h-8 w-8 flex items-center justify-center"><Wallet className="h-5 w-5 text-muted-foreground"/></div>;
+        return <div style={{ backgroundColor: color || '#607D8B' }} className="rounded-full h-8 w-8 flex items-center justify-center"><Wallet className="h-5 w-5 text-white"/></div>;
     }
-    return <CategoryIcon category="Outros" className="h-8 w-8 text-muted-foreground" />;
+    return <div style={{ backgroundColor: color || '#607D8B' }} className="rounded-full h-8 w-8 flex items-center justify-center"><Landmark className="h-5 w-5 text-white"/></div>;
 };

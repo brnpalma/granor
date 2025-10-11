@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { PlusCircle, Trash2, MoreVertical, Edit } from "lucide-react";
+import { PlusCircle, Trash2, MoreVertical, Edit, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -53,6 +53,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { BankIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
+
+const accountColors = [
+    '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
+    '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50',
+    '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800',
+    '#FF5722', '#795548', '#9E9E9E', '#607D8B'
+];
+
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -125,9 +133,7 @@ export default function AccountsPage() {
 
   const handleFormSubmit = async (accountData: Omit<Account, "id">, accountId?: string) => {
     if (accountId) {
-      // Don't update initialBalance when editing, only other fields
-      const { initialBalance, ...dataToUpdate } = accountData;
-      await updateAccount(user?.uid || null, accountId, dataToUpdate);
+      await updateAccount(user?.uid || null, accountId, accountData);
       toast({ title: "Conta atualizada!", variant: "success" });
     } else {
       await addAccount(user?.uid || null, accountData);
@@ -173,7 +179,7 @@ export default function AccountsPage() {
                 {accounts.map(account => (
                     <div key={account.id} className="flex items-center gap-4 p-2.5 border-b last:border-b-0">
                         <div className={cn(account.ignoreInTotals && "opacity-50")}>
-                          <BankIcon name={account.name} />
+                          <BankIcon name={account.name} color={account.color} />
                         </div>
                         <div className="flex-1">
                             <p className="text-xs text-muted-foreground">{account.type}</p>
@@ -237,6 +243,7 @@ function AccountForm({
     const [name, setName] = useState("");
     const [type, setType] = useState<AccountType | "">("");
     const [balance, setBalance] = useState("");
+    const [color, setColor] = useState(accountColors[0]);
     const [ignoreInTotals, setIgnoreInTotals] = useState(false);
     const { toast } = useToast();
     
@@ -248,11 +255,13 @@ function AccountForm({
             setType(account.type);
             setBalance(String(account.initialBalance));
             setIgnoreInTotals(account.ignoreInTotals || false);
+            setColor(account.color || accountColors[0]);
         } else {
             setName("");
             setType("");
             setBalance("");
             setIgnoreInTotals(false);
+            setColor(accountColors[0]);
         }
     }, [account]);
 
@@ -268,6 +277,7 @@ function AccountForm({
             type: type as AccountType,
             initialBalance: parseFloat(balance) || 0,
             ignoreInTotals,
+            color,
         }, account?.id);
 
         onSubmitted();
@@ -291,13 +301,31 @@ function AccountForm({
                         </SelectTrigger>
                         <SelectContent>
                             {accountTypes.map(cat => (
-                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                <SelectItem key={cat} value={cat}>{cat}>{cat}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                 </div>
+                 <div className="space-y-2">
+                    <Label>Cor da Conta</Label>
+                    <div className="flex flex-wrap gap-2">
+                        {accountColors.map((c) => (
+                            <Button
+                                key={c}
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 rounded-full"
+                                style={{ backgroundColor: c }}
+                                onClick={() => setColor(c)}
+                            >
+                                {color === c && <Check className="h-5 w-5 text-white" />}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
                 <div className="space-y-2">
-                    <Label htmlFor="balance">{isEditing ? "Saldo Inicial" : "Saldo Inicial (Opcional)"}</Label>
+                    <Label htmlFor="balance">{isEditing ? "Saldo Inicial (Não pode ser alterado)" : "Saldo Inicial (Opcional)"}</Label>
                     <Input id="balance" type="number" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0,00" disabled={isEditing} />
                 </div>
                 <div className="flex items-center space-x-2">
@@ -311,5 +339,3 @@ function AccountForm({
         </DialogContent>
     );
 }
-
-    
