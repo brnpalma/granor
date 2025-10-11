@@ -326,11 +326,13 @@ function TransactionForm() {
         );
     }
     
-    const pageTitle = isEditing 
-        ? "Editar Transação" 
-        : type === 'income' 
-            ? "Nova Receita" 
-            : "Nova Despesa";
+    const pageTitle = isEditing
+        ? "Editar Transação"
+        : isCreditCardParam
+            ? "Nova Despesa Cartão"
+            : type === 'income'
+                ? "Nova Receita"
+                : "Nova Despesa";
 
     const saveButtonColor = type === 'income'
         ? "bg-green-500 hover:bg-green-600 text-white"
@@ -487,7 +489,7 @@ function TransactionForm() {
                                 </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                                {accounts.map(acc => (
+                                {!isCreditCardParam && accounts.map(acc => (
                                     <SelectItem key={acc.id} value={`acc-${acc.id}`}>
                                         <div className="flex items-center gap-2">
                                             <BankIcon name={acc.name} color={acc.color} />
@@ -580,3 +582,5 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
+
+    
