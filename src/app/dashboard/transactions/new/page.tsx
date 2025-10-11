@@ -455,7 +455,7 @@ function TransactionForm() {
                  { type === 'expense' ? (
                     <div className="flex items-center gap-2 p-1 rounded-lg border">
                          <div className="p-2 rounded-full bg-muted">
-                            {creditCardId !== undefined ? 
+                            {creditCardId !== undefined || isCreditCardParam ? 
                                 <CreditCard className="h-5 w-5 text-muted-foreground" /> :
                                 <Wallet className="h-5 w-5 text-muted-foreground" />
                             }
@@ -484,7 +484,7 @@ function TransactionForm() {
                                                 </div>
                                             )
                                         }
-                                        return "Selecione a conta";
+                                        return isCreditCardParam ? "Selecione o cartão" : "Selecione a conta";
                                     })()}
                                 </SelectValue>
                             </SelectTrigger>
@@ -497,7 +497,7 @@ function TransactionForm() {
                                         </div>
                                     </SelectItem>
                                 ))}
-                                {creditCards.map(cc => (
+                                {isCreditCardParam && creditCards.map(cc => (
                                     <SelectItem key={cc.id} value={`cc-${cc.id}`}>
                                         <div className="flex items-center gap-2">
                                             <CreditCardDisplayIcon color={cc.color} />
@@ -582,5 +582,3 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
-
-    
