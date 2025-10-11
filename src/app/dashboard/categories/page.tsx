@@ -184,130 +184,129 @@ export default function CategoriesPage() {
   }
 
   function CategoryForm({
-      onSubmit,
-      onSubmitted,
-      category,
+    onSubmit,
+    onSubmitted,
+    category,
   }: {
-      onSubmit: (category: Omit<Category, "id">, categoryId?: string) => Promise<void>;
-      onSubmitted: () => void;
-      category: Category | null;
+    onSubmit: (category: Omit<Category, "id">, categoryId?: string) => Promise<void>;
+    onSubmitted: () => void;
+    category: Category | null;
   }) {
-      const [name, setName] = useState("");
-      const [type, setType] = useState<"income" | "expense">("expense");
-      const [color, setColor] = useState(categoryColors[0]);
-      const [icon, setIcon] = useState('MoreHorizontal');
-      const [iconSearchOpen, setIconSearchOpen] = useState(false);
-      const { toast } = useToast();
+    const [name, setName] = useState("");
+    const [type, setType] = useState<"income" | "expense">("expense");
+    const [color, setColor] = useState(categoryColors[0]);
+    const [icon, setIcon] = useState('MoreHorizontal');
+    const [iconSearchOpen, setIconSearchOpen] = useState(false);
+    const { toast } = useToast();
 
-      const isEditing = !!category;
+    const isEditing = !!category;
 
-      useEffect(() => {
-          if (category) {
-              setName(category.name);
-              setType(category.type);
-              setColor(category.color || categoryColors[0]);
-              setIcon(category.icon || 'MoreHorizontal');
-          } else {
-              setName("");
-              setType("expense");
-              setColor(categoryColors[Math.floor(Math.random() * categoryColors.length)]);
-              setIcon('MoreHorizontal');
-          }
-      }, [category]);
+    useEffect(() => {
+        if (category) {
+            setName(category.name);
+            setType(category.type);
+            setColor(category.color || categoryColors[0]);
+            setIcon(category.icon || 'MoreHorizontal');
+        } else {
+            setName("");
+            setType("expense");
+            setColor(categoryColors[Math.floor(Math.random() * categoryColors.length)]);
+            setIcon('MoreHorizontal');
+        }
+    }, [category]);
 
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name || !type || !icon || !color) {
+            toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
+            return;
+        }
 
-      const handleSubmit = async (e: React.FormEvent) => {
-          e.preventDefault();
-          if (!name || !type || !icon || !color) {
-              toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
-              return;
-          }
+        await onSubmit({ name, type, icon, color }, category?.id);
 
-          await onSubmit({ name, type, icon, color }, category?.id);
+        onSubmitted();
+    };
 
-          onSubmitted();
-      };
-
-      return (
-          <DialogContent>
-              <DialogHeader>
-                  <DialogTitle>{isEditing ? 'Editar Categoria' : 'Adicionar Nova Categoria'}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                      <Label htmlFor="name">Nome da Categoria</Label>
-                      <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Lazer" />
-                  </div>
-                   <div className="space-y-2">
-                      <Label>Tipo</Label>
-                      <RadioGroup value={type} onValueChange={(value) => setType(value as "income" | "expense")} className="flex gap-4">
-                          <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="expense" id="expense" />
-                              <Label htmlFor="expense">Despesa</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="income" id="income" />
-                              <Label htmlFor="income">Receita</Label>
-                          </div>
-                      </RadioGroup>
-                  </div>
-                  <div className="space-y-2">
-                      <Label>Ícone e Cor</Label>
-                      <div className="flex items-center gap-2">
-                          <Popover open={iconSearchOpen} onOpenChange={setIconSearchOpen}>
-                              <PopoverTrigger asChild>
-                                  <Button variant="outline" size="icon" style={{backgroundColor: color}} className="text-white w-12 h-12 text-2xl">
-                                      <CategoryIcon icon={icon} className="h-6 w-6" />
-                                  </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="p-0 w-[250px]">
-                                  <Command>
-                                      <CommandInput placeholder="Buscar ícone..." />
-                                      <CommandList>
-                                          <CommandEmpty>Nenhum ícone encontrado.</CommandEmpty>
-                                          <CommandGroup className="max-h-48 overflow-y-auto">
-                                              {iconList.map((iconName) => (
-                                                  <CommandItem
-                                                      key={iconName}
-                                                      value={iconName}
-                                                      onSelect={(currentValue) => {
-                                                          setIcon(currentValue.charAt(0).toUpperCase() + currentValue.slice(1))
-                                                          setIconSearchOpen(false)
-                                                      }}
-                                                      className="flex items-center gap-2"
-                                                  >
-                                                     <CategoryIcon icon={iconName} className="h-5 w-5" />
-                                                      <span>{iconName}</span>
-                                                  </CommandItem>
-                                              ))}
-                                          </CommandGroup>
-                                      </CommandList>
-                                  </Command>
-                              </PopoverContent>
-                          </Popover>
-                          <div className="flex flex-wrap gap-2 flex-1">
-                              {categoryColors.map((c) => (
-                                  <Button
-                                      key={c}
-                                      type="button"
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-8 w-8 rounded-full"
-                                      style={{ backgroundColor: c }}
-                                      onClick={() => setColor(c)}
-                                  >
-                                      {color === c && <Check className="h-5 w-5 text-white" />}
-                                  </Button>
-                              ))}
-                          </div>
-                      </div>
-                  </div>
-                  <DialogFooter>
-                      <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Adicionar Categoria'}</Button>
-                  </DialogFooter>
-              </form>
-          </DialogContent>
-      );
+    return (
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>{isEditing ? 'Editar Categoria' : 'Adicionar Nova Categoria'}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="name">Nome da Categoria</Label>
+                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Lazer" />
+                </div>
+                 <div className="space-y-2">
+                    <Label>Tipo</Label>
+                    <RadioGroup value={type} onValueChange={(value) => setType(value as "income" | "expense")} className="flex gap-4">
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="expense" id="expense" />
+                            <Label htmlFor="expense">Despesa</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="income" id="income" />
+                            <Label htmlFor="income">Receita</Label>
+                        </div>
+                    </RadioGroup>
+                </div>
+                <div className="space-y-2">
+                    <Label>Ícone e Cor</Label>
+                    <div className="flex items-center gap-2">
+                        <Popover open={iconSearchOpen} onOpenChange={setIconSearchOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="icon" style={{backgroundColor: color}} className="text-white w-12 h-12 text-2xl">
+                                    <CategoryIcon icon={icon} className="h-6 w-6" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="p-0 w-[250px]">
+                                <Command>
+                                    <CommandInput placeholder="Buscar ícone..." />
+                                    <CommandList>
+                                        <CommandEmpty>Nenhum ícone encontrado.</CommandEmpty>
+                                        <CommandGroup className="max-h-48 overflow-y-auto">
+                                            {iconList.map((iconName) => (
+                                                <CommandItem
+                                                    key={iconName}
+                                                    value={iconName}
+                                                    onSelect={(currentValue) => {
+                                                        setIcon(currentValue.charAt(0).toUpperCase() + currentValue.slice(1))
+                                                        setIconSearchOpen(false)
+                                                    }}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                   <CategoryIcon icon={iconName} className="h-5 w-5" />
+                                                    <span>{iconName}</span>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                        <div className="flex flex-wrap gap-2 flex-1">
+                            {categoryColors.map((c) => (
+                                <Button
+                                    key={c}
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full"
+                                    style={{ backgroundColor: c }}
+                                    onClick={() => setColor(c)}
+                                >
+                                    {color === c && <Check className="h-5 w-5 text-white" />}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Adicionar Categoria'}</Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+    );
   }
 
   const renderCategoryList = (type: "expense" | "income") => {
