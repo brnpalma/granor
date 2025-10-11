@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -122,12 +121,20 @@ export default function BudgetsPage() {
           const spent = getSpentAmount(budget.category);
           const progress = Math.min((spent / budget.amount) * 100, 100);
           const remaining = budget.amount - spent;
+          const categoryInfo = categories.find(c => c.name === budget.category);
 
           return (
             <Card key={budget.id}>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                    <CardTitle>{budget.category}</CardTitle>
+                    <div className="flex items-center gap-3">
+                        {categoryInfo && (
+                            <div style={{ backgroundColor: categoryInfo.color }} className={'p-2 rounded-full text-white'}>
+                                <CategoryIcon icon={categoryInfo.icon} className="h-5 w-5" />
+                            </div>
+                        )}
+                        <CardTitle>{budget.category}</CardTitle>
+                    </div>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -245,5 +252,7 @@ function BudgetForm({
         </DialogContent>
     )
 }
+
+    
 
     
