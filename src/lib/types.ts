@@ -5,6 +5,7 @@ export type RecurrenceEditScope = "single" | "future" | "all";
 export interface UserPreferences {
   showBalance: boolean;
   includePreviousMonthBalance: boolean;
+  includeBudgetsInForecast?: boolean;
 }
 
 export interface Category {
@@ -86,5 +87,3 @@ export interface SavingsGoal {
   targetAmount: number;
   currentAmount: number;
 }
-
-    
