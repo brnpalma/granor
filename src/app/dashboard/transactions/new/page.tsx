@@ -598,7 +598,7 @@ function TransactionForm() {
             />
             {showEditScopeDialog && (
               <AlertDialog open={showEditScopeDialog} onOpenChange={setShowEditScopeDialog}>
-                  <AlertDialogContent>
+                  <AlertDialogContent style={{ maxWidth: 'fit-content' }}>
                       <AlertDialogHeader>
                           <AlertDialogTitle>Editar Transação</AlertDialogTitle>
                           <AlertDialogDescription>
