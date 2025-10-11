@@ -38,7 +38,7 @@ body {
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
-    --card: 240 4% 12%;
+    --card: 240 5% 8%;
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
@@ -69,11 +69,5 @@ body {
   }
   body {
     @apply bg-background text-foreground;
-  }
-}
-
-@layer components {
-  .dark .card-darker {
-    background-color: hsl(240 5% 8%);
   }
 }
