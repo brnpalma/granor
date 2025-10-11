@@ -51,6 +51,8 @@ export function CategoryIcon({ category, icon, ...props }: CategoryIconProps) {
       IconComponent = iconMap[icon];
   } else if (category && (iconMap as Record<string, React.ComponentType<LucideProps>>)[category]) {
       IconComponent = (iconMap as Record<string, React.ComponentType<LucideProps>>)[category];
+  } else {
+    IconComponent = MoreHorizontal;
   }
   
   return <IconComponent {...props} />;
