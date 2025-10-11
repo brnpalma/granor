@@ -399,7 +399,7 @@ export default function DashboardPage() {
         const total = includedTransactions
             .filter(t => t.type === 'expense' && t.category === category.name)
             .reduce((sum, t) => sum + t.amount, 0);
-        return { name: category.name, value: total };
+        return { name: category.name, value: total, icon: category.icon, color: category.color };
     }).filter(c => c.value > 0)
     .sort((a,b) => b.value - a.value);
   }, [includedTransactions, categories]);
@@ -633,11 +633,12 @@ export default function DashboardPage() {
                     {budgets.map((budget) => {
                         const spent = getBudgetSpentAmount(budget.category);
                         const progress = Math.min((spent / budget.amount) * 100, 100);
+                        const categoryInfo = categories.find(c => c.name === budget.category);
                         return (
                             <div key={budget.id}>
                                 <div className="flex items-center gap-3">
-                                    <div className="bg-muted p-2 rounded-full">
-                                        <CategoryIcon category={budget.category} className="h-5 w-5 text-muted-foreground" />
+                                    <div style={{ backgroundColor: categoryInfo?.color }} className="p-2 rounded-full text-white">
+                                        <CategoryIcon icon={categoryInfo?.icon} className="h-5 w-5" />
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex justify-between items-center">
@@ -650,7 +651,7 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
                                 </div>
-                                <Progress value={progress} className="mt-2 h-2" />
+                                <Progress value={progress} className="mt-2 h-2" style={{ accentColor: categoryInfo?.color }}/>
                             </div>
                         )
                     })}
@@ -682,7 +683,7 @@ export default function DashboardPage() {
                                     paddingAngle={5}
                                 >
                                     {expensesByCategory.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={PIECHART_COLORS[index % PIECHART_COLORS.length]} />
+                                        <Cell key={`cell-${index}`} fill={entry.color || PIECHART_COLORS[index % PIECHART_COLORS.length]} />
                                     ))}
                                 </Pie>
                                 <Legend iconType="circle" />
@@ -708,6 +709,7 @@ export default function DashboardPage() {
   
 
     
+
 
 
 

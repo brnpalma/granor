@@ -1,6 +1,7 @@
 
 "use client";
 
+import * as icons from "lucide-react";
 import {
   Utensils,
   Car,
@@ -22,6 +23,7 @@ import {
 import Image from 'next/image';
 
 const iconMap: Record<string, React.ComponentType<LucideProps>> = {
+  ...icons,
   Alimentação: Utensils,
   Transporte: Car,
   Compras: ShoppingBag,
@@ -38,11 +40,19 @@ const iconMap: Record<string, React.ComponentType<LucideProps>> = {
 };
 
 interface CategoryIconProps extends LucideProps {
-  category: string;
+  category?: string;
+  icon?: string;
 }
 
-export function CategoryIcon({ category, ...props }: CategoryIconProps) {
-  const IconComponent = (iconMap as Record<string, React.ComponentType<LucideProps>>)[category] || MoreHorizontal;
+export function CategoryIcon({ category, icon, ...props }: CategoryIconProps) {
+  let IconComponent: React.ComponentType<LucideProps> = MoreHorizontal;
+
+  if (icon && iconMap[icon]) {
+      IconComponent = iconMap[icon];
+  } else if (category && (iconMap as Record<string, React.ComponentType<LucideProps>>)[category]) {
+      IconComponent = (iconMap as Record<string, React.ComponentType<LucideProps>>)[category];
+  }
+  
   return <IconComponent {...props} />;
 }
 

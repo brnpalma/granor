@@ -189,6 +189,25 @@ export const addCategory = (userId: string | null, category: Omit<Category, "id"
     return addDataItem<Category>(userId, "categories", category);
 };
 
+export const updateCategory = async (userId: string | null, categoryId: string, categoryData: Partial<Omit<Category, "id">>) => {
+    const path = getCollectionPath(userId, "categories");
+    if (path) {
+        try {
+            await updateDoc(doc(db, path, categoryId), categoryData);
+        } catch (error) {
+            console.error(`Error updating category: `, error);
+            showToast({ title: "Erro", description: "Não foi possível atualizar a categoria.", variant: "destructive" });
+        }
+    } else {
+        const localData = getLocalData<Category>("categories");
+        const index = localData.findIndex(c => c.id === categoryId);
+        if (index !== -1) {
+            localData[index] = { ...localData[index], ...categoryData };
+            setLocalData("categories", localData);
+        }
+    }
+};
+
 export const deleteCategory = (userId: string | null, categoryId: string) => {
     return deleteDataItem(userId, "categories", categoryId);
 };
@@ -431,6 +450,11 @@ export const updateTransaction = async (
              const { id, ...newFixedTransaction } = { ...originalTransaction, ...dataToUpdate, id: '', date: dataToUpdate.date, endDate: null, overrides: {} };
              await addTransaction(userId, newFixedTransaction);
         
+        } else if (originalTransaction?.isFixed && scope === 'all') {
+            const mainTransactionRef = doc(db, transactionsPath, transactionId);
+            // ao editar todas, nao devemos mudar a data
+            const { date, ...rest } = dataWithTimestamp;
+            await updateDoc(mainTransactionRef, rest);
         } else { // 'all' scope for fixed, or any other single update
             const mainTransactionRef = doc(db, transactionsPath, transactionId);
             await updateDoc(mainTransactionRef, dataWithTimestamp);
@@ -478,7 +502,7 @@ export const deleteTransaction = async (
 
     // Deleting ALL instances of a recurring/fixed transaction
     if (scope === 'all') {
-        const docToDeleteId = transaction?.isFixed ? transaction.id : transaction?.recurrenceId;
+        const docToDeleteId = transaction?.isFixed ? (transaction.recurrenceId || transaction.id) : transaction?.recurrenceId;
         if (!docToDeleteId) {
              await deleteDoc(doc(db, transactionsPath, transactionId));
              return;
@@ -558,30 +582,48 @@ export const getTransactions = (
         return () => {};
     }
 
-    const dateRangeQuery = query(
+    // Query for transactions where isFixed is not true (includes false and non-existent)
+    // We split into two because Firestore doesn't support != queries with range filters
+    const nonRecurringQuery1 = query(
         collection(db, path),
+        where("isFixed", "==", false),
         where("date", ">=", Timestamp.fromDate(dateRange.startDate)),
         where("date", "<=", Timestamp.fromDate(dateRange.endDate))
     );
-    
+     const nonRecurringQuery2 = query(
+        collection(db, path),
+        where("isFixed", "==", null),
+        where("date", ">=", Timestamp.fromDate(dateRange.startDate)),
+        where("date", "<=", Timestamp.fromDate(dateRange.endDate))
+    );
+
+    // Query for fixed transactions that could occur in the current month
     const fixedQuery = query(
         collection(db, path),
         where("isFixed", "==", true)
     );
 
-
     const handleSnapshots = async () => {
         try {
-            const [dateRangeSnapshot, fixedSnapshot] = await Promise.all([getDocs(dateRangeQuery), getDocs(fixedQuery)]);
+            const [nonRecurringSnap1, nonRecurringSnap2, fixedSnapshot] = await Promise.all([
+                getDocs(nonRecurringQuery1),
+                getDocs(nonRecurringQuery2),
+                getDocs(fixedQuery),
+            ]);
             
             const combinedResults: Transaction[] = [];
             const processedIds = new Set<string>();
 
-            dateRangeSnapshot.forEach(doc => {
-                const t = { id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate() } as Transaction;
-                combinedResults.push(t);
-                processedIds.add(t.id);
-            });
+            const processDoc = (doc: any) => {
+                 const t = { id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate() } as Transaction;
+                 if (!processedIds.has(t.id)) {
+                     combinedResults.push(t);
+                     processedIds.add(t.id);
+                 }
+            };
+            
+            nonRecurringSnap1.forEach(processDoc);
+            nonRecurringSnap2.forEach(processDoc);
 
             const selectedYear = dateRange.startDate.getFullYear();
             const selectedMonth = dateRange.startDate.getMonth();
@@ -602,7 +644,7 @@ export const getTransactions = (
                 if (t.overrides && t.overrides[monthKey]) {
                     if (t.overrides[monthKey] !== 'deleted') {
                          // An override exists, so we should not show the original projected transaction.
-                         // The override itself is a normal transaction and will be fetched by dateRangeQuery.
+                         // The override itself is a normal transaction and will be fetched by other queries.
                     }
                     return; // Either handled by override or deleted for this month
                 }
@@ -638,12 +680,15 @@ export const getTransactions = (
         }
     };
     
-    const unsubDateRange = onSnapshot(dateRangeQuery, handleSnapshots);
-    const unsubFixed = onSnapshot(fixedQuery, handleSnapshots);
+    // Combine listeners
+    const unsub1 = onSnapshot(nonRecurringQuery1, handleSnapshots);
+    const unsub2 = onSnapshot(nonRecurringQuery2, handleSnapshots);
+    const unsub3 = onSnapshot(fixedQuery, handleSnapshots);
 
     return () => {
-        unsubDateRange();
-        unsubFixed();
+        unsub1();
+        unsub2();
+        unsub3();
     };
 };
 
