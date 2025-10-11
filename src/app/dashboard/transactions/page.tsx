@@ -257,7 +257,7 @@ export default function TransactionsPage() {
   const finalBalance = useMemo(() => {
     const isFutureMonth = isFuture(startOfMonth(selectedDate));
     const effectiveInitialBalance = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : initialBalance;
-    const includedAccountsIds = new Set(accounts.filter(a => !a.ignoreInTotals).map(a => a.id));
+    const includedAccountIds = new Set(accounts.filter(a => !a.ignoreInTotals).map(a => a.id));
     const monthlyFlow = transactions
         .filter(t => t.efetivado && (!t.accountId || includedAccountIds.has(t.accountId)))
         .reduce((acc, t) => {
@@ -429,3 +429,4 @@ export default function TransactionsPage() {
 
 
     
+
