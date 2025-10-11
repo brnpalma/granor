@@ -322,7 +322,7 @@ export default function TransactionsPage() {
                         <div key={t.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                             <div className="relative flex flex-col items-center">
                                 {groupIndex > 0 || transIndex > 0 ? <div className="absolute top-0 h-1/2 w-0.5 bg-border -translate-y-1/2"></div> : null}
-                                <div className="z-10 bg-background">
+                                <div className="z-10">
                                      <div 
                                         style={{ backgroundColor: categoryInfo?.color }} 
                                         className={cn("p-2 rounded-full text-white", isIgnored && "opacity-50")}
@@ -426,3 +426,6 @@ export default function TransactionsPage() {
 
     
 
+
+
+    
