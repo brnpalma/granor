@@ -270,10 +270,10 @@ function TransactionForm() {
                    delete dataToUpdate.date;
                 }
                 await updateTransaction(user.uid, transactionId, dataToUpdate, scope, originalTransaction);
-                toast({ title: "Transação atualizada!" });
+                toast({ title: "Transação atualizada!", variant: "success" });
             } else {
                 await addTransaction(user.uid, transactionData);
-                toast({ title: "Transação adicionada!" });
+                toast({ title: "Transação adicionada!", variant: "success" });
             }
             router.back();
         } catch (error) {
@@ -524,5 +524,7 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
+
+    
 
     

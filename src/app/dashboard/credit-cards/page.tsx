@@ -123,16 +123,16 @@ export default function CreditCardsPage() {
   const handleFormSubmit = async (cardData: Omit<CreditCardType, "id">, cardId?: string) => {
     if (cardId) {
       await updateCreditCard(user?.uid || null, cardId, cardData);
-      toast({ title: "Cartão atualizado!" });
+      toast({ title: "Cartão atualizado!", variant: "success" });
     } else {
       await addCreditCard(user?.uid || null, cardData);
-      toast({ title: "Cartão adicionado!" });
+      toast({ title: "Cartão adicionado!", variant: "success" });
     }
   };
   
   const handleDeleteCreditCard = async (cardId: string) => {
     await deleteCreditCard(user?.uid || null, cardId);
-    toast({ title: "Cartão de crédito removido!" });
+    toast({ title: "Cartão de crédito removido!", variant: "destructive" });
   }
   
   const getAccountName = (accountId: string) => {
@@ -377,6 +377,8 @@ function CreditCardForm({
         </DialogContent>
     );
 }
+
+    
 
     
 

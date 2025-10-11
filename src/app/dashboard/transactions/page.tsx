@@ -134,7 +134,7 @@ export default function TransactionsPage() {
   const handleDeleteTransaction = async (scope: RecurrenceEditScope) => {
     if (!transactionToDelete) return;
     await deleteTransaction(user?.uid || null, transactionToDelete.id, scope, transactionToDelete);
-    toast({ title: "Transação removida!" });
+    toast({ title: "Transação removida!", variant: "destructive" });
     setTransactionToDelete(null);
     setDeleteDialogOpen(false);
     clearBalanceCache(); // Force re-fetch of balance
@@ -173,7 +173,7 @@ export default function TransactionsPage() {
           await updateTransaction(user.uid, transaction.id, { efetivado: !transaction.efetivado });
         }
 
-        toast({ title: `Transação ${!transaction.efetivado ? 'efetivada' : 'marcada como pendente'}.` });
+        toast({ title: `Transação ${!transaction.efetivado ? 'efetivada' : 'marcada como pendente'}.`, variant: "success" });
         clearBalanceCache();
     } catch(error) {
         console.error("Error toggling efetivado: ", error);
@@ -408,5 +408,7 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    
 
     

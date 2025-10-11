@@ -22,14 +22,13 @@ import {
   limit,
 } from "firebase/firestore";
 import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, UserPreferences, RecurrencePeriod, RecurrenceEditScope } from "./types";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { subMonths, startOfMonth, endOfMonth, addDays, addWeeks, addMonths, addYears, isAfter, isSameMonth } from 'date-fns';
 
 
 // Toast hook must be called from a component
-const showToast = (options: { title: string; description?: string; variant?: "default" | "destructive" }) => {
-    // This is a placeholder. In a real component, you'd use the useToast hook.
-    console.log(`Toast: ${options.title} - ${options.description}`);
+const showToast = (options: { title: string; description?: string; variant?: "default" | "destructive" | "success" }) => {
+    toast(options);
 };
 
 const getCollectionPath = (userId: string | null, collectionName: string) => {
@@ -573,7 +572,7 @@ export const getTransactions = (
 
     const handleSnapshots = async () => {
         try {
-            const [dateRangeSnapshot, fixedSnapshot] = await Promise.all([getDocs(dateRangeQuery), getDocs(fixedQuery)]);
+            const [dateRangeSnapshot, fixedSnapshot] = await Promise.all([getDocs(dateRangeQuery), getDocs(fixedSnapshot)]);
             
             const combinedResults: Transaction[] = [];
             const processedIds = new Set<string>();
@@ -805,8 +804,10 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         }
     }
     if(didMigrate) {
-        showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta." });
+        showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta.", variant: "success" });
     }
 };
+
+    
 
     

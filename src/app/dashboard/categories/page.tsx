@@ -112,12 +112,12 @@ export default function CategoriesPage() {
         return;
     }
     await addCategory(user?.uid || null, category);
-    toast({ title: "Categoria adicionada!"});
+    toast({ title: "Categoria adicionada!", variant: "success" });
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
     await deleteCategory(user?.uid || null, categoryId);
-    toast({ title: "Categoria removida!"});
+    toast({ title: "Categoria removida!", variant: "destructive" });
   }
 
   const categoryExpenses = useMemo(() => {
@@ -287,3 +287,5 @@ function CategoryForm({
         </DialogContent>
     );
 }
+
+    

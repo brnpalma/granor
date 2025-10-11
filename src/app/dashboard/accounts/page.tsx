@@ -128,16 +128,16 @@ export default function AccountsPage() {
       // Don't update initialBalance when editing, only other fields
       const { initialBalance, ...dataToUpdate } = accountData;
       await updateAccount(user?.uid || null, accountId, dataToUpdate);
-      toast({ title: "Conta atualizada!" });
+      toast({ title: "Conta atualizada!", variant: "success" });
     } else {
       await addAccount(user?.uid || null, accountData);
-      toast({ title: "Conta adicionada!" });
+      toast({ title: "Conta adicionada!", variant: "success" });
     }
   };
   
   const handleDeleteAccount = async (accountId: string) => {
     await deleteAccount(user?.uid || null, accountId);
-    toast({ title: "Conta removida!"});
+    toast({ title: "Conta removida!", variant: "destructive" });
   }
   
 
@@ -311,3 +311,5 @@ function AccountForm({
         </DialogContent>
     );
 }
+
+    

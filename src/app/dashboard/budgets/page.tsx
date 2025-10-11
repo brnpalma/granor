@@ -79,12 +79,12 @@ export default function BudgetsPage() {
 
   const handleAddBudget = async (budget: Omit<Budget, "id">) => {
     await addBudget(user?.uid || null, budget);
-    toast({ title: "Orçamento adicionado", description: "Seu novo orçamento foi salvo." });
+    toast({ title: "Orçamento adicionado", description: "Seu novo orçamento foi salvo.", variant: "success" });
   };
   
   const handleDeleteBudget = async (budgetId: string) => {
     await deleteBudget(user?.uid || null, budgetId);
-    toast({ title: "Orçamento removido!"});
+    toast({ title: "Orçamento removido!", variant: "destructive" });
   }
 
   const getSpentAmount = (category: string) => {
@@ -225,3 +225,5 @@ function BudgetForm({
         </DialogContent>
     )
 }
+
+    

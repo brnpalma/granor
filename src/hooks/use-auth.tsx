@@ -1,9 +1,11 @@
+
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { migrateLocalDataToFirestore } from '@/lib/firestore';
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
   user: User | null;
@@ -19,6 +21,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     // This ensures that the user's session is persisted across browser sessions.
@@ -57,6 +60,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("Error signing in with Google", error);
+      toast({
+        title: "Erro de Login com Google",
+        description: "Não foi possível fazer o login com o Google.",
+        variant: "destructive",
+    });
     }
   };
 
@@ -96,3 +104,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

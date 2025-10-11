@@ -44,12 +44,12 @@ export default function SavingsPage() {
 
   const handleAddSavingsGoal = async (goal: Omit<SavingsGoal, "id">) => {
     await addSavingsGoal(user?.uid || null, goal);
-    toast({ title: "Meta adicionada!" });
+    toast({ title: "Meta adicionada!", variant: "success" });
   };
   
   const handleDeleteSavingsGoal = async (goalId: string) => {
     await deleteSavingsGoal(user?.uid || null, goalId);
-    toast({ title: "Meta removida!" });
+    toast({ title: "Meta removida!", variant: "destructive" });
   }
 
   if (isLoading) {
@@ -172,3 +172,5 @@ function SavingsGoalForm({
         </DialogContent>
     );
 }
+
+    
