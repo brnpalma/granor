@@ -782,6 +782,25 @@ export const addBudget = async (userId: string | null, budget: Omit<Budget, "id"
     await addDataItem<Budget>(userId, "budgets", budget);
 };
 
+export const updateBudget = async (userId: string | null, budgetId: string, budgetData: Partial<Omit<Budget, "id">>) => {
+    const path = getCollectionPath(userId, "budgets");
+    if (path) {
+        try {
+            await updateDoc(doc(db, path, budgetId), budgetData);
+        } catch (error) {
+            console.error(`Error updating budget: `, error);
+            showToast({ title: "Erro", description: "Não foi possível atualizar o orçamento.", variant: "destructive" });
+        }
+    } else {
+        const localData = getLocalData<Budget>("budgets");
+        const index = localData.findIndex(b => b.id === budgetId);
+        if (index !== -1) {
+            localData[index] = { ...localData[index], ...budgetData };
+            setLocalData("budgets", localData);
+        }
+    }
+};
+
 export const deleteBudget = async (userId: string | null, budgetId: string) => {
     try {
         await deleteDataItem(userId, "budgets", budgetId);
@@ -858,3 +877,4 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
     
 
     
+
