@@ -128,7 +128,7 @@ function Header() {
     const { user } = useAuth();
     const { selectedDate, goToNextMonth, goToPreviousMonth } = useDate();
     const [formattedDate, setFormattedDate] = useState('');
-    const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true });
+    const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true, includeBudgetsInForecast: false });
     
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const handleLinkClick = () => {
@@ -199,7 +199,7 @@ function Header() {
                             <Settings className="h-5 w-5" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-72">
+                    <DropdownMenuContent align="end" className="w-80">
                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
                             <Label htmlFor="show-balance-switch" className="flex items-center gap-2 cursor-pointer">
                                 {preferences.showBalance ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -215,12 +215,24 @@ function Header() {
                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
                             <Label htmlFor="include-previous-balance-switch" className="flex items-center gap-2 cursor-pointer">
                                 <Merge className="h-4 w-4" />
-                                <span>Somar saldo anterior em meses futuros</span>
+                                <span className="flex-1">Somar saldo anterior em meses futuros</span>
                             </Label>
                             <Switch
                                 id="include-previous-balance-switch"
                                 checked={preferences.includePreviousMonthBalance}
                                 onCheckedChange={(checked) => handlePreferenceToggle('includePreviousMonthBalance', checked)}
+                            />
+                        </DropdownMenuItem>
+                         <DropdownMenuSeparator />
+                         <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
+                            <Label htmlFor="include-budgets-forecast-switch" className="flex items-center gap-2 cursor-pointer">
+                                <Target className="h-4 w-4" />
+                                <span className="flex-1">Incluir orçamentos na previsão</span>
+                            </Label>
+                            <Switch
+                                id="include-budgets-forecast-switch"
+                                checked={preferences.includeBudgetsInForecast}
+                                onCheckedChange={(checked) => handlePreferenceToggle('includeBudgetsInForecast', checked)}
                             />
                         </DropdownMenuItem>
                     </DropdownMenuContent>
