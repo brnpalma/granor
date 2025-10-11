@@ -29,7 +29,7 @@ import {
 import { cn } from '@/lib/utils';
 import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus, Minus, ArrowRightLeft, PlusCircle } from 'lucide-react';
 import { startOfMonth } from 'date-fns';
-import { BankIcon, CreditCardDisplayIcon } from '@/components/icons';
+import { BankIcon, CreditCardDisplayIcon, CategoryIcon } from '@/components/icons';
 
 function RecurrenceDialog({
   open,
@@ -318,6 +318,8 @@ function TransactionForm() {
         }
         return null;
     }
+    
+    const selectedCategoryData = categories.find(c => c.name === category);
 
     if (isLoading) {
         return (
@@ -444,11 +446,27 @@ function TransactionForm() {
                     </div>
                     <Select onValueChange={setCategory} value={category}>
                         <SelectTrigger className="border-0 focus:ring-0 w-full">
-                            <SelectValue placeholder="Selecione a categoria" />
+                           <SelectValue>
+                                {selectedCategoryData ? (
+                                    <div className="flex items-center gap-3">
+                                        <div style={{ backgroundColor: selectedCategoryData.color }} className={'p-1.5 rounded-full text-white'}>
+                                            <CategoryIcon icon={selectedCategoryData.icon} className="h-4 w-4" />
+                                        </div>
+                                        <span>{selectedCategoryData.name}</span>
+                                    </div>
+                                ) : "Selecione a categoria"}
+                            </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                             {categories.filter(c => c.type === (type === 'credit_card_reversal' ? 'income' : type)).map(cat => (
-                                <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                                <SelectItem key={cat.id} value={cat.name}>
+                                    <div className="flex items-center gap-3">
+                                         <div style={{ backgroundColor: cat.color }} className={'p-1.5 rounded-full text-white'}>
+                                            <CategoryIcon icon={cat.icon} className="h-4 w-4" />
+                                        </div>
+                                        <span>{cat.name}</span>
+                                    </div>
+                                </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>

@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useDate } from "@/hooks/use-date";
+import { CategoryIcon } from "@/components/icons";
 
 export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -178,6 +179,8 @@ function BudgetForm({
     const [amount, setAmount] = useState("");
     const [category, setCategory] = useState<string>("");
     const { toast } = useToast();
+    
+    const selectedCategoryData = categories.find(c => c.name === category);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -206,11 +209,27 @@ function BudgetForm({
                     <Label htmlFor="category">Categoria</Label>
                     <Select onValueChange={(value: string) => setCategory(value)} value={category}>
                         <SelectTrigger id="category">
-                            <SelectValue placeholder="Selecione a categoria" />
+                            <SelectValue>
+                                 {selectedCategoryData ? (
+                                    <div className="flex items-center gap-3">
+                                        <div style={{ backgroundColor: selectedCategoryData.color }} className={'p-1.5 rounded-full text-white'}>
+                                            <CategoryIcon icon={selectedCategoryData.icon} className="h-4 w-4" />
+                                        </div>
+                                        <span>{selectedCategoryData.name}</span>
+                                    </div>
+                                ) : "Selecione a categoria"}
+                            </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                             {categories.filter(c => c.type === 'expense').map(cat => (
-                                <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                                <SelectItem key={cat.id} value={cat.name}>
+                                    <div className="flex items-center gap-3">
+                                         <div style={{ backgroundColor: cat.color }} className={'p-1.5 rounded-full text-white'}>
+                                            <CategoryIcon icon={cat.icon} className="h-4 w-4" />
+                                        </div>
+                                        <span>{cat.name}</span>
+                                    </div>
+                                </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
