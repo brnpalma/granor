@@ -572,7 +572,7 @@ export const getTransactions = (
 
     const handleSnapshots = async () => {
         try {
-            const [dateRangeSnapshot, fixedSnapshot] = await Promise.all([getDocs(dateRangeQuery), getDocs(fixedSnapshot)]);
+            const [dateRangeSnapshot, fixedSnapshot] = await Promise.all([getDocs(dateRangeQuery), getDocs(fixedQuery)]);
             
             const combinedResults: Transaction[] = [];
             const processedIds = new Set<string>();
@@ -807,6 +807,8 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta.", variant: "success" });
     }
 };
+
+    
 
     
 
