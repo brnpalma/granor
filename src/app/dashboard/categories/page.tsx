@@ -183,56 +183,6 @@ export default function CategoriesPage() {
     );
   }
 
-  const renderCategoryList = (type: "expense" | "income") => {
-    const relevantCategories = categories.filter(c => c.type === type);
-    const totalsMap = type === 'expense' ? categoryExpenses : categoryIncomes;
-
-    return (
-        <Card>
-            <CardContent className="p-0">
-            {relevantCategories.map((cat, index) => {
-                const total = totalsMap.get(cat.name) || 0;
-                return (
-                    <div key={cat.id} className="flex items-center gap-4 p-3 border-b last:border-b-0">
-                         <div style={{ backgroundColor: cat.color }} className={'p-2 rounded-full text-white'}>
-                            <CategoryIcon icon={cat.icon} className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="font-bold">{cat.name}</p>
-                            <p className="text-xs text-muted-foreground">{total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                        </div>
-                        <div className="flex items-center">
-                            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => handleOpenDialogForEdit(cat)}>
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="shrink-0">
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Esta ação não pode ser desfeita. Isso removerá permanentemente a categoria e todas as transações associadas.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteCategory(cat.id)}>Remover</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    </div>
-                )
-            })}
-            </CardContent>
-        </Card>
-    );
-  }
-
   function CategoryForm({
       onSubmit,
       onSubmitted,
@@ -358,6 +308,56 @@ export default function CategoriesPage() {
               </form>
           </DialogContent>
       );
+  }
+
+  const renderCategoryList = (type: "expense" | "income") => {
+    const relevantCategories = categories.filter(c => c.type === type);
+    const totalsMap = type === 'expense' ? categoryExpenses : categoryIncomes;
+
+    return (
+        <Card>
+            <CardContent className="p-0">
+            {relevantCategories.map((cat, index) => {
+                const total = totalsMap.get(cat.name) || 0;
+                return (
+                    <div key={cat.id} className="flex items-center gap-4 p-3 border-b last:border-b-0">
+                         <div style={{ backgroundColor: cat.color }} className={'p-2 rounded-full text-white'}>
+                            <CategoryIcon icon={cat.icon} className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="font-bold">{cat.name}</p>
+                            <p className="text-xs text-muted-foreground">{total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                        </div>
+                        <div className="flex items-center">
+                            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => handleOpenDialogForEdit(cat)}>
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="shrink-0">
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta ação não pode ser desfeita. Isso removerá permanentemente a categoria e todas as transações associadas.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteCategory(cat.id)}>Remover</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                    </div>
+                )
+            })}
+            </CardContent>
+        </Card>
+    );
   }
 
   return (
