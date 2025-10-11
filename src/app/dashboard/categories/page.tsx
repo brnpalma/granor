@@ -248,6 +248,7 @@ export default function CategoriesPage() {
                 onSubmit={handleFormSubmit} 
                 onSubmitted={() => handleDialogChange(false)}
                 category={editingCategory}
+                categoryColors={categoryColors}
             />
         </Dialog>
       </div>
@@ -277,11 +278,13 @@ export default function CategoriesPage() {
 function CategoryForm({
     onSubmit,
     onSubmitted,
-    category
+    category,
+    categoryColors,
 }: {
     onSubmit: (category: Omit<Category, "id">, categoryId?: string) => Promise<void>;
     onSubmitted: () => void;
     category: Category | null;
+    categoryColors: string[];
 }) {
     const [name, setName] = useState("");
     const [type, setType] = useState<"income" | "expense">("expense");
@@ -304,7 +307,7 @@ function CategoryForm({
             setColor(categoryColors[Math.floor(Math.random() * categoryColors.length)]);
             setIcon('MoreHorizontal');
         }
-    }, [category]);
+    }, [category, categoryColors]);
 
 
     const handleSubmit = async (e: React.FormEvent) => {
