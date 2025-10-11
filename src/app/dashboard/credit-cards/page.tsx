@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { PlusCircle, CreditCard, Banknote, Trash2, MoreVertical, Edit } from "lucide-react";
+import { PlusCircle, CreditCard, Banknote, Trash2, MoreVertical, Edit, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -52,6 +52,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useDate } from "@/hooks/use-date";
 import { BankIcon } from "@/components/icons";
+
+const accountColors = [
+    '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
+    '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50',
+    '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800',
+    '#FF5722', '#795548', '#9E9E9E', '#607D8B'
+];
+
 
 export default function CreditCardsPage() {
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
@@ -190,7 +198,7 @@ export default function CreditCardsPage() {
               <CardContent className="p-4 space-y-4">
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                        <BankIcon name={card.name} />
+                        <BankIcon name={card.name} color={card.color} />
                         <div>
                             <p className="font-bold">{card.name}</p>
                             <p className="text-sm text-muted-foreground">MasterCard</p>
@@ -288,23 +296,26 @@ function CreditCardForm({
     const [dueDay, setDueDay] = useState("");
     const [closingDay, setClosingDay] = useState("");
     const [defaultAccountId, setDefaultAccountId] = useState("");
+    const [color, setColor] = useState(accountColors[0]);
     const { toast } = useToast();
 
     const isEditing = !!card;
 
     useEffect(() => {
-        if (isEditing) {
+        if (isEditing && card) {
             setName(card.name);
             setLimit(String(card.limit));
             setDueDay(String(card.dueDay));
             setClosingDay(String(card.closingDay));
             setDefaultAccountId(card.defaultAccountId);
+            setColor(card.color || accountColors[0]);
         } else {
             setName("");
             setLimit("");
             setDueDay("");
             setClosingDay("");
             setDefaultAccountId("");
+            setColor(accountColors[0]);
         }
     }, [card, isEditing]);
 
@@ -321,6 +332,7 @@ function CreditCardForm({
             dueDay: parseInt(dueDay),
             closingDay: parseInt(closingDay),
             defaultAccountId,
+            color,
         }, card?.id);
 
         if (!isEditing) {
@@ -329,6 +341,7 @@ function CreditCardForm({
             setDueDay("");
             setClosingDay("");
             setDefaultAccountId("");
+            setColor(accountColors[0]);
         }
         onSubmitted();
     };
@@ -342,6 +355,24 @@ function CreditCardForm({
                 <div className="space-y-2">
                     <Label htmlFor="name">Nome do Cartão</Label>
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Cartão Nubank" />
+                </div>
+                 <div className="space-y-2">
+                    <Label>Cor do Cartão</Label>
+                    <div className="flex flex-wrap gap-2">
+                        {accountColors.map((c) => (
+                            <Button
+                                key={c}
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 rounded-full"
+                                style={{ backgroundColor: c }}
+                                onClick={() => setColor(c)}
+                            >
+                                {color === c && <Check className="h-5 w-5 text-white" />}
+                            </Button>
+                        ))}
+                    </div>
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="defaultAccountId">Conta para Pagamento</Label>
@@ -389,3 +420,5 @@ function CreditCardForm({
         </DialogContent>
     );
 }
+
+    

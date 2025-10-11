@@ -40,6 +40,7 @@ export interface CreditCard {
   closingDay: number;
   dueDay: number;
   defaultAccountId: string;
+  color?: string;
 }
 
 export type RecurrencePeriod = "diária" | "semanal" | "mensal" | "anual";
@@ -81,3 +82,5 @@ export interface SavingsGoal {
   targetAmount: number;
   currentAmount: number;
 }
+
+    
