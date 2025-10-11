@@ -51,7 +51,7 @@ import type { CreditCard as CreditCardType, Account, Transaction } from "@/lib/t
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useDate } from "@/hooks/use-date";
-import { BankIcon } from "@/components/icons";
+import { BankIcon, CreditCardDisplayIcon } from "@/components/icons";
 
 const accountColors = [
     '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
@@ -198,7 +198,7 @@ export default function CreditCardsPage() {
               <CardContent className="p-4 space-y-4">
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                        <BankIcon name={card.name} color={card.color} />
+                        <CreditCardDisplayIcon color={card.color} />
                         <div>
                             <p className="font-bold">{card.name}</p>
                             <p className="text-sm text-muted-foreground">MasterCard</p>
@@ -420,5 +420,3 @@ function CreditCardForm({
         </DialogContent>
     );
 }
-
-    

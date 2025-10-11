@@ -28,7 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus, Minus, ArrowRightLeft, PlusCircle } from 'lucide-react';
 import { startOfMonth } from 'date-fns';
-import { BankIcon } from '@/components/icons';
+import { BankIcon, CreditCardDisplayIcon } from '@/components/icons';
 
 function RecurrenceDialog({
   open,
@@ -309,10 +309,11 @@ function TransactionForm() {
     const getSelectedAccount = () => {
         if(creditCardId) {
             const card = creditCards.find(c => c.id === creditCardId);
-            return { name: card?.name || '', color: undefined };
+            return { name: card?.name, color: card?.color, isCard: true };
         }
         if(accountId) {
-            return accounts.find(a => a.id === accountId);
+            const account = accounts.find(a => a.id === accountId);
+             return { name: account?.name, color: account?.color, isCard: false };
         }
         return null;
     }
@@ -476,7 +477,7 @@ function TransactionForm() {
                                         if(selected?.name) {
                                             return (
                                                 <div className="flex items-center gap-2">
-                                                    <BankIcon name={selected.name || ''} color={selected.color} />
+                                                    {selected.isCard ? <CreditCardDisplayIcon color={selected.color} /> : <BankIcon name={selected.name || ''} color={selected.color} />}
                                                     <span>{selected.name}</span>
                                                 </div>
                                             )
@@ -497,7 +498,7 @@ function TransactionForm() {
                                 {creditCards.map(cc => (
                                     <SelectItem key={cc.id} value={`cc-${cc.id}`}>
                                         <div className="flex items-center gap-2">
-                                            <BankIcon name={cc.name} />
+                                            <CreditCardDisplayIcon color={cc.color} />
                                             <span>{cc.name}</span>
                                         </div>
                                     </SelectItem>
@@ -579,7 +580,3 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
-
-    
-
-    

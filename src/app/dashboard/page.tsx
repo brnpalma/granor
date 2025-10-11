@@ -32,7 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDate } from "@/hooks/use-date";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, subMonths, startOfDay, isBefore, endOfToday, isSameMonth, isFuture } from 'date-fns';
 import { cn } from "@/lib/utils";
-import { BankIcon } from "@/components/icons";
+import { BankIcon, CreditCardDisplayIcon } from "@/components/icons";
 
 
 export default function DashboardPage() {
@@ -598,7 +598,7 @@ export default function DashboardPage() {
 
                     return (
                         <div key={card.id} className="flex items-center gap-4">
-                            <BankIcon name={card.name} />
+                            <CreditCardDisplayIcon color={card.color} />
                             <div className="flex-1">
                                 <p className="font-bold uppercase">{card.name}</p>
                                 <p className="text-sm text-muted-foreground">Vencimento</p>
@@ -704,6 +704,7 @@ export default function DashboardPage() {
   
 
     
+
 
 
 
