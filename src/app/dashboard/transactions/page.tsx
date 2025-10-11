@@ -322,7 +322,7 @@ export default function TransactionsPage() {
                         <div key={t.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                             <div className="relative flex flex-col items-center">
                                 {groupIndex > 0 || transIndex > 0 ? <div className="absolute top-0 h-1/2 w-0.5 bg-border -translate-y-1/2"></div> : null}
-                                <div className="z-10">
+                                <div className="z-10 rounded-full">
                                      <div 
                                         style={{ backgroundColor: categoryInfo?.color }} 
                                         className={cn("p-2 rounded-full text-white", isIgnored && "opacity-50")}
@@ -340,25 +340,39 @@ export default function TransactionsPage() {
                                 <p className="text-sm text-muted-foreground">{getSourceName(t)}</p>
                             </div>
                             <div className="flex flex-col items-end gap-1">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="shrink-0 -mr-2 h-7 w-7">
-                                            <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                                <div className="flex items-center">
+                                    {/* Desktop Buttons */}
+                                    <div className="hidden md:flex items-center gap-1">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditTransaction(t)} disabled={!!t.isBudget}>
+                                            <Edit className="h-4 w-4" />
                                         </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                        <DropdownMenuItem onClick={() => handleEditTransaction(t)} disabled={!!t.isBudget}>
-                                            <Edit className="mr-2 h-4 w-4" />
-                                            <span>Editar</span>
-                                        </DropdownMenuItem>
-                                         {!t.isBudget && (
-                                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDeleteDialog(t); }}>
-                                                <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                                                <span className="text-destructive">Remover</span>
+                                        {!t.isBudget && (
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDeleteDialog(t)}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                    {/* Mobile Dropdown */}
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="shrink-0 -mr-2 h-7 w-7 md:hidden">
+                                                <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            <DropdownMenuItem onClick={() => handleEditTransaction(t)} disabled={!!t.isBudget}>
+                                                <Edit className="mr-2 h-4 w-4" />
+                                                <span>Editar</span>
                                             </DropdownMenuItem>
-                                         )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                            {!t.isBudget && (
+                                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDeleteDialog(t); }}>
+                                                    <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                                                    <span className="text-destructive">Remover</span>
+                                                </DropdownMenuItem>
+                                            )}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
                                 <p className={cn(
                                     "font-bold text-sm",
                                     t.type === "income" || t.type === 'credit_card_reversal' ? "text-green-500" : "text-foreground",
@@ -429,4 +443,5 @@ export default function TransactionsPage() {
 
 
     
+
 
