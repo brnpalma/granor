@@ -208,8 +208,13 @@ export default function BudgetsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Progress value={progress} className="mb-2" />
-                <p className="text-sm text-muted-foreground">
+                <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                        className="h-full w-full flex-1 bg-primary transition-all"
+                        style={{ transform: `translateX(-${100 - (progress || 0)}%)`, backgroundColor: categoryInfo?.color }}
+                    />
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
                   {remaining >= 0 ? `${remaining.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} restantes` : `${Math.abs(remaining).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} acima`}
                 </p>
               </CardContent>
