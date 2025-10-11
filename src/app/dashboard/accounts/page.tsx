@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -301,7 +302,7 @@ function AccountForm({
                         </SelectTrigger>
                         <SelectContent>
                             {accountTypes.map(cat => (
-                                <SelectItem key={cat} value={cat}>{cat}>{cat}</SelectItem>
+                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>

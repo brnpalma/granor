@@ -251,8 +251,12 @@ export default function DashboardPage() {
   const creditCardInvoices = useMemo(() => {
     return creditCards.map(card => {
         const invoiceTotal = transactionsForCurrentMonth
-            .filter(t => t.creditCardId === card.id && t.type === 'expense')
-            .reduce((sum, t) => sum + t.amount, 0);
+            .filter(t => t.creditCardId === card.id)
+            .reduce((sum, t) => {
+                if (t.type === 'expense') return sum + t.amount;
+                if (t.type === 'credit_card_reversal') return sum - t.amount;
+                return sum;
+            }, 0);
         return { ...card, invoiceTotal };
     });
   }, [creditCards, transactionsForCurrentMonth]);
@@ -704,6 +708,7 @@ export default function DashboardPage() {
   
 
     
+
 
 
 

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, Suspense } from 'react';
@@ -6,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { getAccounts, getCategories, getCreditCards, addTransaction, updateTransaction, getTransactionById } from '@/lib/firestore';
-import type { Transaction, Account, Category, CreditCard as CreditCardType, Recurrence, RecurrencePeriod, RecurrenceEditScope } from '@/lib/types';
+import type { Transaction, Account, Category, CreditCard as CreditCardType, Recurrence, RecurrencePeriod, RecurrenceEditScope, TransactionType } from '@/lib/types';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -142,15 +143,15 @@ function TransactionForm() {
     const { toast } = useToast();
 
     const transactionId = searchParams.get('id');
-    const typeParam = searchParams.get('type') as 'income' | 'expense' | null;
-    const isCreditCardParam = searchParams.get('isCreditCard') === 'true';
+    const typeParam = searchParams.get('type') as TransactionType | null;
+    const isCreditCardParam = searchParams.get('isCreditCard') === 'true' || typeParam === 'credit_card_reversal';
     const overrideDateParam = searchParams.get('overrideDate');
 
 
     const [description, setDescription] = useState("");
     const [amount, setAmount] = useState("");
     const [date, setDate] = useState<Date | undefined>(overrideDateParam ? new Date(overrideDateParam) : new Date());
-    const [type, setType] = useState<'income' | 'expense' | null>(typeParam);
+    const [type, setType] = useState<TransactionType | null>(typeParam);
     const [category, setCategory] = useState("");
     const [accountId, setAccountId] = useState<string | undefined>();
     const [creditCardId, setCreditCardId] = useState<string | undefined>();
@@ -328,13 +329,15 @@ function TransactionForm() {
     
     const pageTitle = isEditing
         ? "Editar Transação"
-        : isCreditCardParam
-            ? "Nova Despesa Cartão"
-            : type === 'income'
-                ? "Nova Receita"
-                : "Nova Despesa";
+        : type === 'credit_card_reversal'
+            ? "Novo Estorno Cartão"
+            : isCreditCardParam
+                ? "Nova Despesa Cartão"
+                : type === 'income'
+                    ? "Nova Receita"
+                    : "Nova Despesa";
 
-    const saveButtonColor = type === 'income'
+    const saveButtonColor = type === 'income' || type === 'credit_card_reversal'
         ? "bg-green-500 hover:bg-green-600 text-white"
         : "bg-red-500 hover:bg-red-600 text-white";
         
@@ -444,7 +447,7 @@ function TransactionForm() {
                             <SelectValue placeholder="Selecione a categoria" />
                         </SelectTrigger>
                         <SelectContent>
-                            {categories.filter(c => c.type === type).map(cat => (
+                            {categories.filter(c => c.type === (type === 'credit_card_reversal' ? 'income' : type)).map(cat => (
                                 <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                             ))}
                         </SelectContent>
@@ -452,7 +455,7 @@ function TransactionForm() {
                     <Button variant="ghost" size="icon"><Plus className="h-5 w-5" /></Button>
                 </div>
 
-                 { type === 'expense' ? (
+                 { type === 'expense' || type === 'credit_card_reversal' ? (
                     <div className="flex items-center gap-2 p-1 rounded-lg border">
                          <div className="p-2 rounded-full bg-muted">
                             {creditCardId !== undefined || isCreditCardParam ? 
@@ -489,7 +492,7 @@ function TransactionForm() {
                                 </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                                {!isCreditCardParam && accounts.map(acc => (
+                                {type === 'expense' && !isCreditCardParam && accounts.map(acc => (
                                     <SelectItem key={acc.id} value={`acc-${acc.id}`}>
                                         <div className="flex items-center gap-2">
                                             <BankIcon name={acc.name} color={acc.color} />
@@ -497,7 +500,7 @@ function TransactionForm() {
                                         </div>
                                     </SelectItem>
                                 ))}
-                                {isCreditCardParam && creditCards.map(cc => (
+                                {(type === 'expense' && isCreditCardParam || type === 'credit_card_reversal') && creditCards.map(cc => (
                                     <SelectItem key={cc.id} value={`cc-${cc.id}`}>
                                         <div className="flex items-center gap-2">
                                             <CreditCardDisplayIcon color={cc.color} />

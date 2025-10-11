@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { CreditCard, Edit, MoreVertical, EyeOff, Trash2 } from "lucide-react";
+import { CreditCard, Edit, MoreVertical, EyeOff, Trash2, RotateCcw } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -255,6 +256,7 @@ export default function TransactionsPage() {
         .reduce((acc, t) => {
             if (t.type === 'income') return acc + t.amount;
             if (t.type === 'expense') return acc - t.amount;
+            // Estorno de cartão não afeta o saldo da conta principal
             return acc;
         }, 0);
     return effectiveInitialBalance + monthlyFlow;
@@ -315,8 +317,8 @@ export default function TransactionsPage() {
                                 <div className="z-10 bg-background">
                                      <div className={cn("bg-muted p-2 rounded-full", isIgnored && "opacity-50")}>
                                          {t.creditCardId ? 
-                                         <CreditCard className="h-5 w-5 text-muted-foreground" /> :
-                                         <CategoryIcon category={t.category} className="h-5 w-5 text-muted-foreground" />
+                                          ( t.type === 'credit_card_reversal' ? <RotateCcw className="h-5 w-5 text-muted-foreground" /> : <CreditCard className="h-5 w-5 text-muted-foreground" />)
+                                          : <CategoryIcon category={t.category} className="h-5 w-5 text-muted-foreground" />
                                          }
                                     </div>
                                 </div>
@@ -348,10 +350,10 @@ export default function TransactionsPage() {
                                 </DropdownMenu>
                                 <p className={cn(
                                     "font-bold text-sm",
-                                    t.type === "income" ? "text-green-500" : "text-foreground",
+                                    t.type === "income" || t.type === 'credit_card_reversal' ? "text-green-500" : "text-foreground",
                                     isIgnored && "text-muted-foreground"
                                 )}>
-                                    {t.type === "income" ? "+" : "-"}
+                                    {t.type === "income" ? "+" : t.type === 'credit_card_reversal' ? '+' : "-"}
                                     {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                                 </p>
                                 {!t.efetivado && (

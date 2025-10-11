@@ -51,12 +51,14 @@ export interface Recurrence {
     startInstallment: number;
 }
 
+export type TransactionType = 'income' | 'expense' | 'credit_card_reversal';
+
 export interface Transaction {
   id: string;
   date: Date;
   description: string;
   amount: number;
-  type: "income" | "expense";
+  type: TransactionType;
   category: string;
   efetivado: boolean;
   accountId?: string; // Optional: for bank account transactions

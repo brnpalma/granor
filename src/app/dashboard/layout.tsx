@@ -27,6 +27,7 @@ import {
   EyeOff,
   Settings,
   Merge,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -297,6 +298,13 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                                         <CreditCard className="h-5 w-5 text-blue-500" />
                                     </div>
                                     <span>Despesa cartão</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => router.push('/dashboard/transactions/new?type=credit_card_reversal')}>
+                                    <div className="bg-green-500/20 p-2 rounded-full mr-3">
+                                        <RotateCcw className="h-5 w-5 text-green-500" />
+                                    </div>
+                                    <span>Estorno Cartão</span>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
