@@ -6,6 +6,7 @@ export interface UserPreferences {
   showBalance: boolean;
   includePreviousMonthBalance: boolean;
   includeBudgetsInForecast?: boolean;
+  includeBudgetsInPastForecast?: boolean;
 }
 
 export interface Category {
