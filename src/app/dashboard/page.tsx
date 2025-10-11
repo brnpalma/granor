@@ -30,7 +30,7 @@ import { CategoryIcon } from "@/components/icons";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDate } from "@/hooks/use-date";
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, subMonths, startOfDay, isBefore, endOfToday, isSameMonth, isFuture } from 'date-fns';
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, subMonths, startOfDay, isBefore, endOfToday, isSameMonth, isFuture, isPast } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { BankIcon, CreditCardDisplayIcon } from "@/components/icons";
 
@@ -43,7 +43,7 @@ export default function DashboardPage() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-  const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true, includeBudgetsInForecast: false });
+  const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true, includeBudgetsInForecast: false, includeBudgetsInPastForecast: false });
   const [isLoading, setIsLoading] = useState(true);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   
@@ -163,7 +163,12 @@ export default function DashboardPage() {
         const totalIncome = includedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
         const totalExpenses = includedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
-        const remainingBudgets = preferences.includeBudgetsInForecast 
+        const isPastMonth = isPast(endOfMonth(selectedDate));
+        const shouldIncludeBudgets = isPastMonth
+            ? preferences.includeBudgetsInPastForecast
+            : preferences.includeBudgetsInForecast;
+
+        const remainingBudgets = shouldIncludeBudgets
             ? budgets.reduce((total, budget) => {
                 const spent = getBudgetSpentAmount(budget.category);
                 const remaining = budget.amount - spent;
@@ -173,7 +178,7 @@ export default function DashboardPage() {
       
         setForecastedBalance(totalIncome - totalExpenses - remainingBudgets);
 
-    }, [includedTransactions, preferences.includeBudgetsInForecast, budgets]);
+    }, [includedTransactions, preferences.includeBudgetsInForecast, preferences.includeBudgetsInPastForecast, budgets, selectedDate]);
 
 
   const monthlyNetBalance = useMemo(() => {
@@ -220,7 +225,12 @@ export default function DashboardPage() {
     const forecasts = new Map<string, number>();
     const { startDate, endDate } = getMonthDateRange(selectedDate);
     
-    const remainingBudgetsTotal = preferences.includeBudgetsInForecast
+    const isPastMonth = isPast(endOfMonth(selectedDate));
+    const shouldIncludeBudgets = isPastMonth
+        ? preferences.includeBudgetsInPastForecast
+        : preferences.includeBudgetsInForecast;
+
+    const remainingBudgetsTotal = shouldIncludeBudgets
         ? budgets.reduce((total, budget) => {
             const spent = transactionsForCurrentMonth
                 .filter(t => t.type === 'expense' && t.category === budget.category)
@@ -265,7 +275,7 @@ export default function DashboardPage() {
     });
     return forecasts;
 
-  }, [accounts, allTransactions, transactionsForCurrentMonth, selectedDate, getMonthDateRange, isFutureMonth, preferences.includePreviousMonthBalance, preferences.includeBudgetsInForecast, budgets, accountBalances, includedAccounts.length]);
+  }, [accounts, allTransactions, transactionsForCurrentMonth, selectedDate, getMonthDateRange, isFutureMonth, preferences.includePreviousMonthBalance, preferences.includeBudgetsInForecast, preferences.includeBudgetsInPastForecast, budgets, accountBalances, includedAccounts.length]);
 
 
   const totalBalance = useMemo(() => {
