@@ -347,11 +347,23 @@ function CreditCardForm({
                     <Label htmlFor="defaultAccountId">Conta para Pagamento</Label>
                     <Select onValueChange={setDefaultAccountId} value={defaultAccountId}>
                         <SelectTrigger id="defaultAccountId">
-                            <SelectValue placeholder="Selecione a conta" />
+                             <SelectValue>
+                                {defaultAccountId ? (
+                                    <div className="flex items-center gap-2">
+                                        <BankIcon name={accounts.find(a => a.id === defaultAccountId)?.name || ''} color={accounts.find(a => a.id === defaultAccountId)?.color} />
+                                        <span>{accounts.find(a => a.id === defaultAccountId)?.name}</span>
+                                    </div>
+                                ) : "Selecione a conta"}
+                            </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                             {accounts.map(acc => (
-                                <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                                <SelectItem key={acc.id} value={acc.id}>
+                                    <div className="flex items-center gap-2">
+                                        <BankIcon name={acc.name} color={acc.color} />
+                                        <span>{acc.name}</span>
+                                    </div>
+                                </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
@@ -377,9 +389,3 @@ function CreditCardForm({
         </DialogContent>
     );
 }
-
-    
-
-    
-
-    

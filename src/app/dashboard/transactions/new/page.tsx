@@ -28,6 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus, Minus, ArrowRightLeft, PlusCircle } from 'lucide-react';
 import { startOfMonth } from 'date-fns';
+import { BankIcon } from '@/components/icons';
 
 function RecurrenceDialog({
   open,
@@ -183,7 +184,8 @@ function TransactionForm() {
 
         if (transactionId) {
             setIsEditing(true);
-            getTransactionById(user.uid, transactionId).then(t => {
+            const idToFetch = transactionId.includes('-projected-') ? transactionId.split('-projected-')[0] : transactionId;
+            getTransactionById(user.uid, idToFetch).then(t => {
                 if (t) {
                     setOriginalTransaction(t);
                     setDescription(t.description);
@@ -265,6 +267,7 @@ function TransactionForm() {
         try {
             if (isEditing && transactionId) {
                 let dataToUpdate: Partial<Transaction> = { ...transactionData };
+                
                 // When editing all instances of a fixed transaction, do not change the start date.
                 if (scope === 'all' && originalTransaction?.isFixed) {
                    delete dataToUpdate.date;
@@ -302,6 +305,17 @@ function TransactionForm() {
             setIsRecurring(true);
         }
     };
+    
+    const getSelectedAccount = () => {
+        if(creditCardId) {
+            const card = creditCards.find(c => c.id === creditCardId);
+            return { name: card?.name || '', color: undefined };
+        }
+        if(accountId) {
+            return accounts.find(a => a.id === accountId);
+        }
+        return null;
+    }
 
     if (isLoading) {
         return (
@@ -456,14 +470,37 @@ function TransactionForm() {
                             value={creditCardId ? `cc-${creditCardId}` : accountId ? `acc-${accountId}` : ''}
                         >
                             <SelectTrigger className="border-0 focus:ring-0 w-full">
-                                <SelectValue placeholder="Selecione a conta" />
+                                <SelectValue>
+                                    {(() => {
+                                        const selected = getSelectedAccount();
+                                        if(selected?.name) {
+                                            return (
+                                                <div className="flex items-center gap-2">
+                                                    <BankIcon name={selected.name || ''} color={selected.color} />
+                                                    <span>{selected.name}</span>
+                                                </div>
+                                            )
+                                        }
+                                        return "Selecione a conta";
+                                    })()}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                                 {accounts.map(acc => (
-                                    <SelectItem key={acc.id} value={`acc-${acc.id}`}>{acc.name}</SelectItem>
+                                    <SelectItem key={acc.id} value={`acc-${acc.id}`}>
+                                        <div className="flex items-center gap-2">
+                                            <BankIcon name={acc.name} color={acc.color} />
+                                            <span>{acc.name}</span>
+                                        </div>
+                                    </SelectItem>
                                 ))}
                                 {creditCards.map(cc => (
-                                    <SelectItem key={cc.id} value={`cc-${cc.id}`}>{cc.name}</SelectItem>
+                                    <SelectItem key={cc.id} value={`cc-${cc.id}`}>
+                                        <div className="flex items-center gap-2">
+                                            <BankIcon name={cc.name} />
+                                            <span>{cc.name}</span>
+                                        </div>
+                                    </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -475,11 +512,29 @@ function TransactionForm() {
                         </div>
                         <Select onValueChange={setAccountId} value={accountId}>
                             <SelectTrigger className="border-0 focus:ring-0 w-full">
-                                <SelectValue placeholder="Selecione a conta" />
+                                <SelectValue>
+                                     {(() => {
+                                        const selected = getSelectedAccount();
+                                        if(selected?.name) {
+                                            return (
+                                                <div className="flex items-center gap-2">
+                                                    <BankIcon name={selected.name || ''} color={selected.color} />
+                                                    <span>{selected.name}</span>
+                                                </div>
+                                            )
+                                        }
+                                        return "Selecione a conta";
+                                    })()}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                                 {accounts.map(acc => (
-                                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                                    <SelectItem key={acc.id} value={acc.id}>
+                                         <div className="flex items-center gap-2">
+                                            <BankIcon name={acc.name} color={acc.color} />
+                                            <span>{acc.name}</span>
+                                        </div>
+                                    </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
