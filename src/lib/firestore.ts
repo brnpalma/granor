@@ -160,6 +160,7 @@ export const getUserPreferences = (
             showBalance: true,
             includePreviousMonthBalance: true,
             includeBudgetsInForecast: false,
+            includeBudgetsInPastForecast: false,
         };
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -167,6 +168,7 @@ export const getUserPreferences = (
                 showBalance: data.showBalance ?? defaultPrefs.showBalance,
                 includePreviousMonthBalance: data.includePreviousMonthBalance ?? defaultPrefs.includePreviousMonthBalance,
                 includeBudgetsInForecast: data.includeBudgetsInForecast ?? defaultPrefs.includeBudgetsInForecast,
+                includeBudgetsInPastForecast: data.includeBudgetsInPastForecast ?? defaultPrefs.includeBudgetsInPastForecast,
             });
         } else {
             // Return default preferences if document doesn't exist

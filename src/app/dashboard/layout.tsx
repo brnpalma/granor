@@ -128,7 +128,7 @@ function Header() {
     const { user } = useAuth();
     const { selectedDate, goToNextMonth, goToPreviousMonth } = useDate();
     const [formattedDate, setFormattedDate] = useState('');
-    const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true, includeBudgetsInForecast: false });
+    const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true, includeBudgetsInForecast: false, includeBudgetsInPastForecast: false });
     
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const handleLinkClick = () => {
@@ -227,12 +227,24 @@ function Header() {
                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
                             <Label htmlFor="include-budgets-forecast-switch" className="flex items-center gap-2 cursor-pointer">
                                 <Target className="h-4 w-4" />
-                                <span className="flex-1">Incluir orçamentos na previsão</span>
+                                <span className="flex-1">Incluir orçamentos na previsão (mês atual/futuro)</span>
                             </Label>
                             <Switch
                                 id="include-budgets-forecast-switch"
                                 checked={preferences.includeBudgetsInForecast}
                                 onCheckedChange={(checked) => handlePreferenceToggle('includeBudgetsInForecast', checked)}
+                            />
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                         <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
+                            <Label htmlFor="include-budgets-past-forecast-switch" className="flex items-center gap-2 cursor-pointer">
+                                <RotateCcw className="h-4 w-4" />
+                                <span className="flex-1">Incluir orçamentos na previsão (meses passados)</span>
+                            </Label>
+                            <Switch
+                                id="include-budgets-past-forecast-switch"
+                                checked={preferences.includeBudgetsInPastForecast}
+                                onCheckedChange={(checked) => handlePreferenceToggle('includeBudgetsInPastForecast', checked)}
                             />
                         </DropdownMenuItem>
                     </DropdownMenuContent>

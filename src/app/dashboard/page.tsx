@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -30,7 +29,7 @@ import { CategoryIcon } from "@/components/icons";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDate } from "@/hooks/use-date";
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, subMonths, startOfDay, isBefore, endOfToday, isSameMonth, isFuture } from 'date-fns';
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, subMonths, startOfDay, isBefore, endOfToday, isSameMonth, isFuture, isPast } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { BankIcon, CreditCardDisplayIcon } from "@/components/icons";
 
@@ -43,7 +42,7 @@ export default function DashboardPage() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-  const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true, includeBudgetsInForecast: false });
+  const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true, includeBudgetsInForecast: false, includeBudgetsInPastForecast: false });
   const [isLoading, setIsLoading] = useState(true);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   
@@ -163,7 +162,12 @@ export default function DashboardPage() {
         const totalIncome = includedTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
         const totalExpenses = includedTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
-        const remainingBudgets = preferences.includeBudgetsInForecast 
+        const isPastMonth = isPast(endOfMonth(selectedDate));
+        const shouldIncludeBudgets = isPastMonth
+            ? preferences.includeBudgetsInPastForecast
+            : preferences.includeBudgetsInForecast;
+
+        const remainingBudgets = shouldIncludeBudgets
             ? budgets.reduce((total, budget) => {
                 const spent = getBudgetSpentAmount(budget.category);
                 const remaining = budget.amount - spent;
@@ -173,7 +177,7 @@ export default function DashboardPage() {
       
         setForecastedBalance(totalIncome - totalExpenses - remainingBudgets);
 
-    }, [includedTransactions, preferences.includeBudgetsInForecast, budgets]);
+    }, [includedTransactions, preferences.includeBudgetsInForecast, preferences.includeBudgetsInPastForecast, budgets, selectedDate]);
 
 
   const monthlyNetBalance = useMemo(() => {
@@ -219,16 +223,6 @@ export default function DashboardPage() {
   const accountForecasts = useMemo(() => {
     const forecasts = new Map<string, number>();
     const { startDate, endDate } = getMonthDateRange(selectedDate);
-    
-    const remainingBudgetsTotal = preferences.includeBudgetsInForecast
-        ? budgets.reduce((total, budget) => {
-            const spent = transactionsForCurrentMonth
-                .filter(t => t.type === 'expense' && t.category === budget.category)
-                .reduce((sum, t) => sum + t.amount, 0);
-            const remaining = budget.amount - spent;
-            return total + (remaining > 0 ? remaining : 0);
-        }, 0)
-        : 0;
 
     accounts.forEach(account => {
         let relevantTransactions = allTransactions.filter(t => t.date <= endDate);
@@ -255,17 +249,11 @@ export default function DashboardPage() {
                 return acc;
             }, startingBalance);
         
-        // Distribute the budget forecast reduction proportionally to the account's current balance
-        const totalIncludedBalance = Array.from(accountBalances.values()).reduce((sum, bal) => sum + bal, 0);
-        const accountBalance = accountBalances.get(account.id) || 0;
-        const proportion = totalIncludedBalance > 0 ? accountBalance / totalIncludedBalance : (1 / includedAccounts.length);
-        const budgetAdjustment = remainingBudgetsTotal * proportion;
-
-        forecasts.set(account.id, balanceUntilStartOfMonth + forecastedFlow - budgetAdjustment);
+        forecasts.set(account.id, balanceUntilStartOfMonth + forecastedFlow);
     });
     return forecasts;
 
-  }, [accounts, allTransactions, transactionsForCurrentMonth, selectedDate, getMonthDateRange, isFutureMonth, preferences.includePreviousMonthBalance, preferences.includeBudgetsInForecast, budgets, accountBalances, includedAccounts.length]);
+  }, [accounts, allTransactions, transactionsForCurrentMonth, selectedDate, getMonthDateRange, isFutureMonth, preferences.includePreviousMonthBalance]);
 
 
   const totalBalance = useMemo(() => {
