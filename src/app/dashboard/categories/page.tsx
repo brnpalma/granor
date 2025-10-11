@@ -249,6 +249,7 @@ export default function CategoriesPage() {
                 onSubmitted={() => handleDialogChange(false)}
                 category={editingCategory}
                 categoryColors={categoryColors}
+                iconList={iconList}
             />
         </Dialog>
       </div>
@@ -280,11 +281,13 @@ function CategoryForm({
     onSubmitted,
     category,
     categoryColors,
+    iconList,
 }: {
     onSubmit: (category: Omit<Category, "id">, categoryId?: string) => Promise<void>;
     onSubmitted: () => void;
     category: Category | null;
     categoryColors: string[];
+    iconList: string[];
 }) {
     const [name, setName] = useState("");
     const [type, setType] = useState<"income" | "expense">("expense");
@@ -403,5 +406,7 @@ function CategoryForm({
         </DialogContent>
     );
 }
+
+    
 
     
