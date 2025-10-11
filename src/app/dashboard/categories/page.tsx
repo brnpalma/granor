@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, Edit, Check, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,7 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { addCategory, deleteCategory, getCategories, getTransactions } from "@/lib/firestore";
+import { addCategory, deleteCategory, getCategories, getTransactions, updateCategory } from "@/lib/firestore";
 import type { Category, Transaction } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -43,27 +44,12 @@ import { useDate } from "@/hooks/use-date";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CategoryIcon } from "@/components/icons";
 
-const categoryColors = [
-  "bg-blue-500/20 text-blue-500",
-  "bg-emerald-500/20 text-emerald-500",
-  "bg-amber-500/20 text-amber-500",
-  "bg-violet-500/20 text-violet-500",
-  "bg-rose-500/20 text-rose-500",
-  "bg-cyan-500/20 text-cyan-500",
-  "bg-fuchsia-500/20 text-fuchsia-500",
-  "bg-orange-500/20 text-orange-500",
-];
-
-const getColorForCategory = (index: number) => {
-    return categoryColors[index % categoryColors.length];
-}
-
-
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedDate, getMonthDateRange } = useDate();
@@ -105,19 +91,42 @@ export default function CategoriesPage() {
       clearTimeout(timeout);
     };
   }, [user, selectedDate, getMonthDateRange]);
+  
+  const handleOpenDialogForEdit = (category: Category) => {
+    setEditingCategory(category);
+    setDialogOpen(true);
+  };
 
-  const handleAddCategory = async (category: Omit<Category, "id">) => {
-    if (categories.some(c => c.name.toLowerCase() === category.name.toLowerCase())) {
+  const handleOpenDialogForAdd = () => {
+    setEditingCategory(null);
+    setDialogOpen(true);
+  };
+  
+  const handleDialogChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setEditingCategory(null);
+    }
+  };
+
+  const handleFormSubmit = async (categoryData: Omit<Category, "id">, categoryId?: string) => {
+    if (categories.some(c => c.name.toLowerCase() === categoryData.name.toLowerCase() && c.id !== categoryId)) {
         toast({ title: "Categoria já existe", description: "Esta categoria já foi cadastrada.", variant: "destructive"});
         return;
     }
-    await addCategory(user?.uid || null, category);
-    toast({ title: "Categoria adicionada!"});
+    
+    if (categoryId) {
+        await updateCategory(user?.uid || null, categoryId, categoryData);
+        toast({ title: "Categoria atualizada!", variant: "success" });
+    } else {
+        await addCategory(user?.uid || null, categoryData);
+        toast({ title: "Categoria adicionada!", variant: "success" });
+    }
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
     await deleteCategory(user?.uid || null, categoryId);
-    toast({ title: "Categoria removida!"});
+    toast({ title: "Categoria removida!", variant: "destructive" });
   }
 
   const categoryExpenses = useMemo(() => {
@@ -161,32 +170,37 @@ export default function CategoriesPage() {
                 const total = totalsMap.get(cat.name) || 0;
                 return (
                     <div key={cat.id} className="flex items-center gap-4 p-3 border-b last:border-b-0">
-                         <div className={`p-2 rounded-full ${getColorForCategory(index)}`}>
-                            <CategoryIcon category={cat.name} className="h-5 w-5" />
+                         <div style={{ backgroundColor: cat.color }} className={'p-2 rounded-full text-white'}>
+                            <CategoryIcon icon={cat.icon} className="h-5 w-5" />
                         </div>
                         <div className="flex-1">
                             <p className="font-bold">{cat.name}</p>
                             <p className="text-xs text-muted-foreground">{total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                         </div>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="shrink-0">
-                                <Trash2 className="h-4 w-4 text-destructive" />
+                        <div className="flex items-center">
+                            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => handleOpenDialogForEdit(cat)}>
+                                <Edit className="h-4 w-4" />
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta ação não pode ser desfeita. Isso removerá permanentemente a categoria e todas as transações associadas.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteCategory(cat.id)}>Remover</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="shrink-0">
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta ação não pode ser desfeita. Isso removerá permanentemente a categoria e todas as transações associadas.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteCategory(cat.id)}>Remover</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
                     </div>
                 )
             })}
@@ -195,18 +209,21 @@ export default function CategoriesPage() {
     );
   }
 
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Categorias</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
             <DialogTrigger asChild>
-                <Button>
+                <Button onClick={handleOpenDialogForAdd}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
                 </Button>
             </DialogTrigger>
-            <CategoryForm onSubmit={handleAddCategory} onSubmitted={() => setDialogOpen(false)} />
+            <CategoryForm 
+                onSubmit={handleFormSubmit} 
+                onSubmitted={() => handleDialogChange(false)}
+                category={editingCategory}
+            />
         </Dialog>
       </div>
 
@@ -235,32 +252,54 @@ export default function CategoriesPage() {
 function CategoryForm({
     onSubmit,
     onSubmitted,
-}: {
-    onSubmit: (category: Omit<Category, "id">) => Promise<void>;
+    category,
+  }: {
+    onSubmit: (category: Omit<Category, "id">, categoryId?: string) => Promise<void>;
     onSubmitted: () => void;
-}) {
+    category: Category | null;
+  }) {
     const [name, setName] = useState("");
     const [type, setType] = useState<"income" | "expense">("expense");
+    const [color, setColor] = useState('#F44336');
     const { toast } = useToast();
+
+    const isEditing = !!category;
+    
+    const categoryColors = [
+      '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
+      '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50',
+      '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800',
+      '#FF5722', '#795548', '#9E9E9E', '#607D8B'
+    ];
+
+    useEffect(() => {
+        if (category) {
+            setName(category.name);
+            setType(category.type);
+            setColor(category.color || categoryColors[0]);
+        } else {
+            setName("");
+            setType("expense");
+            setColor(categoryColors[Math.floor(Math.random() * categoryColors.length)]);
+        }
+    }, [category]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !type) {
+        if (!name || !type || !color) {
             toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
             return;
         }
 
-        await onSubmit({ name, type });
+        await onSubmit({ name, type, icon: 'Box', color }, category?.id);
 
-        setName("");
-        setType("expense");
         onSubmitted();
     };
 
     return (
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Adicionar Nova Categoria</DialogTitle>
+                <DialogTitle>{isEditing ? 'Editar Categoria' : 'Adicionar Nova Categoria'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -280,10 +319,28 @@ function CategoryForm({
                         </div>
                     </RadioGroup>
                 </div>
+                <div className="space-y-2">
+                    <Label>Cor</Label>
+                     <div className="flex flex-wrap gap-2">
+                        {categoryColors.map((c) => (
+                            <Button
+                                key={c}
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 rounded-full"
+                                style={{ backgroundColor: c }}
+                                onClick={() => setColor(c)}
+                            >
+                                {color === c && <Check className="h-5 w-5 text-white" />}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
                 <DialogFooter>
-                    <Button type="submit">Adicionar Categoria</Button>
+                    <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Adicionar Categoria'}</Button>
                 </DialogFooter>
             </form>
         </DialogContent>
     );
-}
+  }

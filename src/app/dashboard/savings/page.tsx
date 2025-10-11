@@ -44,12 +44,12 @@ export default function SavingsPage() {
 
   const handleAddSavingsGoal = async (goal: Omit<SavingsGoal, "id">) => {
     await addSavingsGoal(user?.uid || null, goal);
-    toast({ title: "Meta adicionada!" });
+    toast({ title: "Meta adicionada!", variant: "success" });
   };
   
   const handleDeleteSavingsGoal = async (goalId: string) => {
     await deleteSavingsGoal(user?.uid || null, goalId);
-    toast({ title: "Meta removida!" });
+    toast({ title: "Meta removida!", variant: "destructive" });
   }
 
   if (isLoading) {
@@ -130,8 +130,18 @@ function SavingsGoalForm({
     onSubmitted: () => void;
 }) {
     const [name, setName] = useState("");
-    const [targetAmount, setTargetAmount] = useState("");
+    const [targetAmount, setTargetAmount] = useState(0);
     const { toast } = useToast();
+
+    const formatCurrency = (value: number) => {
+        const amountInReais = value / 100;
+        return amountInReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        setTargetAmount(Number(rawValue));
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -142,12 +152,12 @@ function SavingsGoalForm({
 
         await onSubmit({
             name,
-            targetAmount: parseFloat(targetAmount),
+            targetAmount: targetAmount / 100,
             currentAmount: 0,
         });
 
         setName("");
-        setTargetAmount("");
+        setTargetAmount(0);
         onSubmitted();
     };
 
@@ -163,7 +173,7 @@ function SavingsGoalForm({
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="targetAmount">Valor Alvo</Label>
-                    <Input id="targetAmount" type="number" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} placeholder="0,00" />
+                    <Input id="targetAmount" type="text" value={formatCurrency(targetAmount)} onChange={handleAmountChange} placeholder="R$ 0,00" />
                 </div>
                 <DialogFooter>
                     <Button type="submit">Adicionar Meta</Button>
@@ -172,3 +182,5 @@ function SavingsGoalForm({
         </DialogContent>
     );
 }
+
+    

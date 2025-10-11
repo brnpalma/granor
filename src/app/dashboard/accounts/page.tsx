@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { PlusCircle, Trash2, MoreVertical, Edit } from "lucide-react";
+import { PlusCircle, Trash2, MoreVertical, Edit, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -53,6 +54,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { BankIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
+
+const accountColors = [
+    '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
+    '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50',
+    '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800',
+    '#FF5722', '#795548', '#9E9E9E', '#607D8B'
+];
+
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -125,19 +134,17 @@ export default function AccountsPage() {
 
   const handleFormSubmit = async (accountData: Omit<Account, "id">, accountId?: string) => {
     if (accountId) {
-      // Don't update initialBalance when editing, only other fields
-      const { initialBalance, ...dataToUpdate } = accountData;
-      await updateAccount(user?.uid || null, accountId, dataToUpdate);
-      toast({ title: "Conta atualizada!" });
+      await updateAccount(user?.uid || null, accountId, accountData);
+      toast({ title: "Conta atualizada!", variant: "success" });
     } else {
       await addAccount(user?.uid || null, accountData);
-      toast({ title: "Conta adicionada!" });
+      toast({ title: "Conta adicionada!", variant: "success" });
     }
   };
   
   const handleDeleteAccount = async (accountId: string) => {
     await deleteAccount(user?.uid || null, accountId);
-    toast({ title: "Conta removida!"});
+    toast({ title: "Conta removida!", variant: "destructive" });
   }
   
 
@@ -173,7 +180,7 @@ export default function AccountsPage() {
                 {accounts.map(account => (
                     <div key={account.id} className="flex items-center gap-4 p-2.5 border-b last:border-b-0">
                         <div className={cn(account.ignoreInTotals && "opacity-50")}>
-                          <BankIcon name={account.name} />
+                          <BankIcon name={account.name} color={account.color} />
                         </div>
                         <div className="flex-1">
                             <p className="text-xs text-muted-foreground">{account.type}</p>
@@ -236,7 +243,8 @@ function AccountForm({
 }) {
     const [name, setName] = useState("");
     const [type, setType] = useState<AccountType | "">("");
-    const [balance, setBalance] = useState("");
+    const [balance, setBalance] = useState(0);
+    const [color, setColor] = useState(accountColors[0]);
     const [ignoreInTotals, setIgnoreInTotals] = useState(false);
     const { toast } = useToast();
     
@@ -246,15 +254,27 @@ function AccountForm({
         if (account) {
             setName(account.name);
             setType(account.type);
-            setBalance(String(account.initialBalance));
+            setBalance(account.initialBalance * 100);
             setIgnoreInTotals(account.ignoreInTotals || false);
+            setColor(account.color || accountColors[0]);
         } else {
             setName("");
             setType("");
-            setBalance("");
+            setBalance(0);
             setIgnoreInTotals(false);
+            setColor(accountColors[0]);
         }
     }, [account]);
+
+    const formatCurrency = (value: number) => {
+        const amountInReais = value / 100;
+        return amountInReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        setBalance(Number(rawValue));
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -266,8 +286,9 @@ function AccountForm({
         await onSubmit({
             name,
             type: type as AccountType,
-            initialBalance: parseFloat(balance) || 0,
+            initialBalance: balance / 100,
             ignoreInTotals,
+            color,
         }, account?.id);
 
         onSubmitted();
@@ -296,9 +317,27 @@ function AccountForm({
                         </SelectContent>
                     </Select>
                 </div>
+                 <div className="space-y-2">
+                    <Label>Cor da Conta</Label>
+                    <div className="flex flex-wrap gap-2">
+                        {accountColors.map((c) => (
+                            <Button
+                                key={c}
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 rounded-full"
+                                style={{ backgroundColor: c }}
+                                onClick={() => setColor(c)}
+                            >
+                                {color === c && <Check className="h-5 w-5 text-white" />}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
                 <div className="space-y-2">
-                    <Label htmlFor="balance">{isEditing ? "Saldo Inicial" : "Saldo Inicial (Opcional)"}</Label>
-                    <Input id="balance" type="number" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0,00" disabled={isEditing} />
+                    <Label htmlFor="balance">{isEditing ? "Saldo Inicial (Não pode ser alterado)" : "Saldo Inicial (Opcional)"}</Label>
+                    <Input id="balance" type="text" value={formatCurrency(balance)} onChange={handleBalanceChange} placeholder="R$ 0,00" disabled={isEditing} />
                 </div>
                 <div className="flex items-center space-x-2">
                     <Switch id="ignoreInTotals" checked={ignoreInTotals} onCheckedChange={setIgnoreInTotals} />

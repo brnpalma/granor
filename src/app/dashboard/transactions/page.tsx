@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { CreditCard, Edit, MoreVertical, EyeOff, Trash2 } from "lucide-react";
+import { CreditCard, Edit, MoreVertical, EyeOff, Trash2, RotateCcw } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -28,8 +29,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { addTransaction, deleteTransaction, getTransactions, getAccounts, getCreditCards, updateTransaction, findPreviousMonthBalance, getUserPreferences } from "@/lib/firestore";
-import type { Transaction, Account, CreditCard as CreditCardType, UserPreferences, RecurrenceEditScope } from "@/lib/types";
+import { addTransaction, deleteTransaction, getTransactions, getAccounts, getCreditCards, getCategories, updateTransaction, findPreviousMonthBalance, getUserPreferences } from "@/lib/firestore";
+import type { Transaction, Account, CreditCard as CreditCardType, UserPreferences, RecurrenceEditScope, Category } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
@@ -50,6 +51,7 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [initialBalance, setInitialBalance] = useState(0);
   const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true });
   const [isLoading, setIsLoading] = useState(true);
@@ -74,7 +76,7 @@ export default function TransactionsPage() {
     setIsLoading(true);
     const { startDate, endDate } = getMonthDateRange(selectedDate);
     
-    let dataLoaded = { transactions: false, accounts: false, creditCards: false, preferences: false };
+    let dataLoaded = { transactions: false, accounts: false, creditCards: false, categories: false, preferences: false };
     const checkLoading = () => {
         if(Object.values(dataLoaded).every(Boolean)) {
             setIsLoading(false);
@@ -97,6 +99,11 @@ export default function TransactionsPage() {
         dataLoaded.creditCards = true;
         checkLoading();
     });
+    const unsubCategories = getCategories(user.uid, (data) => {
+        setCategories(data);
+        dataLoaded.categories = true;
+        checkLoading();
+    });
      const unsubPrefs = getUserPreferences(user.uid, (data) => {
         setPreferences(data);
         dataLoaded.preferences = true;
@@ -113,6 +120,7 @@ export default function TransactionsPage() {
         unsubTransactions();
         unsubAccounts();
         unsubCreditCards();
+        unsubCategories();
         unsubPrefs();
         clearTimeout(timeout);
     };
@@ -134,7 +142,7 @@ export default function TransactionsPage() {
   const handleDeleteTransaction = async (scope: RecurrenceEditScope) => {
     if (!transactionToDelete) return;
     await deleteTransaction(user?.uid || null, transactionToDelete.id, scope, transactionToDelete);
-    toast({ title: "Transação removida!" });
+    toast({ title: "Transação removida!", variant: "destructive" });
     setTransactionToDelete(null);
     setDeleteDialogOpen(false);
     clearBalanceCache(); // Force re-fetch of balance
@@ -173,7 +181,7 @@ export default function TransactionsPage() {
           await updateTransaction(user.uid, transaction.id, { efetivado: !transaction.efetivado });
         }
 
-        toast({ title: `Transação ${!transaction.efetivado ? 'efetivada' : 'marcada como pendente'}.` });
+        toast({ title: `Transação ${!transaction.efetivado ? 'efetivada' : 'marcada como pendente'}.`, variant: "success" });
         clearBalanceCache();
     } catch(error) {
         console.error("Error toggling efetivado: ", error);
@@ -255,6 +263,7 @@ export default function TransactionsPage() {
         .reduce((acc, t) => {
             if (t.type === 'income') return acc + t.amount;
             if (t.type === 'expense') return acc - t.amount;
+            // Estorno de cartão não afeta o saldo da conta principal
             return acc;
         }, 0);
     return effectiveInitialBalance + monthlyFlow;
@@ -307,16 +316,20 @@ export default function TransactionsPage() {
                     {group.transactions.map((t, transIndex) => {
                       const isIgnored = isTransactionIgnored(t);
                       const isToggling = isTogglingEfetivado.includes(t.id);
+                      const categoryInfo = categories.find(c => c.name === t.category);
 
                       return (
                         <div key={t.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                             <div className="relative flex flex-col items-center">
                                 {groupIndex > 0 || transIndex > 0 ? <div className="absolute top-0 h-1/2 w-0.5 bg-border -translate-y-1/2"></div> : null}
                                 <div className="z-10 bg-background">
-                                     <div className={cn("bg-muted p-2 rounded-full", isIgnored && "opacity-50")}>
+                                     <div 
+                                        style={{ backgroundColor: categoryInfo?.color }} 
+                                        className={cn("p-2 rounded-full text-white", isIgnored && "opacity-50")}
+                                      >
                                          {t.creditCardId ? 
-                                         <CreditCard className="h-5 w-5 text-muted-foreground" /> :
-                                         <CategoryIcon category={t.category} className="h-5 w-5 text-muted-foreground" />
+                                          ( t.type === 'credit_card_reversal' ? <RotateCcw className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />)
+                                          : <CategoryIcon icon={categoryInfo?.icon} className="h-5 w-5" />
                                          }
                                     </div>
                                 </div>
@@ -348,10 +361,10 @@ export default function TransactionsPage() {
                                 </DropdownMenu>
                                 <p className={cn(
                                     "font-bold text-sm",
-                                    t.type === "income" ? "text-green-500" : "text-foreground",
+                                    t.type === "income" || t.type === 'credit_card_reversal' ? "text-green-500" : "text-foreground",
                                     isIgnored && "text-muted-foreground"
                                 )}>
-                                    {t.type === "income" ? "+" : "-"}
+                                    {t.type === "income" ? "+" : t.type === 'credit_card_reversal' ? '+' : "-"}
                                     {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                                 </p>
                                 {!t.efetivado && (
@@ -410,3 +423,6 @@ export default function TransactionsPage() {
 }
 
     
+
+    
+

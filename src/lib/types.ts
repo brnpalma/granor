@@ -11,6 +11,8 @@ export interface Category {
   id: string;
   name: string;
   type: "income" | "expense";
+  icon: string;
+  color: string;
 }
 
 
@@ -30,6 +32,7 @@ export interface Account {
   type: AccountType;
   initialBalance: number;
   ignoreInTotals?: boolean;
+  color?: string;
 }
 
 export interface CreditCard {
@@ -39,6 +42,7 @@ export interface CreditCard {
   closingDay: number;
   dueDay: number;
   defaultAccountId: string;
+  color?: string;
 }
 
 export type RecurrencePeriod = "diária" | "semanal" | "mensal" | "anual";
@@ -49,12 +53,14 @@ export interface Recurrence {
     startInstallment: number;
 }
 
+export type TransactionType = 'income' | 'expense' | 'credit_card_reversal';
+
 export interface Transaction {
   id: string;
   date: Date;
   description: string;
   amount: number;
-  type: "income" | "expense";
+  type: TransactionType;
   category: string;
   efetivado: boolean;
   accountId?: string; // Optional: for bank account transactions

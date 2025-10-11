@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, Suspense } from 'react';
@@ -6,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { getAccounts, getCategories, getCreditCards, addTransaction, updateTransaction, getTransactionById } from '@/lib/firestore';
-import type { Transaction, Account, Category, CreditCard as CreditCardType, Recurrence, RecurrencePeriod, RecurrenceEditScope } from '@/lib/types';
+import type { Transaction, Account, Category, CreditCard as CreditCardType, Recurrence, RecurrencePeriod, RecurrenceEditScope, TransactionType } from '@/lib/types';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +29,7 @@ import {
 import { cn } from '@/lib/utils';
 import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus, Minus, ArrowRightLeft, PlusCircle } from 'lucide-react';
 import { startOfMonth } from 'date-fns';
+import { BankIcon, CreditCardDisplayIcon, CategoryIcon } from '@/components/icons';
 
 function RecurrenceDialog({
   open,
@@ -141,15 +143,15 @@ function TransactionForm() {
     const { toast } = useToast();
 
     const transactionId = searchParams.get('id');
-    const typeParam = searchParams.get('type') as 'income' | 'expense' | null;
-    const isCreditCardParam = searchParams.get('isCreditCard') === 'true';
+    const typeParam = searchParams.get('type') as TransactionType | null;
+    const isCreditCardParam = searchParams.get('isCreditCard') === 'true' || typeParam === 'credit_card_reversal';
     const overrideDateParam = searchParams.get('overrideDate');
 
 
     const [description, setDescription] = useState("");
-    const [amount, setAmount] = useState("");
+    const [amount, setAmount] = useState(0); // Store amount as a number (cents)
     const [date, setDate] = useState<Date | undefined>(overrideDateParam ? new Date(overrideDateParam) : new Date());
-    const [type, setType] = useState<'income' | 'expense' | null>(typeParam);
+    const [type, setType] = useState<TransactionType | null>(typeParam);
     const [category, setCategory] = useState("");
     const [accountId, setAccountId] = useState<string | undefined>();
     const [creditCardId, setCreditCardId] = useState<string | undefined>();
@@ -183,11 +185,12 @@ function TransactionForm() {
 
         if (transactionId) {
             setIsEditing(true);
-            getTransactionById(user.uid, transactionId).then(t => {
+            const idToFetch = transactionId.includes('-projected-') ? transactionId.split('-projected-')[0] : transactionId;
+            getTransactionById(user.uid, idToFetch).then(t => {
                 if (t) {
                     setOriginalTransaction(t);
                     setDescription(t.description);
-                    setAmount(String(t.amount));
+                    setAmount(t.amount * 100); // Convert to cents
                     // If we are overriding a specific month, use that month's date
                     if (overrideDateParam) {
                        const overrideDate = new Date(overrideDateParam);
@@ -220,28 +223,52 @@ function TransactionForm() {
         return () => unsubs.forEach(u => u());
 
     }, [user, transactionId, typeParam, isCreditCardParam, overrideDateParam]);
+
+    const formatCurrency = (value: number) => {
+        const amountInReais = value / 100;
+        return amountInReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        setAmount(Number(rawValue));
+    };
     
 
     const handleSubmit = async (scope?: RecurrenceEditScope) => {
         setIsSaving(true);
         setShowEditScopeDialog(false);
-
-        if (!user?.uid || !description || !amount || !date || !type || !category || (!accountId && !creditCardId)) {
-            toast({ title: "Por favor, preencha todos os campos obrigatórios", variant: 'destructive' });
-            setIsSaving(false);
-            return;
-        }
-        
-        const parsedAmount = parseFloat(amount);
-        if (isNaN(parsedAmount) || parsedAmount <= 0) {
-             toast({ title: "O valor da transação é inválido.", variant: 'destructive' });
+    
+        if (!user?.uid || !date || !type) {
+            toast({ title: "Erro de sistema. Tente novamente.", variant: 'destructive' });
             setIsSaving(false);
             return;
         }
 
+        if (!category) {
+            toast({ title: "Por favor, selecione uma categoria.", variant: 'destructive' });
+            setIsSaving(false);
+            return;
+        }
+
+        if (!accountId && !creditCardId) {
+            toast({ title: "Por favor, selecione uma conta ou cartão de crédito.", variant: 'destructive' });
+            setIsSaving(false);
+            return;
+        }
+    
+        const finalAmount = amount / 100;
+        if (isNaN(finalAmount) || finalAmount <= 0) {
+            toast({ title: "O valor da transação é inválido.", variant: 'destructive' });
+            setIsSaving(false);
+            return;
+        }
+    
+        const finalDescription = description.trim() === "" ? category : description;
+    
         const transactionData: Omit<Transaction, "id"> = {
-            description,
-            amount: parsedAmount,
+            description: finalDescription,
+            amount: finalAmount,
             date,
             type,
             category,
@@ -250,30 +277,30 @@ function TransactionForm() {
             isRecurring: isRecurring && !isFixed,
             isFixed: isFixed,
         };
-
+    
         if (transactionData.isRecurring) {
             transactionData.recurrence = recurrence;
         }
-
+    
         if (creditCardId) {
             transactionData.creditCardId = creditCardId;
         } else if (accountId) {
             transactionData.accountId = accountId;
         }
-
-
+    
         try {
             if (isEditing && transactionId) {
                 let dataToUpdate: Partial<Transaction> = { ...transactionData };
+                
                 // When editing all instances of a fixed transaction, do not change the start date.
                 if (scope === 'all' && originalTransaction?.isFixed) {
                    delete dataToUpdate.date;
                 }
                 await updateTransaction(user.uid, transactionId, dataToUpdate, scope, originalTransaction);
-                toast({ title: "Transação atualizada!" });
+                toast({ title: "Transação atualizada!", variant: "success" });
             } else {
                 await addTransaction(user.uid, transactionData);
-                toast({ title: "Transação adicionada!" });
+                toast({ title: "Transação adicionada!", variant: "success" });
             }
             router.back();
         } catch (error) {
@@ -302,6 +329,20 @@ function TransactionForm() {
             setIsRecurring(true);
         }
     };
+    
+    const getSelectedAccount = () => {
+        if(creditCardId) {
+            const card = creditCards.find(c => c.id === creditCardId);
+            return { name: card?.name, color: card?.color, isCard: true };
+        }
+        if(accountId) {
+            const account = accounts.find(a => a.id === accountId);
+             return { name: account?.name, color: account?.color, isCard: false };
+        }
+        return null;
+    }
+    
+    const selectedCategoryData = categories.find(c => c.name === category);
 
     if (isLoading) {
         return (
@@ -311,13 +352,17 @@ function TransactionForm() {
         );
     }
     
-    const pageTitle = isEditing 
-        ? "Editar Transação" 
-        : type === 'income' 
-            ? "Nova Receita" 
-            : "Nova Despesa";
+    const pageTitle = isEditing
+        ? "Editar Transação"
+        : type === 'credit_card_reversal'
+            ? "Novo Estorno Cartão"
+            : isCreditCardParam
+                ? "Nova Despesa Cartão"
+                : type === 'income'
+                    ? "Nova Receita"
+                    : "Nova Despesa";
 
-    const saveButtonColor = type === 'income'
+    const saveButtonColor = type === 'income' || type === 'credit_card_reversal'
         ? "bg-green-500 hover:bg-green-600 text-white"
         : "bg-red-500 hover:bg-red-600 text-white";
         
@@ -343,7 +388,7 @@ function TransactionForm() {
                  <div className="flex items-center gap-4 p-3 rounded-lg border">
                     <AlignLeft className="h-5 w-5 text-muted-foreground" />
                     <Input
-                        placeholder="Descrição"
+                        placeholder="Descrição (se vazio, usa categoria)"
                         className="border-0 focus-visible:ring-0 text-base p-0"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
@@ -354,11 +399,11 @@ function TransactionForm() {
                 <div className="flex items-center gap-4 p-3 rounded-lg border">
                     <CircleDollarSign className="h-5 w-5 text-muted-foreground" />
                     <Input
-                        type="number"
+                        type="text"
                         placeholder="R$ 0,00"
                         className="border-0 focus-visible:ring-0 text-base p-0"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
+                        value={formatCurrency(amount)}
+                        onChange={handleAmountChange}
                     />
                 </div>
                 
@@ -424,21 +469,37 @@ function TransactionForm() {
                     </div>
                     <Select onValueChange={setCategory} value={category}>
                         <SelectTrigger className="border-0 focus:ring-0 w-full">
-                            <SelectValue placeholder="Selecione a categoria" />
+                           <SelectValue>
+                                {selectedCategoryData ? (
+                                    <div className="flex items-center gap-3">
+                                        <div style={{ backgroundColor: selectedCategoryData.color }} className={'p-1.5 rounded-full text-white'}>
+                                            <CategoryIcon icon={selectedCategoryData.icon} className="h-4 w-4" />
+                                        </div>
+                                        <span>{selectedCategoryData.name}</span>
+                                    </div>
+                                ) : "Selecione a categoria"}
+                            </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                            {categories.filter(c => c.type === type).map(cat => (
-                                <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                            {categories.filter(c => c.type === (type === 'credit_card_reversal' ? 'income' : type)).map(cat => (
+                                <SelectItem key={cat.id} value={cat.name}>
+                                    <div className="flex items-center gap-3">
+                                         <div style={{ backgroundColor: cat.color }} className={'p-1.5 rounded-full text-white'}>
+                                            <CategoryIcon icon={cat.icon} className="h-4 w-4" />
+                                        </div>
+                                        <span>{cat.name}</span>
+                                    </div>
+                                </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                     <Button variant="ghost" size="icon"><Plus className="h-5 w-5" /></Button>
                 </div>
 
-                 { type === 'expense' ? (
+                 { type === 'expense' || type === 'credit_card_reversal' ? (
                     <div className="flex items-center gap-2 p-1 rounded-lg border">
                          <div className="p-2 rounded-full bg-muted">
-                            {creditCardId !== undefined ? 
+                            {creditCardId !== undefined || isCreditCardParam ? 
                                 <CreditCard className="h-5 w-5 text-muted-foreground" /> :
                                 <Wallet className="h-5 w-5 text-muted-foreground" />
                             }
@@ -456,14 +517,37 @@ function TransactionForm() {
                             value={creditCardId ? `cc-${creditCardId}` : accountId ? `acc-${accountId}` : ''}
                         >
                             <SelectTrigger className="border-0 focus:ring-0 w-full">
-                                <SelectValue placeholder="Selecione a conta" />
+                                <SelectValue>
+                                    {(() => {
+                                        const selected = getSelectedAccount();
+                                        if(selected?.name) {
+                                            return (
+                                                <div className="flex items-center gap-2">
+                                                    {selected.isCard ? <CreditCardDisplayIcon color={selected.color} /> : <BankIcon name={selected.name || ''} color={selected.color} />}
+                                                    <span>{selected.name}</span>
+                                                </div>
+                                            )
+                                        }
+                                        return isCreditCardParam ? "Selecione o cartão" : "Selecione a conta";
+                                    })()}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                                {accounts.map(acc => (
-                                    <SelectItem key={acc.id} value={`acc-${acc.id}`}>{acc.name}</SelectItem>
+                                {type === 'expense' && !isCreditCardParam && accounts.map(acc => (
+                                    <SelectItem key={acc.id} value={`acc-${acc.id}`}>
+                                        <div className="flex items-center gap-2">
+                                            <BankIcon name={acc.name} color={acc.color} />
+                                            <span>{acc.name}</span>
+                                        </div>
+                                    </SelectItem>
                                 ))}
-                                {creditCards.map(cc => (
-                                    <SelectItem key={cc.id} value={`cc-${cc.id}`}>{cc.name}</SelectItem>
+                                {(type === 'expense' && isCreditCardParam || type === 'credit_card_reversal') && creditCards.map(cc => (
+                                    <SelectItem key={cc.id} value={`cc-${cc.id}`}>
+                                        <div className="flex items-center gap-2">
+                                            <CreditCardDisplayIcon color={cc.color} />
+                                            <span>{cc.name}</span>
+                                        </div>
+                                    </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -475,11 +559,29 @@ function TransactionForm() {
                         </div>
                         <Select onValueChange={setAccountId} value={accountId}>
                             <SelectTrigger className="border-0 focus:ring-0 w-full">
-                                <SelectValue placeholder="Selecione a conta" />
+                                <SelectValue>
+                                     {(() => {
+                                        const selected = getSelectedAccount();
+                                        if(selected?.name) {
+                                            return (
+                                                <div className="flex items-center gap-2">
+                                                    <BankIcon name={selected.name || ''} color={selected.color} />
+                                                    <span>{selected.name}</span>
+                                                </div>
+                                            )
+                                        }
+                                        return "Selecione a conta";
+                                    })()}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                                 {accounts.map(acc => (
-                                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                                    <SelectItem key={acc.id} value={acc.id}>
+                                         <div className="flex items-center gap-2">
+                                            <BankIcon name={acc.name} color={acc.color} />
+                                            <span>{acc.name}</span>
+                                        </div>
+                                    </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -524,5 +626,3 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
-
-    

@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { PlusCircle, CreditCard, Banknote, Trash2, MoreVertical, Edit } from "lucide-react";
+import { PlusCircle, CreditCard, Banknote, Trash2, MoreVertical, Edit, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -51,7 +52,15 @@ import type { CreditCard as CreditCardType, Account, Transaction } from "@/lib/t
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useDate } from "@/hooks/use-date";
-import { BankIcon } from "@/components/icons";
+import { BankIcon, CreditCardDisplayIcon } from "@/components/icons";
+
+const accountColors = [
+    '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
+    '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50',
+    '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800',
+    '#FF5722', '#795548', '#9E9E9E', '#607D8B'
+];
+
 
 export default function CreditCardsPage() {
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
@@ -123,16 +132,16 @@ export default function CreditCardsPage() {
   const handleFormSubmit = async (cardData: Omit<CreditCardType, "id">, cardId?: string) => {
     if (cardId) {
       await updateCreditCard(user?.uid || null, cardId, cardData);
-      toast({ title: "Cartão atualizado!" });
+      toast({ title: "Cartão atualizado!", variant: "success" });
     } else {
       await addCreditCard(user?.uid || null, cardData);
-      toast({ title: "Cartão adicionado!" });
+      toast({ title: "Cartão adicionado!", variant: "success" });
     }
   };
   
   const handleDeleteCreditCard = async (cardId: string) => {
     await deleteCreditCard(user?.uid || null, cardId);
-    toast({ title: "Cartão de crédito removido!" });
+    toast({ title: "Cartão de crédito removido!", variant: "destructive" });
   }
   
   const getAccountName = (accountId: string) => {
@@ -142,8 +151,12 @@ export default function CreditCardsPage() {
   const creditCardInvoices = useMemo(() => {
     return creditCards.map(card => {
         const invoiceTotal = transactions
-            .filter(t => t.creditCardId === card.id && t.type === 'expense')
-            .reduce((sum, t) => sum + t.amount, 0);
+            .filter(t => t.creditCardId === card.id)
+            .reduce((sum, t) => {
+                if (t.type === 'expense') return sum + t.amount;
+                if (t.type === 'credit_card_reversal') return sum - t.amount;
+                return sum;
+            }, 0);
         return { ...card, invoiceTotal };
     });
   }, [creditCards, transactions]);
@@ -190,7 +203,7 @@ export default function CreditCardsPage() {
               <CardContent className="p-4 space-y-4">
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                        <BankIcon name={card.name} />
+                        <CreditCardDisplayIcon color={card.color} />
                         <div>
                             <p className="font-bold">{card.name}</p>
                             <p className="text-sm text-muted-foreground">MasterCard</p>
@@ -284,29 +297,42 @@ function CreditCardForm({
     card: CreditCardType | null;
 }) {
     const [name, setName] = useState("");
-    const [limit, setLimit] = useState("");
+    const [limit, setLimit] = useState(0);
     const [dueDay, setDueDay] = useState("");
     const [closingDay, setClosingDay] = useState("");
     const [defaultAccountId, setDefaultAccountId] = useState("");
+    const [color, setColor] = useState(accountColors[0]);
     const { toast } = useToast();
 
     const isEditing = !!card;
 
     useEffect(() => {
-        if (isEditing) {
+        if (isEditing && card) {
             setName(card.name);
-            setLimit(String(card.limit));
+            setLimit(card.limit * 100);
             setDueDay(String(card.dueDay));
             setClosingDay(String(card.closingDay));
             setDefaultAccountId(card.defaultAccountId);
+            setColor(card.color || accountColors[0]);
         } else {
             setName("");
-            setLimit("");
+            setLimit(0);
             setDueDay("");
             setClosingDay("");
             setDefaultAccountId("");
+            setColor(accountColors[0]);
         }
     }, [card, isEditing]);
+
+    const formatCurrency = (value: number) => {
+        const amountInReais = value / 100;
+        return amountInReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    const handleLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        setLimit(Number(rawValue));
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -317,18 +343,20 @@ function CreditCardForm({
 
         await onSubmit({
             name,
-            limit: parseFloat(limit),
+            limit: limit / 100,
             dueDay: parseInt(dueDay),
             closingDay: parseInt(closingDay),
             defaultAccountId,
+            color,
         }, card?.id);
 
         if (!isEditing) {
             setName("");
-            setLimit("");
+            setLimit(0);
             setDueDay("");
             setClosingDay("");
             setDefaultAccountId("");
+            setColor(accountColors[0]);
         }
         onSubmitted();
     };
@@ -344,14 +372,44 @@ function CreditCardForm({
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Cartão Nubank" />
                 </div>
                  <div className="space-y-2">
+                    <Label>Cor do Cartão</Label>
+                    <div className="flex flex-wrap gap-2">
+                        {accountColors.map((c) => (
+                            <Button
+                                key={c}
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 rounded-full"
+                                style={{ backgroundColor: c }}
+                                onClick={() => setColor(c)}
+                            >
+                                {color === c && <Check className="h-5 w-5 text-white" />}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+                 <div className="space-y-2">
                     <Label htmlFor="defaultAccountId">Conta para Pagamento</Label>
                     <Select onValueChange={setDefaultAccountId} value={defaultAccountId}>
                         <SelectTrigger id="defaultAccountId">
-                            <SelectValue placeholder="Selecione a conta" />
+                             <SelectValue>
+                                {defaultAccountId ? (
+                                    <div className="flex items-center gap-2">
+                                        <BankIcon name={accounts.find(a => a.id === defaultAccountId)?.name || ''} color={accounts.find(a => a.id === defaultAccountId)?.color} />
+                                        <span>{accounts.find(a => a.id === defaultAccountId)?.name}</span>
+                                    </div>
+                                ) : "Selecione a conta"}
+                            </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                             {accounts.map(acc => (
-                                <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                                <SelectItem key={acc.id} value={acc.id}>
+                                    <div className="flex items-center gap-2">
+                                        <BankIcon name={acc.name} color={acc.color} />
+                                        <span>{acc.name}</span>
+                                    </div>
+                                </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
@@ -359,7 +417,7 @@ function CreditCardForm({
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="limit">Limite do Cartão</Label>
-                        <Input id="limit" type="number" value={limit} onChange={(e) => setLimit(e.target.value)} placeholder="5000,00" />
+                        <Input id="limit" type="text" value={formatCurrency(limit)} onChange={handleLimitChange} placeholder="R$ 5.000,00" />
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="dueDay">Dia do Vencimento</Label>
@@ -377,7 +435,3 @@ function CreditCardForm({
         </DialogContent>
     );
 }
-
-    
-
-    
