@@ -599,13 +599,13 @@ function TransactionForm() {
             {showEditScopeDialog && (
               <AlertDialog open={showEditScopeDialog} onOpenChange={setShowEditScopeDialog}>
                   <AlertDialogContent>
-                      <AlertDialogHeader>
+                      <AlertDialogHeader className="text-left">
                           <AlertDialogTitle>Editar Transação</AlertDialogTitle>
                           <AlertDialogDescription>
                               Você está editando uma transação recorrente/fixa. Como deseja aplicar as alterações?
                           </AlertDialogDescription>
                       </AlertDialogHeader>
-                      <AlertDialogFooter className="flex-col gap-2">
+                      <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:gap-2">
                            <AlertDialogAction onClick={() => handleSubmit("single")}>Salvar somente esta transação</AlertDialogAction>
                            <AlertDialogAction className={cn(buttonVariants({ variant: "destructive" }))} onClick={() => handleSubmit("future")}>Salvar esta e as futuras</AlertDialogAction>
                            <AlertDialogAction className={cn(buttonVariants({ variant: "destructive" }))} onClick={() => handleSubmit("all")}>Salvar todas as transações</AlertDialogAction>

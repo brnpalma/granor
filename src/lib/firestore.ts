@@ -156,15 +156,21 @@ export const getUserPreferences = (
 ): (() => void) => {
     const prefDocRef = doc(db, `users/${userId}/preferences`, 'user');
     const unsubscribe = onSnapshot(prefDocRef, (docSnap) => {
+        const defaultPrefs: UserPreferences = {
+            showBalance: true,
+            includePreviousMonthBalance: true,
+            includeBudgetsInForecast: false,
+        };
         if (docSnap.exists()) {
             const data = docSnap.data();
             callback({
-                showBalance: data.showBalance ?? true,
-                includePreviousMonthBalance: data.includePreviousMonthBalance ?? true,
+                showBalance: data.showBalance ?? defaultPrefs.showBalance,
+                includePreviousMonthBalance: data.includePreviousMonthBalance ?? defaultPrefs.includePreviousMonthBalance,
+                includeBudgetsInForecast: data.includeBudgetsInForecast ?? defaultPrefs.includeBudgetsInForecast,
             });
         } else {
             // Return default preferences if document doesn't exist
-            callback({ showBalance: true, includePreviousMonthBalance: true });
+            callback(defaultPrefs);
         }
     });
     return unsubscribe;
@@ -871,10 +877,3 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta.", variant: "success" });
     }
 };
-
-    
-
-    
-
-    
-
