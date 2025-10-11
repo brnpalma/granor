@@ -545,7 +545,7 @@ export default function DashboardPage() {
                   <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
                 </Link>
             </div>
-            <Card>
+            <Card className="card-darker">
                 <CardContent className="p-0">
                     {accounts.map((account, index) => {
                         const balance = accountBalances.get(account.id) ?? 0;
@@ -593,7 +593,7 @@ export default function DashboardPage() {
                     <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
                 </Link>
             </div>
-            <Card>
+            <Card className="card-darker">
               <CardContent className="p-2 space-y-4">
                 {creditCardInvoices.map(card => {
                     const dueDate = new Date();
@@ -714,6 +714,7 @@ export default function DashboardPage() {
   
 
     
+
 
 
 

@@ -72,4 +72,8 @@ body {
   }
 }
 
-    
+@layer components {
+  .dark .card-darker {
+    background-color: hsl(240 5% 8%);
+  }
+}
