@@ -598,8 +598,8 @@ function TransactionForm() {
             />
             {showEditScopeDialog && (
               <AlertDialog open={showEditScopeDialog} onOpenChange={setShowEditScopeDialog}>
-                  <AlertDialogContent>
-                      <AlertDialogHeader className="text-left">
+                  <AlertDialogContent style={{ maxWidth: 'fit-content' }}>
+                      <AlertDialogHeader>
                           <AlertDialogTitle>Editar Transação</AlertDialogTitle>
                           <AlertDialogDescription>
                               Você está editando uma transação recorrente/fixa. Como deseja aplicar as alterações?
