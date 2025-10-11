@@ -259,7 +259,7 @@ export default function TransactionsPage() {
     const effectiveInitialBalance = (isFutureMonth && !preferences.includePreviousMonthBalance) ? 0 : initialBalance;
     const includedAccountsIds = new Set(accounts.filter(a => !a.ignoreInTotals).map(a => a.id));
     const monthlyFlow = transactions
-        .filter(t => t.efetivado && (!t.accountId || includedAccountsIds.has(t.accountId)))
+        .filter(t => t.efetivado && (!t.accountId || includedAccountIds.has(t.accountId)))
         .reduce((acc, t) => {
             if (t.type === 'income') return acc + t.amount;
             if (t.type === 'expense') return acc - t.amount;
@@ -392,7 +392,7 @@ export default function TransactionsPage() {
         )}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>
-                <AlertDialogHeader>
+                <AlertDialogHeader className="text-left">
                     <AlertDialogTitle>Remover Transação</AlertDialogTitle>
                     {(transactionToDelete?.isRecurring || transactionToDelete?.isFixed) ? (
                         <AlertDialogDescription>
@@ -404,7 +404,7 @@ export default function TransactionsPage() {
                         </AlertDialogDescription>
                     )}
                 </AlertDialogHeader>
-                <AlertDialogFooter className="flex-col gap-2">
+                <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:gap-2">
                     {(transactionToDelete?.isRecurring || transactionToDelete?.isFixed) ? (
                         <>
                             <AlertDialogAction className={cn(buttonVariants({ variant: "destructive" }))} onClick={() => handleDeleteTransaction("single")}>Remover somente esta</AlertDialogAction>
