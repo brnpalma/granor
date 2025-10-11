@@ -228,22 +228,36 @@ function TransactionForm() {
     const handleSubmit = async (scope?: RecurrenceEditScope) => {
         setIsSaving(true);
         setShowEditScopeDialog(false);
-
-        if (!user?.uid || !description || !amount || !date || !type || !category || (!accountId && !creditCardId)) {
-            toast({ title: "Por favor, preencha todos os campos obrigatórios", variant: 'destructive' });
+    
+        if (!user?.uid || !date || !type) {
+            toast({ title: "Erro de sistema. Tente novamente.", variant: 'destructive' });
             setIsSaving(false);
             return;
         }
-        
+
+        if (!category) {
+            toast({ title: "Por favor, selecione uma categoria.", variant: 'destructive' });
+            setIsSaving(false);
+            return;
+        }
+
+        if (!accountId && !creditCardId) {
+            toast({ title: "Por favor, selecione uma conta ou cartão de crédito.", variant: 'destructive' });
+            setIsSaving(false);
+            return;
+        }
+    
         const parsedAmount = parseFloat(amount);
         if (isNaN(parsedAmount) || parsedAmount <= 0) {
-             toast({ title: "O valor da transação é inválido.", variant: 'destructive' });
+            toast({ title: "O valor da transação é inválido.", variant: 'destructive' });
             setIsSaving(false);
             return;
         }
-
+    
+        const finalDescription = description.trim() === "" ? category : description;
+    
         const transactionData: Omit<Transaction, "id"> = {
-            description,
+            description: finalDescription,
             amount: parsedAmount,
             date,
             type,
@@ -253,18 +267,17 @@ function TransactionForm() {
             isRecurring: isRecurring && !isFixed,
             isFixed: isFixed,
         };
-
+    
         if (transactionData.isRecurring) {
             transactionData.recurrence = recurrence;
         }
-
+    
         if (creditCardId) {
             transactionData.creditCardId = creditCardId;
         } else if (accountId) {
             transactionData.accountId = accountId;
         }
-
-
+    
         try {
             if (isEditing && transactionId) {
                 let dataToUpdate: Partial<Transaction> = { ...transactionData };
