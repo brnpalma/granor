@@ -238,7 +238,7 @@ function BudgetForm({
     categories: Category[];
     budget: Budget | null;
 }) {
-    const [amount, setAmount] = useState("");
+    const [amount, setAmount] = useState(0);
     const [category, setCategory] = useState<string>("");
     const { toast } = useToast();
     
@@ -247,13 +247,23 @@ function BudgetForm({
 
     useEffect(() => {
         if (isEditing && budget) {
-            setAmount(String(budget.amount));
+            setAmount(budget.amount * 100);
             setCategory(budget.category);
         } else {
-            setAmount("");
+            setAmount(0);
             setCategory("");
         }
     }, [budget, isEditing]);
+
+    const formatCurrency = (value: number) => {
+        const amountInReais = value / 100;
+        return amountInReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        setAmount(Number(rawValue));
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -263,7 +273,7 @@ function BudgetForm({
         }
 
         await onSubmit({
-            amount: parseFloat(amount),
+            amount: amount / 100,
             category: category,
         }, budget?.id);
         
@@ -307,7 +317,7 @@ function BudgetForm({
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="amount">Valor do Orçamento Mensal</Label>
-                    <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
+                    <Input id="amount" type="text" value={formatCurrency(amount)} onChange={handleAmountChange} placeholder="R$ 0,00" />
                 </div>
                 <DialogFooter>
                     <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Adicionar Orçamento'}</Button>

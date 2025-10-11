@@ -243,7 +243,7 @@ function AccountForm({
 }) {
     const [name, setName] = useState("");
     const [type, setType] = useState<AccountType | "">("");
-    const [balance, setBalance] = useState("");
+    const [balance, setBalance] = useState(0);
     const [color, setColor] = useState(accountColors[0]);
     const [ignoreInTotals, setIgnoreInTotals] = useState(false);
     const { toast } = useToast();
@@ -254,17 +254,27 @@ function AccountForm({
         if (account) {
             setName(account.name);
             setType(account.type);
-            setBalance(String(account.initialBalance));
+            setBalance(account.initialBalance * 100);
             setIgnoreInTotals(account.ignoreInTotals || false);
             setColor(account.color || accountColors[0]);
         } else {
             setName("");
             setType("");
-            setBalance("");
+            setBalance(0);
             setIgnoreInTotals(false);
             setColor(accountColors[0]);
         }
     }, [account]);
+
+    const formatCurrency = (value: number) => {
+        const amountInReais = value / 100;
+        return amountInReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        setBalance(Number(rawValue));
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -276,7 +286,7 @@ function AccountForm({
         await onSubmit({
             name,
             type: type as AccountType,
-            initialBalance: parseFloat(balance) || 0,
+            initialBalance: balance / 100,
             ignoreInTotals,
             color,
         }, account?.id);
@@ -327,7 +337,7 @@ function AccountForm({
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="balance">{isEditing ? "Saldo Inicial (Não pode ser alterado)" : "Saldo Inicial (Opcional)"}</Label>
-                    <Input id="balance" type="number" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0,00" disabled={isEditing} />
+                    <Input id="balance" type="text" value={formatCurrency(balance)} onChange={handleBalanceChange} placeholder="R$ 0,00" disabled={isEditing} />
                 </div>
                 <div className="flex items-center space-x-2">
                     <Switch id="ignoreInTotals" checked={ignoreInTotals} onCheckedChange={setIgnoreInTotals} />

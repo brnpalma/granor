@@ -297,7 +297,7 @@ function CreditCardForm({
     card: CreditCardType | null;
 }) {
     const [name, setName] = useState("");
-    const [limit, setLimit] = useState("");
+    const [limit, setLimit] = useState(0);
     const [dueDay, setDueDay] = useState("");
     const [closingDay, setClosingDay] = useState("");
     const [defaultAccountId, setDefaultAccountId] = useState("");
@@ -309,20 +309,30 @@ function CreditCardForm({
     useEffect(() => {
         if (isEditing && card) {
             setName(card.name);
-            setLimit(String(card.limit));
+            setLimit(card.limit * 100);
             setDueDay(String(card.dueDay));
             setClosingDay(String(card.closingDay));
             setDefaultAccountId(card.defaultAccountId);
             setColor(card.color || accountColors[0]);
         } else {
             setName("");
-            setLimit("");
+            setLimit(0);
             setDueDay("");
             setClosingDay("");
             setDefaultAccountId("");
             setColor(accountColors[0]);
         }
     }, [card, isEditing]);
+
+    const formatCurrency = (value: number) => {
+        const amountInReais = value / 100;
+        return amountInReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    const handleLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        setLimit(Number(rawValue));
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -333,7 +343,7 @@ function CreditCardForm({
 
         await onSubmit({
             name,
-            limit: parseFloat(limit),
+            limit: limit / 100,
             dueDay: parseInt(dueDay),
             closingDay: parseInt(closingDay),
             defaultAccountId,
@@ -342,7 +352,7 @@ function CreditCardForm({
 
         if (!isEditing) {
             setName("");
-            setLimit("");
+            setLimit(0);
             setDueDay("");
             setClosingDay("");
             setDefaultAccountId("");
@@ -407,7 +417,7 @@ function CreditCardForm({
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="limit">Limite do Cartão</Label>
-                        <Input id="limit" type="number" value={limit} onChange={(e) => setLimit(e.target.value)} placeholder="5000,00" />
+                        <Input id="limit" type="text" value={formatCurrency(limit)} onChange={handleLimitChange} placeholder="R$ 5.000,00" />
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="dueDay">Dia do Vencimento</Label>
