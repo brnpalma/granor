@@ -651,7 +651,12 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
                                 </div>
-                                <Progress value={progress} className="mt-2 h-2" style={{ accentColor: categoryInfo?.color }}/>
+                                <div className="relative h-2 mt-2 w-full overflow-hidden rounded-full bg-secondary">
+                                    <div
+                                        className="h-full w-full flex-1 bg-primary transition-all"
+                                        style={{ transform: `translateX(-${100 - (progress || 0)}%)`, backgroundColor: categoryInfo?.color }}
+                                    />
+                                </div>
                             </div>
                         )
                     })}
@@ -709,6 +714,7 @@ export default function DashboardPage() {
   
 
     
+
 
 
 

@@ -149,7 +149,7 @@ function TransactionForm() {
 
 
     const [description, setDescription] = useState("");
-    const [amount, setAmount] = useState("");
+    const [amount, setAmount] = useState(0); // Store amount as a number (cents)
     const [date, setDate] = useState<Date | undefined>(overrideDateParam ? new Date(overrideDateParam) : new Date());
     const [type, setType] = useState<TransactionType | null>(typeParam);
     const [category, setCategory] = useState("");
@@ -190,7 +190,7 @@ function TransactionForm() {
                 if (t) {
                     setOriginalTransaction(t);
                     setDescription(t.description);
-                    setAmount(String(t.amount));
+                    setAmount(t.amount * 100); // Convert to cents
                     // If we are overriding a specific month, use that month's date
                     if (overrideDateParam) {
                        const overrideDate = new Date(overrideDateParam);
@@ -223,6 +223,16 @@ function TransactionForm() {
         return () => unsubs.forEach(u => u());
 
     }, [user, transactionId, typeParam, isCreditCardParam, overrideDateParam]);
+
+    const formatCurrency = (value: number) => {
+        const amountInReais = value / 100;
+        return amountInReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        setAmount(Number(rawValue));
+    };
     
 
     const handleSubmit = async (scope?: RecurrenceEditScope) => {
@@ -247,8 +257,8 @@ function TransactionForm() {
             return;
         }
     
-        const parsedAmount = parseFloat(amount);
-        if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        const finalAmount = amount / 100;
+        if (isNaN(finalAmount) || finalAmount <= 0) {
             toast({ title: "O valor da transação é inválido.", variant: 'destructive' });
             setIsSaving(false);
             return;
@@ -258,7 +268,7 @@ function TransactionForm() {
     
         const transactionData: Omit<Transaction, "id"> = {
             description: finalDescription,
-            amount: parsedAmount,
+            amount: finalAmount,
             date,
             type,
             category,
@@ -378,7 +388,7 @@ function TransactionForm() {
                  <div className="flex items-center gap-4 p-3 rounded-lg border">
                     <AlignLeft className="h-5 w-5 text-muted-foreground" />
                     <Input
-                        placeholder="Descrição"
+                        placeholder="Descrição (se vazio, usa categoria)"
                         className="border-0 focus-visible:ring-0 text-base p-0"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
@@ -389,11 +399,11 @@ function TransactionForm() {
                 <div className="flex items-center gap-4 p-3 rounded-lg border">
                     <CircleDollarSign className="h-5 w-5 text-muted-foreground" />
                     <Input
-                        type="number"
+                        type="text"
                         placeholder="R$ 0,00"
                         className="border-0 focus-visible:ring-0 text-base p-0"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
+                        value={formatCurrency(amount)}
+                        onChange={handleAmountChange}
                     />
                 </div>
                 
