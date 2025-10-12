@@ -7,6 +7,7 @@ export interface UserPreferences {
   includePreviousMonthBalance: boolean;
   includeBudgetsInForecast?: boolean;
   includeBudgetsInPastForecast?: boolean;
+  transactionSortOrder?: 'asc' | 'desc';
 }
 
 export interface Category {
