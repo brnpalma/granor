@@ -29,7 +29,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { addTransaction, deleteTransaction, getTransactions, getAccounts, getCreditCards, getCategories, updateTransaction, findPreviousMonthBalance, getUserPreferences } from "@/lib/firestore";
+import { addTransaction, deleteTransaction, getTransactions, getAccounts, getCreditCards, getCategories, updateTransaction, findPreviousMonthBalance, getUserPreferences, updateUserPreferences } from "@/lib/firestore";
 import type { Transaction, Account, CreditCard as CreditCardType, UserPreferences, RecurrenceEditScope, Category } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
@@ -53,10 +53,9 @@ export default function TransactionsPage() {
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [initialBalance, setInitialBalance] = useState(0);
-  const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true });
+  const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true, transactionSortOrder: 'desc' });
   const [isLoading, setIsLoading] = useState(true);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedDate, getMonthDateRange, clearBalanceCache } = useDate();
@@ -153,6 +152,12 @@ export default function TransactionsPage() {
       setTransactionToDelete(transaction);
       setDeleteDialogOpen(true);
   }
+  
+  const handleToggleSortOrder = () => {
+    if (!user?.uid) return;
+    const newSortOrder = preferences.transactionSortOrder === 'asc' ? 'desc' : 'asc';
+    updateUserPreferences(user.uid, { transactionSortOrder: newSortOrder });
+  };
 
   const handleToggleEfetivado = async (transaction: Transaction) => {
     if (!user?.uid) return;
@@ -233,12 +238,12 @@ export default function TransactionsPage() {
 
   const sortedTransactions = useMemo(() => {
     return [...transactions].sort((a, b) => {
-        if (sortOrder === 'asc') {
+        if (preferences.transactionSortOrder === 'asc') {
             return a.date.getTime() - b.date.getTime();
         }
         return b.date.getTime() - a.date.getTime();
     });
-  }, [transactions, sortOrder]);
+  }, [transactions, preferences.transactionSortOrder]);
 
 
   const groupedTransactions = useMemo(() => {
@@ -290,7 +295,7 @@ export default function TransactionsPage() {
   }
   
   const BalanceInfo = ({ isTop }: { isTop: boolean }) => {
-    const isAsc = sortOrder === 'asc';
+    const isAsc = preferences.transactionSortOrder === 'asc';
     const label = isTop ? (isAsc ? "Saldo Inicial" : "Saldo Final") : (isAsc ? "Saldo Final" : "Saldo Inicial");
     const value = isTop ? (isAsc ? displayedInitialBalance : finalBalance) : (isAsc ? finalBalance : displayedInitialBalance);
 
@@ -310,8 +315,8 @@ export default function TransactionsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Transações</h1>
-        <Button variant="ghost" size="icon" onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}>
-            {sortOrder === 'asc' ? <ArrowUpNarrowWide className="h-5 w-5" /> : <ArrowDownNarrowWide className="h-5 w-5" />}
+        <Button variant="ghost" size="icon" onClick={handleToggleSortOrder}>
+            {preferences.transactionSortOrder === 'asc' ? <ArrowUpNarrowWide className="h-5 w-5" /> : <ArrowDownNarrowWide className="h-5 w-5" />}
         </Button>
       </div>
 

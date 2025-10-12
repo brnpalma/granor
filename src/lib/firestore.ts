@@ -161,6 +161,7 @@ export const getUserPreferences = (
             includePreviousMonthBalance: true,
             includeBudgetsInForecast: false,
             includeBudgetsInPastForecast: false,
+            transactionSortOrder: 'desc',
         };
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -169,6 +170,7 @@ export const getUserPreferences = (
                 includePreviousMonthBalance: data.includePreviousMonthBalance ?? defaultPrefs.includePreviousMonthBalance,
                 includeBudgetsInForecast: data.includeBudgetsInForecast ?? defaultPrefs.includeBudgetsInForecast,
                 includeBudgetsInPastForecast: data.includeBudgetsInPastForecast ?? defaultPrefs.includeBudgetsInPastForecast,
+                transactionSortOrder: data.transactionSortOrder ?? defaultPrefs.transactionSortOrder,
             });
         } else {
             // Return default preferences if document doesn't exist
