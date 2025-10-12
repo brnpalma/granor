@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { CreditCard, Edit, MoreVertical, EyeOff, Trash2, RotateCcw } from "lucide-react";
+import { CreditCard, Edit, MoreVertical, EyeOff, Trash2, RotateCcw, ArrowUpNarrowWide, ArrowDownNarrowWide } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -56,6 +56,7 @@ export default function TransactionsPage() {
   const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true });
   const [isLoading, setIsLoading] = useState(true);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedDate, getMonthDateRange, clearBalanceCache } = useDate();
@@ -84,7 +85,7 @@ export default function TransactionsPage() {
     }
 
     const unsubTransactions = getTransactions(user.uid, (data) => {
-      setTransactions(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
+      setTransactions(data);
       dataLoaded.transactions = true;
       checkLoading();
     }, { startDate, endDate });
@@ -230,9 +231,19 @@ export default function TransactionsPage() {
     return <span>{value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>;
   }
 
+  const sortedTransactions = useMemo(() => {
+    return [...transactions].sort((a, b) => {
+        if (sortOrder === 'asc') {
+            return a.date.getTime() - b.date.getTime();
+        }
+        return b.date.getTime() - a.date.getTime();
+    });
+  }, [transactions, sortOrder]);
+
+
   const groupedTransactions = useMemo(() => {
     const groups: { [key: string]: Transaction[] } = {};
-    transactions.forEach(t => {
+    sortedTransactions.forEach(t => {
       const dateKey = t.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
       if (!groups[dateKey]) {
         groups[dateKey] = [];
@@ -247,7 +258,7 @@ export default function TransactionsPage() {
         transactions,
       };
     });
-  }, [transactions]);
+  }, [sortedTransactions]);
   
   const displayedInitialBalance = useMemo(() => {
     const isFutureMonth = isFuture(startOfMonth(selectedDate));
@@ -277,22 +288,34 @@ export default function TransactionsPage() {
       </div>
     );
   }
+  
+  const BalanceInfo = ({ isTop }: { isTop: boolean }) => {
+    const isAsc = sortOrder === 'asc';
+    const label = isTop ? (isAsc ? "Saldo Inicial" : "Saldo Final") : (isAsc ? "Saldo Final" : "Saldo Inicial");
+    const value = isTop ? (isAsc ? displayedInitialBalance : finalBalance) : (isAsc ? finalBalance : displayedInitialBalance);
+
+    return (
+        <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground">{label}</p>
+            {isBalanceLoading ? (
+                <Skeleton className="h-6 w-28" />
+            ) : (
+                <p className="text-lg font-bold">{renderBalance(value)}</p>
+            )}
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Transações</h1>
+        <Button variant="ghost" size="icon" onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}>
+            {sortOrder === 'asc' ? <ArrowUpNarrowWide className="h-5 w-5" /> : <ArrowDownNarrowWide className="h-5 w-5" />}
+        </Button>
       </div>
 
-      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-          <p className="text-sm font-medium text-muted-foreground">Saldo Inicial</p>
-          {isBalanceLoading ? (
-              <Skeleton className="h-6 w-28" />
-          ) : (
-              <p className="text-lg font-bold">{renderBalance(displayedInitialBalance)}</p>
-          )}
-      </div>
-
+      <BalanceInfo isTop />
 
        {(accounts.length === 0 && creditCards.length === 0) && (
           <Card className="text-center p-6">
@@ -395,14 +418,7 @@ export default function TransactionsPage() {
         ))}
       </div>
         {groupedTransactions.length > 0 && (
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg mt-4">
-                <p className="text-sm font-medium text-muted-foreground">Saldo Final</p>
-                {isBalanceLoading ? (
-                    <Skeleton className="h-6 w-28" />
-                ) : (
-                    <p className="text-lg font-bold">{renderBalance(finalBalance)}</p>
-                )}
-            </div>
+            <BalanceInfo isTop={false} />
         )}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>
@@ -445,3 +461,6 @@ export default function TransactionsPage() {
     
 
 
+
+
+    
