@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
 import { balanceCache } from '@/lib/firestore';
 
 const DATE_CACHE_KEY = 'granor_selected_date';
@@ -96,3 +96,5 @@ export const useDate = () => {
   }
   return context;
 };
+
+    
