@@ -367,10 +367,26 @@ export default function TransactionsPage() {
                                 <p className={cn("font-medium", isIgnored && "text-muted-foreground")}>{t.description}</p>
                                 <p className="text-sm text-muted-foreground">{getSourceName(t)}</p>
                             </div>
-                            <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-2">
+                                <div className="flex flex-col items-end gap-1">
+                                    <p className={cn(
+                                        "font-bold text-sm",
+                                        t.type === "income" || t.type === 'credit_card_reversal' ? "text-green-500" : "text-foreground",
+                                        isIgnored && "text-muted-foreground"
+                                    )}>
+                                        {t.type === "income" ? "+" : t.type === 'credit_card_reversal' ? '+' : "-"}
+                                        {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                                    </p>
+                                    {!t.efetivado && (
+                                        <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => handleToggleEfetivado(t)} disabled={isToggling}>
+                                            {isToggling ? "Aguarde..." : "Efetivar"}
+                                        </Button>
+                                    )}
+                                </div>
+
                                 <div className="flex items-center">
                                     {/* Desktop Buttons */}
-                                    <div className="hidden md:flex items-center gap-1">
+                                    <div className="hidden md:flex items-center">
                                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditTransaction(t)} disabled={!!t.isBudget}>
                                             <Edit className="h-4 w-4" />
                                         </Button>
@@ -383,7 +399,7 @@ export default function TransactionsPage() {
                                     {/* Mobile Dropdown */}
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="shrink-0 -mr-2 h-7 w-7 md:hidden">
+                                            <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 md:hidden">
                                                 <MoreVertical className="h-5 w-5 text-muted-foreground" />
                                             </Button>
                                         </DropdownMenuTrigger>
@@ -401,19 +417,6 @@ export default function TransactionsPage() {
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
-                                <p className={cn(
-                                    "font-bold text-sm",
-                                    t.type === "income" || t.type === 'credit_card_reversal' ? "text-green-500" : "text-foreground",
-                                    isIgnored && "text-muted-foreground"
-                                )}>
-                                    {t.type === "income" ? "+" : t.type === 'credit_card_reversal' ? '+' : "-"}
-                                    {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                                </p>
-                                {!t.efetivado && (
-                                    <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => handleToggleEfetivado(t)} disabled={isToggling}>
-                                        {isToggling ? "Aguarde..." : "Efetivar"}
-                                    </Button>
-                                )}
                             </div>
                         </div>
                       )
@@ -469,3 +472,4 @@ export default function TransactionsPage() {
 
 
     
+
