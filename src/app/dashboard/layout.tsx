@@ -183,7 +183,7 @@ function Header() {
                 </SheetContent>
             </Sheet>
 
-            <div className="flex items-center justify-center gap-1 sm:gap-2">
+            <div className="flex items-center justify-center sm:gap-2">
                 <Button variant="ghost" size="icon" className="hover:bg-gray-700" onClick={goToPreviousMonth}>
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
