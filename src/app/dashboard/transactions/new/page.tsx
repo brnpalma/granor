@@ -155,7 +155,7 @@ function TransactionForm() {
     const [category, setCategory] = useState("");
     const [accountId, setAccountId] = useState<string | undefined>();
     const [creditCardId, setCreditCardId] = useState<string | undefined>();
-    const [efetivado, setEfetivado] = useState(true);
+    const [efetivado, setEfetivado] = useState(false);
     
     const [isRecurring, setIsRecurring] = useState(false);
     const [isFixed, setIsFixed] = useState(false);
