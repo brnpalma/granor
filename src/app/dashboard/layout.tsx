@@ -28,6 +28,7 @@ import {
   Settings,
   Merge,
   RotateCcw,
+  CalendarClock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -126,7 +127,7 @@ function SidebarContent({ onLinkClick }: { onLinkClick: () => void }) {
 
 function Header() {
     const { user } = useAuth();
-    const { selectedDate, goToNextMonth, goToPreviousMonth } = useDate();
+    const { selectedDate, goToNextMonth, goToPreviousMonth, goToCurrentMonth } = useDate();
     const [formattedDate, setFormattedDate] = useState('');
     const [preferences, setPreferences] = useState<UserPreferences>({ showBalance: true, includePreviousMonthBalance: true, includeBudgetsInForecast: false, includeBudgetsInPastForecast: false });
     
@@ -182,17 +183,20 @@ function Header() {
                 </SheetContent>
             </Sheet>
 
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center sm:gap-2">
                 <Button variant="ghost" size="icon" className="hover:bg-gray-700" onClick={goToPreviousMonth}>
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
-                <span className="text-lg font-semibold w-32 text-center">{formattedDate}</span>
+                <span className="text-lg font-semibold w-24 sm:w-32 text-center">{formattedDate}</span>
                 <Button variant="ghost" size="icon" className="hover:bg-gray-700" onClick={goToNextMonth}>
                     <ChevronRight className="h-5 w-5" />
                 </Button>
             </div>
 
-            <div className="absolute right-4">
+            <div className="absolute right-4 flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="hover:bg-gray-700" onClick={goToCurrentMonth}>
+                    <CalendarClock className="h-5 w-5" />
+                </Button>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="hover:bg-gray-700">

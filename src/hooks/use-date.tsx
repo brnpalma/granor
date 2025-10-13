@@ -2,14 +2,17 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
 import { balanceCache } from '@/lib/firestore';
+
+const DATE_CACHE_KEY = 'granor_selected_date';
 
 interface DateContextType {
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
   goToNextMonth: () => void;
   goToPreviousMonth: () => void;
+  goToCurrentMonth: () => void;
   getMonthDateRange: (date: Date) => { startDate: Date; endDate: Date };
   clearBalanceCache: () => void;
 }
@@ -17,7 +20,26 @@ interface DateContextType {
 const DateContext = createContext<DateContextType | undefined>(undefined);
 
 export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDateState] = useState(() => {
+    if (typeof window !== 'undefined') {
+        const savedDate = localStorage.getItem(DATE_CACHE_KEY);
+        if (savedDate) {
+            const date = new Date(savedDate);
+            // Check if date is valid
+            if (!isNaN(date.getTime())) {
+                return date;
+            }
+        }
+    }
+    return new Date();
+  });
+
+  const setSelectedDate = (date: Date) => {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem(DATE_CACHE_KEY, date.toISOString());
+    }
+    setSelectedDateState(date);
+  };
 
   const clearBalanceCache = useCallback(() => {
     balanceCache.clear();
@@ -40,6 +62,11 @@ export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return newDate;
     });
   };
+  
+  const goToCurrentMonth = () => {
+    clearBalanceCache();
+    setSelectedDate(new Date());
+  }
 
   const getMonthDateRange = useCallback((date: Date) => {
     const year = date.getFullYear();
@@ -54,9 +81,10 @@ export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSelectedDate,
     goToNextMonth,
     goToPreviousMonth,
+    goToCurrentMonth,
     getMonthDateRange,
     clearBalanceCache,
-  }), [selectedDate, getMonthDateRange, clearBalanceCache, goToNextMonth, goToPreviousMonth]);
+  }), [selectedDate, getMonthDateRange, clearBalanceCache]);
 
   return <DateContext.Provider value={value}>{children}</DateContext.Provider>;
 };
