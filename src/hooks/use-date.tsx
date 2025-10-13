@@ -47,20 +47,16 @@ export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const goToNextMonth = () => {
     clearBalanceCache();
-    setSelectedDate(currentDate => {
-      const newDate = new Date(currentDate);
-      newDate.setMonth(newDate.getMonth() + 1);
-      return newDate;
-    });
+    const newDate = new Date(selectedDate);
+    newDate.setMonth(newDate.getMonth() + 1);
+    setSelectedDate(newDate);
   };
 
   const goToPreviousMonth = () => {
     clearBalanceCache();
-    setSelectedDate(currentDate => {
-      const newDate = new Date(currentDate);
-      newDate.setMonth(newDate.getMonth() - 1);
-      return newDate;
-    });
+    const newDate = new Date(selectedDate);
+    newDate.setMonth(newDate.getMonth() - 1);
+    setSelectedDate(newDate);
   };
   
   const goToCurrentMonth = () => {
