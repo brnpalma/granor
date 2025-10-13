@@ -6,13 +6,14 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { getAccounts, getCategories, getCreditCards, addTransaction, updateTransaction, getTransactionById } from '@/lib/firestore';
+import { getAccounts, getCategories, getCreditCards, addTransaction, updateTransaction, getTransactionById, addCategory } from '@/lib/firestore';
 import type { Transaction, Account, Category, CreditCard as CreditCardType, Recurrence, RecurrencePeriod, RecurrenceEditScope, TransactionType } from '@/lib/types';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch }from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -27,9 +28,105 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
-import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus, Minus, ArrowRightLeft, PlusCircle } from 'lucide-react';
+import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus, Minus, ArrowRightLeft, PlusCircle, Check } from 'lucide-react';
 import { startOfMonth } from 'date-fns';
 import { BankIcon, CreditCardDisplayIcon, CategoryIcon } from '@/components/icons';
+
+function CategoryForm({
+    onSubmit,
+    onSubmitted,
+    category,
+  }: {
+    onSubmit: (category: Omit<Category, "id">, categoryId?: string) => Promise<void>;
+    onSubmitted: () => void;
+    category: Category | null;
+  }) {
+    const [name, setName] = useState("");
+    const [type, setType] = useState<"income" | "expense">("expense");
+    const [color, setColor] = useState('#F44336');
+    const { toast } = useToast();
+
+    const isEditing = !!category;
+    
+    const categoryColors = [
+      '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
+      '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50',
+      '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800',
+      '#FF5722', '#795548', '#9E9E9E', '#607D8B'
+    ];
+
+    useEffect(() => {
+        if (category) {
+            setName(category.name);
+            setType(category.type);
+            setColor(category.color || categoryColors[0]);
+        } else {
+            setName("");
+            setType("expense");
+            setColor(categoryColors[Math.floor(Math.random() * categoryColors.length)]);
+        }
+    }, [category]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name || !type || !color) {
+            toast({ title: "Por favor, preencha todos os campos", variant: 'destructive' });
+            return;
+        }
+
+        await onSubmit({ name, type, icon: 'Box', color }, category?.id);
+
+        onSubmitted();
+    };
+
+    return (
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>{isEditing ? 'Editar Categoria' : 'Adicionar Nova Categoria'}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="name">Nome da Categoria</Label>
+                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Lazer" />
+                </div>
+                 <div className="space-y-2">
+                    <Label>Tipo</Label>
+                    <RadioGroup value={type} onValueChange={(value) => setType(value as "income" | "expense")} className="flex gap-4">
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="expense" id="expense" />
+                            <Label htmlFor="expense">Despesa</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="income" id="income" />
+                            <Label htmlFor="income">Receita</Label>
+                        </div>
+                    </RadioGroup>
+                </div>
+                <div className="space-y-2">
+                    <Label>Cor</Label>
+                     <div className="flex flex-wrap gap-2">
+                        {categoryColors.map((c) => (
+                            <Button
+                                key={c}
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 rounded-full"
+                                style={{ backgroundColor: c }}
+                                onClick={() => setColor(c)}
+                            >
+                                {color === c && <Check className="h-5 w-5 text-white" />}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Adicionar Categoria'}</Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+    );
+  }
 
 function RecurrenceDialog({
   open,
@@ -173,6 +270,7 @@ function TransactionForm() {
     const [isSaving, setIsSaving] = useState(false);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const [showEditScopeDialog, setShowEditScopeDialog] = useState(false);
+    const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
 
     useEffect(() => {
@@ -190,8 +288,7 @@ function TransactionForm() {
                 if (t) {
                     setOriginalTransaction(t);
                     setDescription(t.description);
-                    setAmount(t.amount * 100); // Convert to cents
-                    // If we are overriding a specific month, use that month's date
+                    setAmount(t.amount * 100);
                     if (overrideDateParam) {
                        const overrideDate = new Date(overrideDateParam);
                        const originalDay = t.date.getDate();
@@ -201,7 +298,13 @@ function TransactionForm() {
                     }
                     setType(t.type);
                     setCategory(t.category);
-                    setEfetivado(t.efetivado);
+                    
+                    if (transactionId.includes('-projected-')) {
+                        setEfetivado(false);
+                    } else {
+                        setEfetivado(t.efetivado);
+                    }
+                    
                     setAccountId(t.accountId);
                     setCreditCardId(t.creditCardId);
                     setIsRecurring(t.isRecurring || false);
@@ -213,6 +316,7 @@ function TransactionForm() {
                 setIsLoading(false);
             });
         } else {
+            setEfetivado(false);
             setType(typeParam || 'expense');
             if (isCreditCardParam) {
                 setCreditCardId("");
@@ -232,6 +336,18 @@ function TransactionForm() {
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const rawValue = e.target.value.replace(/\D/g, '');
         setAmount(Number(rawValue));
+    };
+
+    const handleAddCategory = async (categoryData: Omit<Category, "id">) => {
+      if (user?.uid) {
+        if (categories.some(c => c.name.toLowerCase() === categoryData.name.toLowerCase())) {
+          toast({ title: "Categoria já existe", description: "Esta categoria já foi cadastrada.", variant: "destructive" });
+          return;
+        }
+        await addCategory(user.uid, categoryData);
+        toast({ title: "Categoria adicionada!", variant: "success" });
+        setCategory(categoryData.name);
+      }
     };
     
 
@@ -292,7 +408,6 @@ function TransactionForm() {
             if (isEditing && transactionId) {
                 let dataToUpdate: Partial<Transaction> = { ...transactionData };
                 
-                // When editing all instances of a fixed transaction, do not change the start date.
                 if (scope === 'all' && originalTransaction?.isFixed) {
                    delete dataToUpdate.date;
                 }
@@ -463,38 +578,47 @@ function TransactionForm() {
                     <Switch id="efetivado" checked={efetivado} onCheckedChange={setEfetivado} />
                 </div>
                 
-                <div className="flex items-center gap-2 p-1 rounded-lg border">
-                    <div className="p-2 rounded-full bg-muted">
-                       <Shapes className="h-5 w-5 text-muted-foreground" />
+                 <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+                    <div className="flex items-center gap-2 p-1 rounded-lg border">
+                        <div className="p-2 rounded-full bg-muted">
+                           <Shapes className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <Select onValueChange={setCategory} value={category}>
+                            <SelectTrigger className="border-0 focus:ring-0 w-full">
+                               <SelectValue placeholder="Selecione a categoria">
+                                    {selectedCategoryData ? (
+                                        <div className="flex items-center gap-3">
+                                            <div style={{ backgroundColor: selectedCategoryData.color }} className={'p-1.5 rounded-full text-white'}>
+                                                <CategoryIcon icon={selectedCategoryData.icon} className="h-4 w-4" />
+                                            </div>
+                                            <span>{selectedCategoryData.name}</span>
+                                        </div>
+                                    ) : "Selecione a categoria"}
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {categories.filter(c => c.type === (type === 'credit_card_reversal' ? 'income' : type)).map(cat => (
+                                    <SelectItem key={cat.id} value={cat.name}>
+                                        <div className="flex items-center gap-3">
+                                             <div style={{ backgroundColor: cat.color }} className={'p-1.5 rounded-full text-white'}>
+                                                <CategoryIcon icon={cat.icon} className="h-4 w-4" />
+                                            </div>
+                                            <span>{cat.name}</span>
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <DialogTrigger asChild>
+                             <Button variant="ghost" size="icon"><Plus className="h-5 w-5" /></Button>
+                        </DialogTrigger>
                     </div>
-                    <Select onValueChange={setCategory} value={category}>
-                        <SelectTrigger className="border-0 focus:ring-0 w-full">
-                           <SelectValue>
-                                {selectedCategoryData ? (
-                                    <div className="flex items-center gap-3">
-                                        <div style={{ backgroundColor: selectedCategoryData.color }} className={'p-1.5 rounded-full text-white'}>
-                                            <CategoryIcon icon={selectedCategoryData.icon} className="h-4 w-4" />
-                                        </div>
-                                        <span>{selectedCategoryData.name}</span>
-                                    </div>
-                                ) : "Selecione a categoria"}
-                            </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                            {categories.filter(c => c.type === (type === 'credit_card_reversal' ? 'income' : type)).map(cat => (
-                                <SelectItem key={cat.id} value={cat.name}>
-                                    <div className="flex items-center gap-3">
-                                         <div style={{ backgroundColor: cat.color }} className={'p-1.5 rounded-full text-white'}>
-                                            <CategoryIcon icon={cat.icon} className="h-4 w-4" />
-                                        </div>
-                                        <span>{cat.name}</span>
-                                    </div>
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button variant="ghost" size="icon"><Plus className="h-5 w-5" /></Button>
-                </div>
+                     <CategoryForm
+                        onSubmit={handleAddCategory}
+                        onSubmitted={() => setCategoryDialogOpen(false)}
+                        category={null}
+                    />
+                </Dialog>
 
                  { type === 'expense' || type === 'credit_card_reversal' ? (
                     <div className="flex items-center gap-2 p-1 rounded-lg border">
@@ -517,7 +641,7 @@ function TransactionForm() {
                             value={creditCardId ? `cc-${creditCardId}` : accountId ? `acc-${accountId}` : ''}
                         >
                             <SelectTrigger className="border-0 focus:ring-0 w-full">
-                                <SelectValue>
+                                <SelectValue placeholder={isCreditCardParam ? "Selecione o cartão" : "Selecione a conta"}>
                                     {(() => {
                                         const selected = getSelectedAccount();
                                         if(selected?.name) {
@@ -559,7 +683,7 @@ function TransactionForm() {
                         </div>
                         <Select onValueChange={setAccountId} value={accountId}>
                             <SelectTrigger className="border-0 focus:ring-0 w-full">
-                                <SelectValue>
+                                <SelectValue placeholder="Selecione a conta">
                                      {(() => {
                                         const selected = getSelectedAccount();
                                         if(selected?.name) {
@@ -626,3 +750,5 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
+
+    
