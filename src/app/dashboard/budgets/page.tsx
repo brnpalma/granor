@@ -277,7 +277,13 @@ function BudgetForm({
             category: category,
         }, budget?.id);
         
-        onSubmitted();
+        if (isEditing) {
+            onSubmitted();
+        } else {
+            // Reset form for next entry
+            setAmount(0);
+            setCategory("");
+        }
     };
     
     return (

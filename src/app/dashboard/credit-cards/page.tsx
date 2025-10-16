@@ -356,7 +356,10 @@ function CreditCardForm({
             color,
         }, card?.id);
 
-        if (!isEditing) {
+        if (isEditing) {
+            onSubmitted();
+        } else {
+            // Reset form for next entry
             setName("");
             setLimit(0);
             setDueDay("");
@@ -364,7 +367,6 @@ function CreditCardForm({
             setDefaultAccountId("");
             setColor(accountColors[0]);
         }
-        onSubmitted();
     };
 
     return (
