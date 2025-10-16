@@ -36,6 +36,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { addCategory, deleteCategory, getCategories, getTransactions, updateCategory } from "@/lib/firestore";
 import type { Category, Transaction } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -276,7 +283,11 @@ function CategoryForm({
       '#FF5722', '#795548', '#9E9E9E', '#607D8B', '#B71C1C',
       '#880E4F', '#4A148C', '#311B92', '#1A237E', '#0D47A1',
       '#01579B', '#006064', '#004D40', '#1B5E20', '#33691E',
-      '#827717', '#F57F17', '#FF6F00', '#E65100', '#BF360C'
+      '#827717', '#F57F17', '#FF6F00', '#E65100', '#BF360C',
+      '#4E342E', '#424242', '#37474F', '#C62828', '#AD1457',
+      '#6A1B9A', '#4527A0', '#283593', '#1565C0', '#0277BD',
+      '#00838F', '#00695C', '#2E7D32', '#558B2F', '#9E9D24',
+      '#F9A825', '#FF8F00', '#EF6C00', '#D84315'
     ];
 
     useEffect(() => {
@@ -328,21 +339,31 @@ function CategoryForm({
                 </div>
                 <div className="space-y-2">
                     <Label>Cor</Label>
-                     <div className="flex flex-wrap gap-2">
-                        {categoryColors.map((c) => (
-                            <Button
-                                key={c}
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8 rounded-full"
-                                style={{ backgroundColor: c }}
-                                onClick={() => setColor(c)}
-                            >
-                                {color === c && <Check className="h-5 w-5 text-white" />}
-                            </Button>
-                        ))}
-                    </div>
+                     <Select onValueChange={setColor} value={color}>
+                        <SelectTrigger>
+                            <SelectValue asChild>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: color }} />
+                                    <span>{color}</span>
+                                </div>
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <div className="grid grid-cols-5 gap-2 p-2">
+                                {categoryColors.map((c) => (
+                                    <SelectItem key={c} value={c} className="p-0 m-0 focus:ring-0 focus:bg-transparent">
+                                        <div 
+                                            className="w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ring-offset-background focus:ring-2 focus:ring-ring"
+                                            style={{ backgroundColor: c }}
+                                            onClick={() => setColor(c)}
+                                        >
+                                            {color === c && <Check className="h-5 w-5 text-white" />}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </div>
+                        </SelectContent>
+                    </Select>
                 </div>
                 <DialogFooter>
                     <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Adicionar Categoria'}</Button>
