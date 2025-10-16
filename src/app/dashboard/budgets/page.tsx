@@ -277,7 +277,13 @@ function BudgetForm({
             category: category,
         }, budget?.id);
         
-        onSubmitted();
+        if (isEditing) {
+            onSubmitted();
+        } else {
+            // Reset form for next entry
+            setAmount(0);
+            setCategory("");
+        }
     };
     
     return (
@@ -317,7 +323,7 @@ function BudgetForm({
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="amount">Valor do Orçamento Mensal</Label>
-                    <Input id="amount" type="text" value={formatCurrency(amount)} onChange={handleAmountChange} placeholder="R$ 0,00" />
+                    <Input id="amount" type="text" inputMode="numeric" value={formatCurrency(amount)} onChange={handleAmountChange} placeholder="R$ 0,00" />
                 </div>
                 <DialogFooter>
                     <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Adicionar Orçamento'}</Button>
