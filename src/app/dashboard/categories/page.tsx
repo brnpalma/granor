@@ -50,6 +50,7 @@ export default function CategoriesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [activeTab, setActiveTab] = useState<"expense" | "income">("expense");
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedDate, getMonthDateRange } = useDate();
@@ -223,23 +224,24 @@ export default function CategoriesPage() {
                 onSubmit={handleFormSubmit} 
                 onSubmitted={() => handleDialogChange(false)}
                 category={editingCategory}
+                defaultType={activeTab}
             />
         </Dialog>
       </div>
 
-       <Tabs defaultValue="expenses" className="w-full">
+       <Tabs defaultValue="expense" onValueChange={(value) => setActiveTab(value as "expense" | "income")} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="expenses">
+                <TabsTrigger value="expense">
                   Despesas
                 </TabsTrigger>
-                <TabsTrigger value="incomes">
+                <TabsTrigger value="income">
                   Receitas
                 </TabsTrigger>
             </TabsList>
-            <TabsContent value="expenses">
+            <TabsContent value="expense">
                 {renderCategoryList("expense")}
             </TabsContent>
-            <TabsContent value="incomes">
+            <TabsContent value="income">
                 {renderCategoryList("income")}
             </TabsContent>
         </Tabs>
@@ -253,13 +255,15 @@ function CategoryForm({
     onSubmit,
     onSubmitted,
     category,
+    defaultType,
   }: {
     onSubmit: (category: Omit<Category, "id">, categoryId?: string) => Promise<void>;
     onSubmitted: () => void;
     category: Category | null;
+    defaultType: "expense" | "income";
   }) {
     const [name, setName] = useState("");
-    const [type, setType] = useState<"income" | "expense">("expense");
+    const [type, setType] = useState<"income" | "expense">(defaultType);
     const [color, setColor] = useState('#F44336');
     const { toast } = useToast();
 
@@ -279,10 +283,10 @@ function CategoryForm({
             setColor(category.color || categoryColors[0]);
         } else {
             setName("");
-            setType("expense");
+            setType(defaultType);
             setColor(categoryColors[Math.floor(Math.random() * categoryColors.length)]);
         }
-    }, [category]);
+    }, [category, defaultType]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
