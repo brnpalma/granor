@@ -30,35 +30,38 @@ import { cn } from '@/lib/utils';
 import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus, Minus, ArrowRightLeft, PlusCircle, Check } from 'lucide-react';
 import { startOfMonth } from 'date-fns';
 import { BankIcon, CreditCardDisplayIcon, CategoryIcon } from '@/components/icons';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 function CategoryForm({
     onSubmit,
     onSubmitted,
     category,
+    defaultType,
   }: {
     onSubmit: (category: Omit<Category, "id">, categoryId?: string) => Promise<void>;
     onSubmitted: () => void;
     category: Category | null;
+    defaultType: "expense" | "income";
   }) {
     const [name, setName] = useState("");
-    const [type, setType] = useState<"income" | "expense">("expense");
+    const [type, setType] = useState<"income" | "expense">(defaultType);
     const [color, setColor] = useState('#F44336');
     const { toast } = useToast();
 
     const isEditing = !!category;
     
     const categoryColors = [
-      '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
-      '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50',
-      '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800',
-      '#FF5722', '#795548', '#9E9E9E', '#607D8B', '#B71C1C',
-      '#880E4F', '#4A148C', '#311B92', '#1A237E', '#0D47A1',
-      '#01579B', '#006064', '#004D40', '#1B5E20', '#33691E',
-      '#827717', '#F57F17', '#FF6F00', '#E65100', '#BF360C',
-      '#4E342E', '#424242', '#37474F', '#C62828', '#AD1457',
-      '#6A1B9A', '#4527A0', '#283593', '#1565C0', '#0277BD',
-      '#00838F', '#00695C', '#2E7D32', '#558B2F', '#9E9D24',
-      '#F9A825', '#FF8F00', '#EF6C00', '#D84315'
+        '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#2196F3', '#03A9F4', 
+        '#00BCD4', '#009688', '#4CAF50', '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', 
+        '#FF9800', '#FF5722', '#795548', '#9E9E9E', '#607D8B', '#B71C1C', '#880E4F', 
+        '#4A148C', '#311B92', '#1A237E', '#0D47A1', '#01579B', '#006064', '#004D40', 
+        '#1B5E20', '#33691E', '#827717', '#F57F17', '#FF6F00', '#E65100', '#BF360C', 
+        '#4E342E', '#424242', '#37474F', '#C62828', '#AD1457', '#6A1B9A', '#4527A0', 
+        '#283593', '#1565C0', '#0277BD', '#00838F', '#00695C', '#2E7D32', '#558B2F', 
+        '#9E9D24', '#F9A825', '#FF8F00', '#EF6C00', '#D84315',
+        '#F06292', '#BA68C8', '#9575CD', '#7986CB', '#64B5F6', '#4FC3F7', '#4DD0E1',
+        '#4DB6AC', '#81C784', '#AED581', '#DCE775', '#FFF176', '#FFD54F', '#FFB74D',
+        '#FF8A65', '#A1887F', '#BDBDBD', '#90A4AE',
     ];
 
     useEffect(() => {
@@ -68,10 +71,10 @@ function CategoryForm({
             setColor(category.color || categoryColors[0]);
         } else {
             setName("");
-            setType("expense");
+            setType(defaultType);
             setColor(categoryColors[Math.floor(Math.random() * categoryColors.length)]);
         }
-    }, [category]);
+    }, [category, defaultType]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -110,31 +113,31 @@ function CategoryForm({
                 </div>
                 <div className="space-y-2">
                     <Label>Cor</Label>
-                     <Select onValueChange={setColor} value={color}>
-                        <SelectTrigger>
-                            <SelectValue asChild>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start">
                                 <div className="flex items-center gap-2">
                                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: color }} />
                                     <span>{color}</span>
                                 </div>
-                            </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                            <div className="grid grid-cols-5 gap-2 p-2">
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="max-h-60 overflow-y-auto">
+                             <div className="grid grid-cols-5 gap-2 p-2">
                                 {categoryColors.map((c) => (
-                                    <SelectItem key={c} value={c} className="p-0 m-0 focus:ring-0 focus:bg-transparent">
-                                        <div 
-                                            className="w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ring-offset-background focus:ring-2 focus:ring-ring"
-                                            style={{ backgroundColor: c }}
-                                            onClick={() => setColor(c)}
-                                        >
-                                            {color === c && <Check className="h-5 w-5 text-white" />}
-                                        </div>
-                                    </SelectItem>
+                                    <button
+                                        type="button"
+                                        key={c}
+                                        className="w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ring-offset-background focus:ring-2 focus:ring-ring"
+                                        style={{ backgroundColor: c }}
+                                        onClick={() => setColor(c)}
+                                    >
+                                        {color === c && <Check className="h-5 w-5 text-white" />}
+                                    </button>
                                 ))}
                             </div>
-                        </SelectContent>
-                    </Select>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
                 <DialogFooter>
                     <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Adicionar Categoria'}</Button>
@@ -531,6 +534,7 @@ function TransactionForm() {
                     <CircleDollarSign className="h-5 w-5 text-muted-foreground" />
                     <Input
                         type="text"
+                        inputMode="numeric"
                         placeholder="R$ 0,00"
                         className="border-0 focus-visible:ring-0 text-base p-0"
                         value={formatCurrency(amount)}
@@ -633,6 +637,7 @@ function TransactionForm() {
                         onSubmit={handleAddCategory}
                         onSubmitted={() => setCategoryDialogOpen(false)}
                         category={null}
+                        defaultType={type === 'income' ? 'income' : 'expense'}
                     />
                 </Dialog>
 

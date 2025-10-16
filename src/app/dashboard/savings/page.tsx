@@ -173,7 +173,7 @@ function SavingsGoalForm({
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="targetAmount">Valor Alvo</Label>
-                    <Input id="targetAmount" type="text" value={formatCurrency(targetAmount)} onChange={handleAmountChange} placeholder="R$ 0,00" />
+                    <Input id="targetAmount" type="text" inputMode="numeric" value={formatCurrency(targetAmount)} onChange={handleAmountChange} placeholder="R$ 0,00" />
                 </div>
                 <DialogFooter>
                     <Button type="submit">Adicionar Meta</Button>
