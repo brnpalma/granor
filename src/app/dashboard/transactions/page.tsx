@@ -371,7 +371,7 @@ export default function TransactionsPage() {
                                 <div className="flex flex-col items-end gap-1">
                                     <p className={cn(
                                         "font-bold text-sm",
-                                        t.type === "income" || t.type === 'credit_card_reversal' ? "text-green-500" : "text-foreground",
+                                        t.type === "income" || t.type === 'credit_card_reversal' ? "text-green-500" : "text-red-500",
                                         isIgnored && "text-muted-foreground"
                                     )}>
                                         {t.type === "income" ? "+" : t.type === 'credit_card_reversal' ? '+' : "-"}
@@ -471,5 +471,7 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    
 
     
