@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils"
 
 export function Toaster() {
-  const { toasts } = useToast()
+  const { toasts, remove } = useToast()
 
   return (
     <ToastProvider>
@@ -25,7 +25,16 @@ export function Toaster() {
       />
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
-          <Toast key={id} {...props} duration={1500}>
+          <Toast
+            key={id}
+            {...props}
+            duration={1500}
+            onAnimationEnd={(event) => {
+              if (event.animationName.includes('slide-out')) {
+                remove(id);
+              }
+            }}
+          >
             <div className="grid gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && (

@@ -75,6 +75,11 @@ const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
+      // Cannot dismiss if no toast is present
+      if (!state.toasts.find(t => t.id === toastId)) {
+        return state;
+      }
+
       return {
         ...state,
         toasts: state.toasts.map((t) =>
@@ -123,7 +128,7 @@ function toast({ ...props }: Toast) {
       toast: { ...props, id },
     })
 
-  const dismiss = () => dispatch({ type: "REMOVE_TOAST", toastId: id })
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
   dispatch({
     type: "ADD_TOAST",
@@ -133,8 +138,7 @@ function toast({ ...props }: Toast) {
       open: true,
       onOpenChange: (open) => {
         if (!open) {
-          // Trigger the remove action when the toast is closed by the provider
-          dismiss();
+          dismiss()
         }
       },
     },
@@ -164,6 +168,7 @@ function useToast() {
     ...state,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+    remove: (toastId?: string) => dispatch({ type: "REMOVE_TOAST", toastId }),
   }
 }
 
