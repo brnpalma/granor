@@ -266,6 +266,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     
     const showHeader = !pathname.startsWith('/dashboard/transactions/new');
 
+    const paddingPainel = pathname === '/dashboard' || pathname === '/dashboard/' 
+                            ? "flex-1 p-0 sm:p-0"
+                            : "flex-1 p-4 sm:p-6";
+
     useEffect(() => {
         setIsLoading(true);
         clearBalanceCache();
@@ -282,7 +286,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </aside>
             <div className={cn("flex flex-col", showHeader && "sm:pl-60")}>
                 {showHeader && <Header />}
-                <main className={cn("flex-1 p-4 sm:p-6", showHeader && "")}>
+                <main id="main-principal" className={cn(paddingPainel, showHeader && "")}>
                     {isLoading ? (
                         <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
