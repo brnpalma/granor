@@ -252,6 +252,7 @@ function AccountForm({
     const [balance, setBalance] = useState(0);
     const [color, setColor] = useState(accountColors[0]);
     const [ignoreInTotals, setIgnoreInTotals] = useState(false);
+    const [colorPickerOpen, setColorPickerOpen] = useState(false);
     const { toast } = useToast();
     
     const isEditing = !!account;
@@ -325,7 +326,7 @@ function AccountForm({
                 </div>
                  <div className="space-y-2">
                     <Label>Cor da Conta</Label>
-                    <DropdownMenu>
+                    <DropdownMenu open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="w-full justify-start">
                                 <div className="flex items-center gap-2">
@@ -342,7 +343,10 @@ function AccountForm({
                                         key={c}
                                         className="w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ring-offset-background focus:ring-2 focus:ring-ring"
                                         style={{ backgroundColor: c }}
-                                        onClick={() => setColor(c)}
+                                        onClick={() => {
+                                            setColor(c);
+                                            setColorPickerOpen(false);
+                                        }}
                                     >
                                         {color === c && <Check className="h-5 w-5 text-white" />}
                                     </button>

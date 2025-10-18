@@ -308,6 +308,7 @@ function CreditCardForm({
     const [closingDay, setClosingDay] = useState("");
     const [defaultAccountId, setDefaultAccountId] = useState("");
     const [color, setColor] = useState(accountColors[0]);
+    const [colorPickerOpen, setColorPickerOpen] = useState(false);
     const { toast } = useToast();
 
     const isEditing = !!card;
@@ -381,7 +382,7 @@ function CreditCardForm({
                 </div>
                  <div className="space-y-2">
                     <Label>Cor do Cartão</Label>
-                    <DropdownMenu>
+                    <DropdownMenu open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="w-full justify-start">
                                 <div className="flex items-center gap-2">
@@ -398,7 +399,10 @@ function CreditCardForm({
                                         key={c}
                                         className="w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ring-offset-background focus:ring-2 focus:ring-ring"
                                         style={{ backgroundColor: c }}
-                                        onClick={() => setColor(c)}
+                                        onClick={() => {
+                                            setColor(c);
+                                            setColorPickerOpen(false);
+                                        }}
                                     >
                                         {color === c && <Check className="h-5 w-5 text-white" />}
                                     </button>
