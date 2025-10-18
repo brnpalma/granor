@@ -378,7 +378,18 @@ export default function TransactionsPage() {
                                         {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                                     </p>
                                     {!t.efetivado && (
-                                        <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => handleToggleEfetivado(t)} disabled={isToggling}>
+                                        <Button 
+                                            size="sm" 
+                                            variant="outline" 
+                                            className={cn(
+                                                "h-6 text-xs px-2",
+                                                t.type === 'income' || t.type === 'credit_card_reversal'
+                                                    ? "border-green-500 text-green-500 hover:bg-green-500/10 hover:text-green-600"
+                                                    : "border-red-500 text-red-500 hover:bg-red-500/10 hover:text-red-600"
+                                            )} 
+                                            onClick={() => handleToggleEfetivado(t)} 
+                                            disabled={isToggling}
+                                        >
                                             {isToggling ? "Aguarde..." : "Efetivar"}
                                         </Button>
                                     )}
@@ -460,3 +471,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    
