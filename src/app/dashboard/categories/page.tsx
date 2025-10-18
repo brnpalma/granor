@@ -272,6 +272,7 @@ function CategoryForm({
     const [name, setName] = useState("");
     const [type, setType] = useState<"income" | "expense">(defaultType);
     const [color, setColor] = useState('#F44336');
+    const [colorPickerOpen, setColorPickerOpen] = useState(false);
     const { toast } = useToast();
 
     const isEditing = !!category;
@@ -339,7 +340,7 @@ function CategoryForm({
                 </div>
                 <div className="space-y-2">
                     <Label>Cor</Label>
-                    <DropdownMenu>
+                    <DropdownMenu open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="w-full justify-start">
                                 <div className="flex items-center gap-2">
@@ -356,7 +357,10 @@ function CategoryForm({
                                         key={c}
                                         className="w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ring-offset-background focus:ring-2 focus:ring-ring"
                                         style={{ backgroundColor: c }}
-                                        onClick={() => setColor(c)}
+                                        onClick={() => {
+                                            setColor(c);
+                                            setColorPickerOpen(false);
+                                        }}
                                     >
                                         {color === c && <Check className="h-5 w-5 text-white" />}
                                     </button>
@@ -372,3 +376,5 @@ function CategoryForm({
         </DialogContent>
     );
   }
+
+    
