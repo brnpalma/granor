@@ -95,7 +95,7 @@ function SidebarContent({ onLinkClick }: { onLinkClick: () => void }) {
                         onClick={onLinkClick}
                         className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                        pathname === item.href && "bg-muted text-primary"
+                        pathname === item.href && "bg-muted text-primary dark:text-blue-200"
                         )}
                     >
                         <item.icon className="h-4 w-4" />
@@ -267,7 +267,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     const showHeader = !pathname.startsWith('/dashboard/transactions/new');
 
     const paddingPainel = pathname === '/dashboard' || pathname === '/dashboard/' 
-                            ? "flex-1 p-0 sm:p-0"
+                            ? "flex-1"
                             : "flex-1 p-4 sm:p-6";
 
     useEffect(() => {
