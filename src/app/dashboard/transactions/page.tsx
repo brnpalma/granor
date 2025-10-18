@@ -358,11 +358,12 @@ export default function TransactionsPage() {
                       const isToggling = isTogglingEfetivado.includes(t.id);
                       const categoryInfo = categories.find(c => c.name === t.category);
                       const isTransfer = !!t.transferId;
+                      const isLastItemInGroup = transIndex === group.transactions.length - 1;
 
                       return (
                         <div key={t.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                             <div className="relative flex flex-col items-center">
-                                {groupIndex > 0 || transIndex > 0 ? <div className="absolute top-0 h-1/2 w-0.5 bg-border -translate-y-1/2"></div> : null}
+                                {!isLastItemInGroup && <div className="absolute top-8 h-full w-0.5 bg-border z-0"></div>}
                                 <div className="z-10 rounded-full">
                                      <div 
                                         style={{ backgroundColor: isTransfer ? '#FBBF24' : categoryInfo?.color }} 
@@ -376,7 +377,6 @@ export default function TransactionsPage() {
                                          }
                                     </div>
                                 </div>
-                                {transIndex < group.transactions.length - 1 ? <div className="absolute bottom-0 h-1/2 w-0.5 bg-border translate-y-1/2"></div> : null}
                             </div>
                             <div className="flex-1">
                                 <p className={cn("font-medium", isIgnored && "text-muted-foreground", isTransfer && "text-yellow-500")}>{t.description}</p>
@@ -498,3 +498,4 @@ export default function TransactionsPage() {
     
 
     
+
