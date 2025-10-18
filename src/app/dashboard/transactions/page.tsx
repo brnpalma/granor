@@ -398,9 +398,11 @@ export default function TransactionsPage() {
                                             variant="outline" 
                                             className={cn(
                                                 "h-6 text-xs px-2",
-                                                t.type === 'income' || t.type === 'credit_card_reversal'
-                                                    ? "border-green-500 text-green-500 hover:bg-green-500/10 hover:text-green-600"
-                                                    : "border-red-500 text-red-500 hover:bg-red-500/10 hover:text-red-600"
+                                                isTransfer 
+                                                    ? "border-yellow-500 text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-600"
+                                                    : (t.type === 'income' || t.type === 'credit_card_reversal'
+                                                        ? "border-green-500 text-green-500 hover:bg-green-500/10 hover:text-green-600"
+                                                        : "border-red-500 text-red-500 hover:bg-red-500/10 hover:text-red-600")
                                             )} 
                                             onClick={() => handleToggleEfetivado(t)} 
                                             disabled={isToggling}
@@ -498,4 +500,5 @@ export default function TransactionsPage() {
     
 
     
+
 
