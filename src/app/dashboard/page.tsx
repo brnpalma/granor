@@ -471,24 +471,24 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="space-y-6">
-      <div className="bg-blue-900">
-        <div className="flex w-full items-center justify-center text-center p-2 gap-4">
+    <div>
+      <div className="bg-blue-900 text-white p-6 rounded-b-3xl">
+        <div className="flex w-full items-center justify-center text-center gap-4">
             <div className="flex-1 flex flex-col items-center gap-1">
-                <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                <div className="flex items-center justify-center gap-1 text-sm text-gray-300">
+                    <CheckCircle className="h-4 w-4 text-green-400" />
                     <span>Inicial</span>
                 </div>
-                 {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : renderBalanceInP(displayedInitialBalance, "text-sm md:text-base")}
+                 {isBalanceLoading ? <Skeleton className="h-6 w-24 bg-white/20" /> : renderBalanceInP(displayedInitialBalance, "text-sm md:text-base")}
             </div>
             <div className="flex-shrink-0 flex flex-col items-center gap-1">
-                 <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
-                     <div className="h-4 w-4 rounded-full border-2 border-muted-foreground flex items-center justify-center">
-                        <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground"></div>
+                 <div className="flex items-center justify-center gap-1 text-sm text-gray-300">
+                     <div className="h-4 w-4 rounded-full border-2 border-gray-300 flex items-center justify-center">
+                        <div className="h-1.5 w-1.5 rounded-full bg-gray-300"></div>
                     </div>
                     <span>Saldo</span>
                 </div>
-                 {isBalanceLoading ? <Skeleton className="h-7 w-28" /> : (
+                 {isBalanceLoading ? <Skeleton className="h-7 w-28 bg-white/20" /> : (
                     <Link href="/dashboard/transactions">
                         <div className="cursor-pointer hover:underline text-lg md:text-xl font-bold">
                             {renderBalance(monthlyNetBalance)}
@@ -497,11 +497,11 @@ export default function DashboardPage() {
                  )}
             </div>
             <div className="flex-1 flex flex-col items-center gap-1">
-                 <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                 <div className="flex items-center justify-center gap-1 text-sm text-gray-300">
                     <Clock className="h-4 w-4"/>
                     <span>Previsto</span>
                 </div>
-                {isBalanceLoading ? <Skeleton className="h-6 w-24" /> : renderBalanceInP(effectiveForecastedBalance, "text-sm md:text-base")}
+                {isBalanceLoading ? <Skeleton className="h-6 w-24 bg-white/20" /> : renderBalanceInP(effectiveForecastedBalance, "text-sm md:text-base")}
             </div>
         </div>
 
@@ -510,12 +510,12 @@ export default function DashboardPage() {
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart 
                         data={balanceChartData}
-                        margin={{ top: 5, right: 30, left: -20, bottom: 5 }}
+                        margin={{ top: 20, right: 30, left: -20, bottom: 5 }}
                     >
                     <defs>
                         <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={chartColors.fill} stopOpacity={0.4}/>
-                            <stop offset="95%" stopColor={chartColors.fill} stopOpacity={0}/>
+                            <stop offset="5%" stopColor="white" stopOpacity={0.4}/>
+                            <stop offset="95%" stopColor="white" stopOpacity={0}/>
                         </linearGradient>
                     </defs>
                     <XAxis 
@@ -525,6 +525,7 @@ export default function DashboardPage() {
                         tickLine={false} 
                         axisLine={false}
                         interval="preserveStartEnd"
+                        tick={{ fill: 'rgba(255, 255, 255, 0.7)' }}
                     />
                     <YAxis 
                         stroke="hsl(var(--muted-foreground))"
@@ -533,6 +534,7 @@ export default function DashboardPage() {
                         axisLine={false}
                         tickFormatter={(value) => preferences.showBalance ? `${(value / 1000).toFixed(0)}k` : '---'}
                         allowDuplicatedCategory={false}
+                        tick={{ fill: 'rgba(255, 255, 255, 0.7)' }}
                         {...yAxisProps}
                     />
                     <Tooltip
@@ -540,19 +542,19 @@ export default function DashboardPage() {
                         formatter={(value: number) => [preferences.showBalance ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : "---", "Saldo"]}
                         labelStyle={{ fontWeight: 'bold' }}
                     />
-                    <Area type="monotone" dataKey="Saldo" stroke={chartColors.stroke} fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={2} dot={{ stroke: chartColors.stroke, strokeWidth: 2, r: 4, fill: 'hsl(var(--background))' }} activeDot={{ r: 6 }}/>
+                    <Area type="monotone" dataKey="Saldo" stroke="white" fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={2} dot={{ stroke: "white", strokeWidth: 2, r: 4, fill: 'hsl(var(--background))' }} activeDot={{ r: 6 }}/>
                     </AreaChart>
                 </ResponsiveContainer>
             ) : (
-                <div className="flex h-full w-full flex-col items-center justify-center rounded-lg border-2 border-dashed bg-muted/50">
-                    <LineChart className="h-10 w-10 text-muted-foreground" />
-                    <p className="mt-2 text-sm text-muted-foreground">Sem dados de saldo para exibir no período.</p>
+                <div className="flex h-full w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-white/20 bg-white/5">
+                    <LineChart className="h-10 w-10 text-white/70" />
+                    <p className="mt-2 text-sm text-white/70">Sem dados de saldo para exibir no período.</p>
                 </div>
             )}
         </div>
       </div>
 
-      <div className="p-4 sm:p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6 bg-background rounded-t-3xl">
         <div className="space-y-2">
             <div className="flex justify-between items-center px-1">
                 <h2 className="text-lg font-bold">Contas</h2>
