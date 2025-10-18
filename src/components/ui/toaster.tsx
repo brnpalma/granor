@@ -29,8 +29,8 @@ export function Toaster() {
             key={id}
             {...props}
             duration={1500}
-            onAnimationEnd={(event) => {
-              if (event.animationName.includes('slide-out')) {
+            onOpenChange={(open) => {
+              if (!open) {
                 remove(id);
               }
             }}

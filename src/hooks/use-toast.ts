@@ -75,11 +75,6 @@ const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // Cannot dismiss if no toast is present
-      if (!state.toasts.find(t => t.id === toastId)) {
-        return state;
-      }
-
       return {
         ...state,
         toasts: state.toasts.map((t) =>
