@@ -472,7 +472,7 @@ export default function DashboardPage() {
 
 
   return (
-    <div>
+    <div id="grafico-principal" style={{ marginLeft: "-16px", marginRight: "-16px" }}>
       <div className="bg-blue-900 text-white p-6 -mx-4 -mt-4 sm:-mx-6 sm:-mt-6">
         <div className="flex w-full items-center justify-center text-center gap-4">
             <div className="flex-1 flex flex-col items-center gap-1">
