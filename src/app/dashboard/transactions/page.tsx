@@ -428,6 +428,7 @@ export default function TransactionsPage() {
         {groupedTransactions.length > 0 && (
             <BalanceInfo isTop={false} />
         )}
+        <div className="pb-24"></div>
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>
                 <AlertDialogHeader className="text-left">
@@ -459,17 +460,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    
-
-    
-
-
-
-    
-
-
-
-
-    
-
