@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { CreditCard, Edit, MoreVertical, EyeOff, Trash2, RotateCcw, ArrowUpNarrowWide, ArrowDownNarrowWide } from "lucide-react";
+import { CreditCard, Edit, MoreVertical, EyeOff, Trash2, RotateCcw, ArrowUpNarrowWide, ArrowDownNarrowWide, ArrowUpDown } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -202,10 +202,19 @@ export default function TransactionsPage() {
       if (transaction.isFixed && transaction.id.includes('-projected-')) {
           url += `&overrideDate=${transaction.date.toISOString()}`;
       }
+      if(transaction.transferId) {
+        url += `&type=transfer`;
+      }
       router.push(url);
   }
   
   const getSourceName = (t: Transaction) => {
+    if (t.transferId) {
+        const source = accounts.find(a => a.id === t.accountId);
+        const incomePart = transactions.find(trans => trans.transferId === t.transferId && trans.type === 'income');
+        const destination = accounts.find(a => a.id === incomePart?.accountId);
+        return `${source?.name || '?'} -> ${destination?.name || '?'}`;
+    }
     if (t.accountId) {
         return accounts.find(a => a.id === t.accountId)?.name || "Conta Desconhecida";
     }
@@ -237,7 +246,10 @@ export default function TransactionsPage() {
   }
 
   const sortedTransactions = useMemo(() => {
-    return [...transactions].sort((a, b) => {
+    // Filter out the income part of transfers to avoid duplication
+    const filtered = transactions.filter(t => !(t.type === 'income' && t.transferId));
+    
+    return [...filtered].sort((a, b) => {
         if (preferences.transactionSortOrder === 'asc') {
             return a.date.getTime() - b.date.getTime();
         }
@@ -345,40 +357,56 @@ export default function TransactionsPage() {
                       const isIgnored = isTransactionIgnored(t);
                       const isToggling = isTogglingEfetivado.includes(t.id);
                       const categoryInfo = categories.find(c => c.name === t.category);
+                      const isTransfer = !!t.transferId;
+                      const isLastItemInGroup = transIndex === group.transactions.length - 1;
 
                       return (
                         <div key={t.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                             <div className="relative flex flex-col items-center">
-                                {groupIndex > 0 || transIndex > 0 ? <div className="absolute top-0 h-1/2 w-0.5 bg-border -translate-y-1/2"></div> : null}
+                                {!isLastItemInGroup && <div className="absolute top-8 h-full w-0.5 bg-border z-0"></div>}
                                 <div className="z-10 rounded-full">
                                      <div 
-                                        style={{ backgroundColor: categoryInfo?.color }} 
+                                        style={{ backgroundColor: isTransfer ? '#FBBF24' : categoryInfo?.color }} 
                                         className={cn("p-2 rounded-full text-white", isIgnored && "opacity-50")}
                                       >
-                                         {t.creditCardId ? 
-                                          ( t.type === 'credit_card_reversal' ? <RotateCcw className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />)
-                                          : <CategoryIcon icon={categoryInfo?.icon} className="h-5 w-5" />
+                                         {isTransfer
+                                          ? <ArrowUpDown className="h-5 w-5" /> 
+                                          : t.creditCardId 
+                                            ? ( t.type === 'credit_card_reversal' ? <RotateCcw className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />)
+                                            : <CategoryIcon icon={categoryInfo?.icon} className="h-5 w-5" />
                                          }
                                     </div>
                                 </div>
-                                {transIndex < group.transactions.length - 1 ? <div className="absolute bottom-0 h-1/2 w-0.5 bg-border translate-y-1/2"></div> : null}
                             </div>
                             <div className="flex-1">
-                                <p className={cn("font-medium", isIgnored && "text-muted-foreground")}>{t.description}</p>
+                                <p className={cn("font-medium", isIgnored && "text-muted-foreground", isTransfer && "text-yellow-500")}>{t.description}</p>
                                 <p className="text-sm text-muted-foreground">{getSourceName(t)}</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="flex flex-col items-end gap-1">
                                     <p className={cn(
                                         "font-bold text-sm",
-                                        t.type === "income" || t.type === 'credit_card_reversal' ? "text-green-500" : "text-foreground",
+                                         isTransfer ? "text-yellow-500" : (t.type === "income" || t.type === 'credit_card_reversal' ? "text-green-500" : "text-red-500"),
                                         isIgnored && "text-muted-foreground"
                                     )}>
-                                        {t.type === "income" ? "+" : t.type === 'credit_card_reversal' ? '+' : "-"}
+                                        {t.type === "income" ? "+" : isTransfer ? "" : (t.type === 'credit_card_reversal' ? '+' : "-")}
                                         {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                                     </p>
                                     {!t.efetivado && (
-                                        <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => handleToggleEfetivado(t)} disabled={isToggling}>
+                                        <Button 
+                                            size="sm" 
+                                            variant="outline" 
+                                            className={cn(
+                                                "h-6 text-xs px-2",
+                                                isTransfer 
+                                                    ? "border-yellow-500 text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-600"
+                                                    : (t.type === 'income' || t.type === 'credit_card_reversal'
+                                                        ? "border-green-500 text-green-500 hover:bg-green-500/10 hover:text-green-600"
+                                                        : "border-red-500 text-red-500 hover:bg-red-500/10 hover:text-red-600")
+                                            )} 
+                                            onClick={() => handleToggleEfetivado(t)} 
+                                            disabled={isToggling}
+                                        >
                                             {isToggling ? "Aguarde..." : "Efetivar"}
                                         </Button>
                                     )}
@@ -428,6 +456,7 @@ export default function TransactionsPage() {
         {groupedTransactions.length > 0 && (
             <BalanceInfo isTop={false} />
         )}
+        <div className="pb-24"></div>
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent style={{ maxWidth: 'fit-content' }}>
                 <AlertDialogHeader>
@@ -437,9 +466,15 @@ export default function TransactionsPage() {
                             Esta é uma transação recorrente/fixa. Como você gostaria de removê-la?
                         </AlertDialogDescription>
                     ) : (
-                        <AlertDialogDescription>
-                            Você tem certeza que quer remover esta transação? Esta ação não pode ser desfeita.
-                        </AlertDialogDescription>
+                         transactionToDelete?.transferId ? (
+                            <AlertDialogDescription>
+                                Esta ação removerá a despesa e a receita correspondente a esta transferência. Deseja continuar?
+                            </AlertDialogDescription>
+                         ) : (
+                            <AlertDialogDescription>
+                                Você tem certeza que quer remover esta transação? Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                         )
                     )}
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:gap-2">
@@ -464,12 +499,6 @@ export default function TransactionsPage() {
 
     
 
-
-
     
 
-
-
-
-    
 

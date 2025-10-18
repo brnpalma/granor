@@ -308,6 +308,7 @@ function CreditCardForm({
     const [closingDay, setClosingDay] = useState("");
     const [defaultAccountId, setDefaultAccountId] = useState("");
     const [color, setColor] = useState(accountColors[0]);
+    const [colorPickerOpen, setColorPickerOpen] = useState(false);
     const { toast } = useToast();
 
     const isEditing = !!card;
@@ -375,37 +376,39 @@ function CreditCardForm({
                 <DialogTitle>{isEditing ? "Editar Cartão" : "Adicionar Cartão"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="name">Nome do Cartão</Label>
-                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Cartão Nubank" />
-                </div>
-                 <div className="space-y-2">
-                    <Label>Cor do Cartão</Label>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: color }} />
-                                    <span>{color}</span>
+                 <div className="flex items-end gap-4">
+                    <div className="space-y-2 flex-1">
+                        <Label htmlFor="name">Nome do Cartão</Label>
+                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Cartão Nubank" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Cor</Label>
+                        <DropdownMenu open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-10 w-10 p-0 border-0 flex items-center justify-center">
+                                    <div className="w-8 h-8 rounded-full" style={{ backgroundColor: color }} />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="max-h-60 overflow-y-auto">
+                                 <div className="grid grid-cols-5 gap-2 p-2">
+                                    {accountColors.map((c) => (
+                                        <button
+                                            type="button"
+                                            key={c}
+                                            className="w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ring-offset-background focus:ring-2 focus:ring-ring"
+                                            style={{ backgroundColor: c }}
+                                            onClick={() => {
+                                                setColor(c);
+                                                setColorPickerOpen(false);
+                                            }}
+                                        >
+                                            {color === c && <Check className="h-5 w-5 text-white" />}
+                                        </button>
+                                    ))}
                                 </div>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="max-h-60 overflow-y-auto">
-                             <div className="grid grid-cols-5 gap-2 p-2">
-                                {accountColors.map((c) => (
-                                    <button
-                                        type="button"
-                                        key={c}
-                                        className="w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ring-offset-background focus:ring-2 focus:ring-ring"
-                                        style={{ backgroundColor: c }}
-                                        onClick={() => setColor(c)}
-                                    >
-                                        {color === c && <Check className="h-5 w-5 text-white" />}
-                                    </button>
-                                ))}
-                            </div>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="defaultAccountId">Conta para Pagamento</Label>

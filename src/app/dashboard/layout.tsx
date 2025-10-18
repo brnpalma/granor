@@ -95,7 +95,7 @@ function SidebarContent({ onLinkClick }: { onLinkClick: () => void }) {
                         onClick={onLinkClick}
                         className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                        pathname === item.href && "bg-muted text-primary"
+                        pathname === item.href && "bg-muted text-primary dark:text-blue-200"
                         )}
                     >
                         <item.icon className="h-4 w-4" />
@@ -167,10 +167,10 @@ function Header() {
 
 
     return (
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-center border-b border-border bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 relative">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-center bg-blue-900 text-white px-4 sm:static sm:h-auto relative">
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
-                    <Button size="icon" variant="outline" className="sm:hidden bg-transparent border-0 hover:bg-gray-700 absolute left-4">
+                    <Button size="icon" variant="outline" className="sm:hidden bg-transparent border-0 hover:bg-white/10 absolute left-4">
                         <Menu className="h-5 w-5" />
                         <span className="sr-only">Alternar Menu</span>
                     </Button>
@@ -184,22 +184,22 @@ function Header() {
             </Sheet>
 
             <div className="flex items-center justify-center sm:gap-2">
-                <Button variant="ghost" size="icon" className="hover:bg-gray-700" onClick={goToPreviousMonth}>
+                <Button variant="ghost" size="icon" className="hover:bg-white/10" onClick={goToPreviousMonth}>
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
                 <span className="text-lg font-semibold w-24 sm:w-32 text-center">{formattedDate}</span>
-                <Button variant="ghost" size="icon" className="hover:bg-gray-700" onClick={goToNextMonth}>
+                <Button variant="ghost" size="icon" className="hover:bg-white/10" onClick={goToNextMonth}>
                     <ChevronRight className="h-5 w-5" />
                 </Button>
             </div>
 
             <div className="absolute right-4 flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="hover:bg-gray-700" onClick={goToCurrentMonth}>
+                <Button variant="ghost" size="icon" className="hover:bg-white/10" onClick={goToCurrentMonth}>
                     <CalendarClock className="h-5 w-5" />
                 </Button>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="hover:bg-gray-700">
+                        <Button variant="ghost" size="icon" className="hover:bg-white/10">
                             <Settings className="h-5 w-5" />
                         </Button>
                     </DropdownMenuTrigger>
@@ -266,6 +266,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     
     const showHeader = !pathname.startsWith('/dashboard/transactions/new');
 
+    const paddingPainel = pathname === '/dashboard' || pathname === '/dashboard/' 
+                            ? "flex-1"
+                            : "flex-1 p-4 sm:p-6";
+
     useEffect(() => {
         setIsLoading(true);
         clearBalanceCache();
@@ -282,7 +286,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </aside>
             <div className={cn("flex flex-col", showHeader && "sm:pl-60")}>
                 {showHeader && <Header />}
-                <main className={cn("flex-1", showHeader && "p-4 sm:p-6 pb-24")}>
+                <main id="main-principal" className={cn(paddingPainel, showHeader && "")}>
                     {isLoading ? (
                         <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -300,7 +304,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56 mb-2" side="top" align="end">
-                                <DropdownMenuItem disabled>
+                                <DropdownMenuItem onClick={() => router.push('/dashboard/transactions/new?type=transfer')}>
                                     <div className="bg-yellow-500/20 p-2 rounded-full mr-3">
                                         <ArrowUpDown className="h-5 w-5 text-yellow-500" />
                                     </div>
@@ -350,5 +354,3 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </DateProvider>
     );
 }
-
-    

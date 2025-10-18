@@ -21,7 +21,7 @@ import {
   setDoc,
   limit,
 } from "firebase/firestore";
-import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, UserPreferences, RecurrencePeriod, RecurrenceEditScope } from "./types";
+import type { Transaction, Budget, SavingsGoal, Category, Account, CreditCard, UserPreferences, RecurrencePeriod, RecurrenceEditScope, TransactionType } from "./types";
 import { toast } from "@/hooks/use-toast";
 import { subMonths, startOfMonth, endOfMonth, addDays, addWeeks, addMonths, addYears, isAfter, isSameMonth } from 'date-fns';
 
@@ -365,15 +365,50 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
             ...restOfTransaction,
             date: Timestamp.fromDate(date),
         };
-        
-        if (transaction.isRecurring && transaction.recurrence && !transaction.isFixed) {
+
+        if (transaction.type === 'transfer') {
+            const batch = writeBatch(db);
+            const transferId = doc(collection(db, 'transactions')).id;
+
+            // Expense from source account
+            const expenseDocRef = doc(collection(db, transactionsPath));
+            const expenseData: Partial<Transaction> = {
+                ...transaction,
+                description: transaction.description || "Transferência",
+                type: 'expense',
+                transferId: transferId,
+                category: 'Transferência',
+            };
+            delete expenseData.destinationAccountId;
+            delete expenseData.creditCardId;
+            batch.set(expenseDocRef, { ...expenseData, date: Timestamp.fromDate(expenseData.date!) });
+            
+            // Income to destination account
+            const incomeDocRef = doc(collection(db, transactionsPath));
+            const incomeData: Partial<Transaction> = {
+                ...transaction,
+                description: transaction.description || "Transferência",
+                type: 'income',
+                transferId: transferId,
+                accountId: transaction.destinationAccountId,
+                category: 'Transferência',
+            };
+            delete incomeData.destinationAccountId;
+            delete incomeData.creditCardId;
+            batch.set(incomeDocRef, { ...incomeData, date: Timestamp.fromDate(incomeData.date!) });
+            
+            await batch.commit();
+
+        } else if (transaction.isRecurring && transaction.recurrence && !transaction.isFixed) {
             const batch = writeBatch(db);
             const recurrenceId = doc(collection(db, 'transactions')).id; // Generate a unique ID for the group
             const { quantity, period, startInstallment } = transaction.recurrence;
             let currentDate = transaction.date;
+            
+            const installmentsToCreate = quantity - startInstallment + 1;
 
-            for (let i = 0; i < quantity; i++) {
-                const installmentNumber = i + startInstallment;
+            for (let i = 0; i < installmentsToCreate; i++) {
+                const installmentNumber = startInstallment + i;
                 const newDocRef = doc(collection(db, transactionsPath));
                 
                 const installmentTransaction: Omit<Transaction, "id"> = {
@@ -443,7 +478,7 @@ export const updateTransaction = async (
         } else if (originalTransaction?.isFixed && scope === 'single' && dataToUpdate.date) {
             // Create a one-off override for a fixed transaction
             const monthKey = `${dataToUpdate.date.getFullYear()}-${dataToUpdate.date.getMonth()}`;
-            const newTransactionData = { ...dataToUpdate, isFixed: false, isRecurring: false, recurrenceId: originalTransaction.id };
+            const newTransactionData = { ...dataToUpdate, isFixed: false, isRecurring: false, recurrenceId: originalTransaction.id } as Omit<Transaction, 'id'>;
             if('id' in newTransactionData) delete (newTransactionData as any).id;
             
             const overrideId = await addTransaction(userId, newTransactionData, true);
@@ -458,7 +493,7 @@ export const updateTransaction = async (
              await updateDoc(oldDocRef, { endDate: Timestamp.fromDate(subMonths(dataToUpdate.date, 1)) });
              
              const { id, ...newFixedTransaction } = { ...originalTransaction, ...dataToUpdate, id: '', date: dataToUpdate.date, endDate: null, overrides: {} };
-             await addTransaction(userId, newFixedTransaction);
+             await addTransaction(userId, newFixedTransaction as Omit<Transaction, 'id'>);
         
         } else if (originalTransaction?.isFixed && scope === 'all') {
             const mainTransactionRef = doc(db, transactionsPath, transactionId);
@@ -488,6 +523,16 @@ export const deleteTransaction = async (
   try {
     const originalDocId = transaction?.recurrenceId || (transaction?.isFixed ? transaction.id : null) || transactionId;
     const originalDocRef = doc(db, transactionsPath, originalDocId);
+
+    // Deleting a transfer
+    if(transaction?.transferId) {
+        const q = query(collection(db, transactionsPath), where('transferId', '==', transaction.transferId));
+        const querySnapshot = await getDocs(q);
+        const batch = writeBatch(db);
+        querySnapshot.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        return;
+    }
 
     // Deleting a single instance of a non-fixed recurring transaction
     if (transaction?.isRecurring && scope === 'single') {
@@ -881,3 +926,5 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta.", variant: "success" });
     }
 };
+
+    

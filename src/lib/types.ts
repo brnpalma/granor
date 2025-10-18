@@ -56,7 +56,7 @@ export interface Recurrence {
     startInstallment: number;
 }
 
-export type TransactionType = 'income' | 'expense' | 'credit_card_reversal';
+export type TransactionType = 'income' | 'expense' | 'credit_card_reversal' | 'transfer';
 
 export interface Transaction {
   id: string;
@@ -68,6 +68,8 @@ export interface Transaction {
   efetivado: boolean;
   accountId?: string; // Optional: for bank account transactions
   creditCardId?: string; // Optional: for credit card transactions
+  destinationAccountId?: string; // for transfers
+  transferId?: string; // for transfers
   isBudget?: boolean;
   isRecurring?: boolean;
   isFixed?: boolean;
