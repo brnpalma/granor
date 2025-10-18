@@ -300,7 +300,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56 mb-2" side="top" align="end">
-                                <DropdownMenuItem disabled>
+                                <DropdownMenuItem onClick={() => router.push('/dashboard/transactions/new?type=transfer')}>
                                     <div className="bg-yellow-500/20 p-2 rounded-full mr-3">
                                         <ArrowUpDown className="h-5 w-5 text-yellow-500" />
                                     </div>

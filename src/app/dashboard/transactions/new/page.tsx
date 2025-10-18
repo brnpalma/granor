@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, Suspense } from 'react';
@@ -46,6 +47,7 @@ function CategoryForm({
     const [name, setName] = useState("");
     const [type, setType] = useState<"income" | "expense">(defaultType);
     const [color, setColor] = useState('#F44336');
+    const [colorPickerOpen, setColorPickerOpen] = useState(false);
     const { toast } = useToast();
 
     const isEditing = !!category;
@@ -98,46 +100,48 @@ function CategoryForm({
                     <Label htmlFor="name">Nome da Categoria</Label>
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Lazer" />
                 </div>
-                 <div className="space-y-2">
-                    <Label>Tipo</Label>
-                    <RadioGroup value={type} onValueChange={(value) => setType(value as "income" | "expense")} className="flex gap-4">
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="expense" id="expense" />
-                            <Label htmlFor="expense">Despesa</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="income" id="income" />
-                            <Label htmlFor="income">Receita</Label>
-                        </div>
-                    </RadioGroup>
-                </div>
-                <div className="space-y-2">
-                    <Label>Cor</Label>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: color }} />
-                                    <span>{color}</span>
-                                </div>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="max-h-60 overflow-y-auto">
-                             <div className="grid grid-cols-5 gap-2 p-2">
-                                {categoryColors.map((c) => (
-                                    <button
-                                        type="button"
-                                        key={c}
-                                        className="w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ring-offset-background focus:ring-2 focus:ring-ring"
-                                        style={{ backgroundColor: c }}
-                                        onClick={() => setColor(c)}
-                                    >
-                                        {color === c && <Check className="h-5 w-5 text-white" />}
-                                    </button>
-                                ))}
+                 <div className="flex items-end gap-4">
+                    <div className="space-y-2 flex-1">
+                        <Label>Tipo</Label>
+                        <RadioGroup value={type} onValueChange={(value) => setType(value as "income" | "expense")} className="flex gap-4 pt-2">
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="expense" id="expense" />
+                                <Label htmlFor="expense">Despesa</Label>
                             </div>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="income" id="income" />
+                                <Label htmlFor="income">Receita</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Cor</Label>
+                        <DropdownMenu open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-10 w-10 p-0 border-0 flex items-center justify-center">
+                                    <div className="w-8 h-8 rounded-full" style={{ backgroundColor: color }} />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="max-h-60 overflow-y-auto">
+                                 <div className="grid grid-cols-5 gap-2 p-2">
+                                    {categoryColors.map((c) => (
+                                        <button
+                                            type="button"
+                                            key={c}
+                                            className="w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ring-offset-background focus:ring-2 focus:ring-ring"
+                                            style={{ backgroundColor: c }}
+                                            onClick={() => {
+                                                setColor(c);
+                                                setColorPickerOpen(false);
+                                            }}
+                                        >
+                                            {color === c && <Check className="h-5 w-5 text-white" />}
+                                        </button>
+                                    ))}
+                                </div>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
                 <DialogFooter>
                     <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Adicionar Categoria'}</Button>
@@ -270,6 +274,7 @@ function TransactionForm() {
     const [type, setType] = useState<TransactionType | null>(typeParam);
     const [category, setCategory] = useState("");
     const [accountId, setAccountId] = useState<string | undefined>();
+    const [destinationAccountId, setDestinationAccountId] = useState<string | undefined>();
     const [creditCardId, setCreditCardId] = useState<string | undefined>();
     const [efetivado, setEfetivado] = useState(false);
     
@@ -326,6 +331,7 @@ function TransactionForm() {
                     
                     setAccountId(t.accountId);
                     setCreditCardId(t.creditCardId);
+                    setDestinationAccountId(t.destinationAccountId);
                     setIsRecurring(t.isRecurring || false);
                     setIsFixed(t.isFixed || false);
                     if (t.recurrence) {
@@ -380,13 +386,19 @@ function TransactionForm() {
             return;
         }
 
-        if (!category) {
+        if (type !== 'transfer' && !category) {
             toast({ title: "Por favor, selecione uma categoria.", variant: 'destructive' });
             setIsSaving(false);
             return;
         }
+        
+        if (type === 'transfer' && (!accountId || !destinationAccountId)) {
+            toast({ title: "Por favor, selecione as contas de origem e destino.", variant: 'destructive' });
+            setIsSaving(false);
+            return;
+        }
 
-        if (!accountId && !creditCardId) {
+        if (type !== 'transfer' && !accountId && !creditCardId) {
             toast({ title: "Por favor, selecione uma conta ou cartão de crédito.", variant: 'destructive' });
             setIsSaving(false);
             return;
@@ -411,16 +423,13 @@ function TransactionForm() {
             isBudget: false,
             isRecurring: isRecurring && !isFixed,
             isFixed: isFixed,
+            accountId,
+            creditCardId,
+            destinationAccountId,
         };
     
         if (transactionData.isRecurring) {
             transactionData.recurrence = recurrence;
-        }
-    
-        if (creditCardId) {
-            transactionData.creditCardId = creditCardId;
-        } else if (accountId) {
-            transactionData.accountId = accountId;
         }
     
         try {
@@ -464,14 +473,19 @@ function TransactionForm() {
         }
     };
     
-    const getSelectedAccount = () => {
+    const getSelectedAccount = (isDestination = false) => {
+        const id = isDestination ? destinationAccountId : accountId;
+        if(id) {
+            const account = accounts.find(a => a.id === id);
+             return { name: account?.name, color: account?.color };
+        }
+        return null;
+    }
+
+    const getSelectedCreditCard = () => {
         if(creditCardId) {
             const card = creditCards.find(c => c.id === creditCardId);
-            return { name: card?.name, color: card?.color, isCard: true };
-        }
-        if(accountId) {
-            const account = accounts.find(a => a.id === accountId);
-             return { name: account?.name, color: account?.color, isCard: false };
+             return { name: card?.name, color: card?.color };
         }
         return null;
     }
@@ -494,17 +508,197 @@ function TransactionForm() {
                 ? "Nova Despesa Cartão"
                 : type === 'income'
                     ? "Nova Receita"
-                    : "Nova Despesa";
+                    : type === 'transfer'
+                        ? 'Nova Transferência'
+                        : "Nova Despesa";
 
     const saveButtonColor = type === 'income' || type === 'credit_card_reversal'
         ? "bg-green-500 hover:bg-green-600 text-white"
-        : "bg-red-500 hover:bg-red-600 text-white";
+        : type === 'transfer'
+            ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+            : "bg-red-500 hover:bg-red-600 text-white";
         
     const recurrenceText = isFixed
         ? "Fixa Mensal"
         : isRecurring
         ? `${recurrence.period.charAt(0).toUpperCase() + recurrence.period.slice(1)}, ${recurrence.quantity} parcelas`
         : "Não recorrente";
+
+    const renderDefaultForm = () => (
+        <>
+            { type === 'expense' || type === 'credit_card_reversal' ? (
+                <div className="flex items-center gap-2 p-1 rounded-lg border">
+                     <div className="p-2 rounded-full bg-muted">
+                        {creditCardId !== undefined || isCreditCardParam ? 
+                            <CreditCard className="h-5 w-5 text-muted-foreground" /> :
+                            <Wallet className="h-5 w-5 text-muted-foreground" />
+                        }
+                    </div>
+                    <Select 
+                        onValueChange={(val) => {
+                            if (val.startsWith('acc-')) {
+                                setAccountId(val.replace('acc-', ''));
+                                setCreditCardId(undefined);
+                            } else {
+                                setCreditCardId(val.replace('cc-', ''));
+                                setAccountId(undefined);
+                            }
+                        }} 
+                        value={creditCardId ? `cc-${creditCardId}` : accountId ? `acc-${accountId}` : ''}
+                    >
+                        <SelectTrigger className="border-0 focus:ring-0 w-full">
+                            <SelectValue placeholder={isCreditCardParam ? "Selecione o cartão" : "Selecione a conta"}>
+                                {(() => {
+                                    const selectedCC = getSelectedCreditCard();
+                                    const selectedAcc = getSelectedAccount();
+                                    if(selectedCC?.name) {
+                                        return (
+                                            <div className="flex items-center gap-2">
+                                                <CreditCardDisplayIcon color={selectedCC.color} />
+                                                <span>{selectedCC.name}</span>
+                                            </div>
+                                        )
+                                    }
+                                     if(selectedAcc?.name) {
+                                        return (
+                                            <div className="flex items-center gap-2">
+                                                <BankIcon name={selectedAcc.name || ''} color={selectedAcc.color} />
+                                                <span>{selectedAcc.name}</span>
+                                            </div>
+                                        )
+                                    }
+                                    return isCreditCardParam ? "Selecione o cartão" : "Selecione a conta";
+                                })()}
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            {type === 'expense' && !isCreditCardParam && accounts.map(acc => (
+                                <SelectItem key={acc.id} value={`acc-${acc.id}`}>
+                                    <div className="flex items-center gap-2">
+                                        <BankIcon name={acc.name} color={acc.color} />
+                                        <span>{acc.name}</span>
+                                    </div>
+                                </SelectItem>
+                            ))}
+                            {(type === 'expense' && isCreditCardParam || type === 'credit_card_reversal') && creditCards.map(cc => (
+                                <SelectItem key={cc.id} value={`cc-${cc.id}`}>
+                                    <div className="flex items-center gap-2">
+                                        <CreditCardDisplayIcon color={cc.color} />
+                                        <span>{cc.name}</span>
+                                    </div>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+             ) : (
+                 <div className="flex items-center gap-2 p-1 rounded-lg border">
+                     <div className="p-2 rounded-full bg-muted">
+                        <Wallet className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <Select onValueChange={setAccountId} value={accountId}>
+                        <SelectTrigger className="border-0 focus:ring-0 w-full">
+                            <SelectValue placeholder="Selecione a conta">
+                                 {(() => {
+                                    const selected = getSelectedAccount();
+                                    if(selected?.name) {
+                                        return (
+                                            <div className="flex items-center gap-2">
+                                                <BankIcon name={selected.name || ''} color={selected.color} />
+                                                <span>{selected.name}</span>
+                                            </div>
+                                        )
+                                    }
+                                    return "Selecione a conta";
+                                })()}
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            {accounts.map(acc => (
+                                <SelectItem key={acc.id} value={acc.id}>
+                                     <div className="flex items-center gap-2">
+                                        <BankIcon name={acc.name} color={acc.color} />
+                                        <span>{acc.name}</span>
+                                    </div>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+             )}
+        </>
+    );
+
+    const renderTransferForm = () => (
+        <>
+             <div className="flex items-center gap-2 p-1 rounded-lg border">
+                 <div className="p-2 rounded-full bg-muted">
+                    <Wallet className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <Select onValueChange={setAccountId} value={accountId}>
+                    <SelectTrigger className="border-0 focus:ring-0 w-full">
+                        <SelectValue placeholder="Conta de Origem">
+                             {(() => {
+                                const selected = getSelectedAccount();
+                                if(selected?.name) {
+                                    return (
+                                        <div className="flex items-center gap-2">
+                                            <BankIcon name={selected.name || ''} color={selected.color} />
+                                            <span>{selected.name}</span>
+                                        </div>
+                                    )
+                                }
+                                return "Conta de Origem";
+                            })()}
+                        </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                        {accounts.filter(a => a.id !== destinationAccountId).map(acc => (
+                            <SelectItem key={acc.id} value={acc.id}>
+                                 <div className="flex items-center gap-2">
+                                    <BankIcon name={acc.name} color={acc.color} />
+                                    <span>{acc.name}</span>
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+             <div className="flex items-center gap-2 p-1 rounded-lg border">
+                 <div className="p-2 rounded-full bg-muted">
+                    <Wallet className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <Select onValueChange={setDestinationAccountId} value={destinationAccountId}>
+                    <SelectTrigger className="border-0 focus:ring-0 w-full">
+                        <SelectValue placeholder="Conta de Destino">
+                             {(() => {
+                                const selected = getSelectedAccount(true);
+                                if(selected?.name) {
+                                    return (
+                                        <div className="flex items-center gap-2">
+                                            <BankIcon name={selected.name || ''} color={selected.color} />
+                                            <span>{selected.name}</span>
+                                        </div>
+                                    )
+                                }
+                                return "Conta de Destino";
+                            })()}
+                        </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                        {accounts.filter(a => a.id !== accountId).map(acc => (
+                            <SelectItem key={acc.id} value={acc.id}>
+                                 <div className="flex items-center gap-2">
+                                    <BankIcon name={acc.name} color={acc.color} />
+                                    <span>{acc.name}</span>
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+        </>
+    )
 
     return (
         <div className="flex flex-col h-screen bg-background">
@@ -522,7 +716,7 @@ function TransactionForm() {
                  <div className="flex items-center gap-4 p-3 rounded-lg border">
                     <AlignLeft className="h-5 w-5 text-muted-foreground" />
                     <Input
-                        placeholder="Descrição (se vazio, usa categoria)"
+                        placeholder="Descrição"
                         className="border-0 focus-visible:ring-0 text-base p-0"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
@@ -542,16 +736,18 @@ function TransactionForm() {
                     />
                 </div>
                 
-                <Button variant="outline" className="w-full justify-start font-normal h-auto p-3 border" onClick={() => setIsRecurrenceDialogOpen(true)} disabled={isEditing}>
-                    <div className="flex items-center justify-between w-full">
-                        <div className='flex items-center gap-4'>
-                            <Repeat className="h-5 w-5 text-muted-foreground" />
-                            <span>Repetir</span>
-                        </div>
-                        <span className="text-muted-foreground">{recurrenceText}</span>
-                    </div>
-                </Button>
-                 {(isRecurring || isFixed) && !isEditing && (
+                {type !== 'transfer' && (
+                  <Button variant="outline" className="w-full justify-start font-normal h-auto p-3 border" onClick={() => setIsRecurrenceDialogOpen(true)} disabled={isEditing}>
+                      <div className="flex items-center justify-between w-full">
+                          <div className='flex items-center gap-4'>
+                              <Repeat className="h-5 w-5 text-muted-foreground" />
+                              <span>Repetir</span>
+                          </div>
+                          <span className="text-muted-foreground">{recurrenceText}</span>
+                      </div>
+                  </Button>
+                )}
+                 {(isRecurring || isFixed) && !isEditing && type !== 'transfer' && (
                     <div className="flex items-center justify-between gap-4 p-3 rounded-lg border -mt-1">
                         <div className="flex items-center gap-4">
                             <Label htmlFor="is-recurring-switch">Desativar repetição</Label>
@@ -598,6 +794,7 @@ function TransactionForm() {
                     <Switch id="efetivado" checked={efetivado} onCheckedChange={setEfetivado} />
                 </div>
                 
+                { type !== 'transfer' && (
                  <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
                     <div className="flex items-center gap-2 p-1 rounded-lg border">
                         <div className="p-2 rounded-full bg-muted">
@@ -640,99 +837,10 @@ function TransactionForm() {
                         defaultType={type === 'income' ? 'income' : 'expense'}
                     />
                 </Dialog>
+                )}
+                
+                { type === 'transfer' ? renderTransferForm() : renderDefaultForm() }
 
-                 { type === 'expense' || type === 'credit_card_reversal' ? (
-                    <div className="flex items-center gap-2 p-1 rounded-lg border">
-                         <div className="p-2 rounded-full bg-muted">
-                            {creditCardId !== undefined || isCreditCardParam ? 
-                                <CreditCard className="h-5 w-5 text-muted-foreground" /> :
-                                <Wallet className="h-5 w-5 text-muted-foreground" />
-                            }
-                        </div>
-                        <Select 
-                            onValueChange={(val) => {
-                                if (val.startsWith('acc-')) {
-                                    setAccountId(val.replace('acc-', ''));
-                                    setCreditCardId(undefined);
-                                } else {
-                                    setCreditCardId(val.replace('cc-', ''));
-                                    setAccountId(undefined);
-                                }
-                            }} 
-                            value={creditCardId ? `cc-${creditCardId}` : accountId ? `acc-${accountId}` : ''}
-                        >
-                            <SelectTrigger className="border-0 focus:ring-0 w-full">
-                                <SelectValue placeholder={isCreditCardParam ? "Selecione o cartão" : "Selecione a conta"}>
-                                    {(() => {
-                                        const selected = getSelectedAccount();
-                                        if(selected?.name) {
-                                            return (
-                                                <div className="flex items-center gap-2">
-                                                    {selected.isCard ? <CreditCardDisplayIcon color={selected.color} /> : <BankIcon name={selected.name || ''} color={selected.color} />}
-                                                    <span>{selected.name}</span>
-                                                </div>
-                                            )
-                                        }
-                                        return isCreditCardParam ? "Selecione o cartão" : "Selecione a conta";
-                                    })()}
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {type === 'expense' && !isCreditCardParam && accounts.map(acc => (
-                                    <SelectItem key={acc.id} value={`acc-${acc.id}`}>
-                                        <div className="flex items-center gap-2">
-                                            <BankIcon name={acc.name} color={acc.color} />
-                                            <span>{acc.name}</span>
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                                {(type === 'expense' && isCreditCardParam || type === 'credit_card_reversal') && creditCards.map(cc => (
-                                    <SelectItem key={cc.id} value={`cc-${cc.id}`}>
-                                        <div className="flex items-center gap-2">
-                                            <CreditCardDisplayIcon color={cc.color} />
-                                            <span>{cc.name}</span>
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                 ) : (
-                     <div className="flex items-center gap-2 p-1 rounded-lg border">
-                         <div className="p-2 rounded-full bg-muted">
-                            <Wallet className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <Select onValueChange={setAccountId} value={accountId}>
-                            <SelectTrigger className="border-0 focus:ring-0 w-full">
-                                <SelectValue placeholder="Selecione a conta">
-                                     {(() => {
-                                        const selected = getSelectedAccount();
-                                        if(selected?.name) {
-                                            return (
-                                                <div className="flex items-center gap-2">
-                                                    <BankIcon name={selected.name || ''} color={selected.color} />
-                                                    <span>{selected.name}</span>
-                                                </div>
-                                            )
-                                        }
-                                        return "Selecione a conta";
-                                    })()}
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {accounts.map(acc => (
-                                    <SelectItem key={acc.id} value={acc.id}>
-                                         <div className="flex items-center gap-2">
-                                            <BankIcon name={acc.name} color={acc.color} />
-                                            <span>{acc.name}</span>
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                 )
-                }
             </main>
              <RecurrenceDialog
                 open={isRecurrenceDialogOpen}

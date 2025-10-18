@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { CreditCard, Edit, MoreVertical, EyeOff, Trash2, RotateCcw, ArrowUpNarrowWide, ArrowDownNarrowWide } from "lucide-react";
+import { CreditCard, Edit, MoreVertical, EyeOff, Trash2, RotateCcw, ArrowUpNarrowWide, ArrowDownNarrowWide, ArrowUpDown } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -202,10 +202,18 @@ export default function TransactionsPage() {
       if (transaction.isFixed && transaction.id.includes('-projected-')) {
           url += `&overrideDate=${transaction.date.toISOString()}`;
       }
+      if(transaction.type === 'transfer') {
+        url += `&type=transfer`;
+      }
       router.push(url);
   }
   
   const getSourceName = (t: Transaction) => {
+    if (t.type === 'transfer') {
+        const source = accounts.find(a => a.id === t.accountId);
+        const destination = accounts.find(a => a.id === t.destinationAccountId);
+        return `${source?.name || '?'} -> ${destination?.name || '?'}`;
+    }
     if (t.accountId) {
         return accounts.find(a => a.id === t.accountId)?.name || "Conta Desconhecida";
     }
@@ -345,6 +353,7 @@ export default function TransactionsPage() {
                       const isIgnored = isTransactionIgnored(t);
                       const isToggling = isTogglingEfetivado.includes(t.id);
                       const categoryInfo = categories.find(c => c.name === t.category);
+                      const isTransfer = t.type === 'transfer';
 
                       return (
                         <div key={t.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
@@ -352,12 +361,14 @@ export default function TransactionsPage() {
                                 {groupIndex > 0 || transIndex > 0 ? <div className="absolute top-0 h-1/2 w-0.5 bg-border -translate-y-1/2"></div> : null}
                                 <div className="z-10 rounded-full">
                                      <div 
-                                        style={{ backgroundColor: categoryInfo?.color }} 
+                                        style={{ backgroundColor: isTransfer ? '#F59E0B' : categoryInfo?.color }} 
                                         className={cn("p-2 rounded-full text-white", isIgnored && "opacity-50")}
                                       >
-                                         {t.creditCardId ? 
-                                          ( t.type === 'credit_card_reversal' ? <RotateCcw className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />)
-                                          : <CategoryIcon icon={categoryInfo?.icon} className="h-5 w-5" />
+                                         {isTransfer 
+                                          ? <ArrowUpDown className="h-5 w-5" /> 
+                                          : t.creditCardId 
+                                            ? ( t.type === 'credit_card_reversal' ? <RotateCcw className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />)
+                                            : <CategoryIcon icon={categoryInfo?.icon} className="h-5 w-5" />
                                          }
                                     </div>
                                 </div>
@@ -371,10 +382,10 @@ export default function TransactionsPage() {
                                 <div className="flex flex-col items-end gap-1">
                                     <p className={cn(
                                         "font-bold text-sm",
-                                        t.type === "income" || t.type === 'credit_card_reversal' ? "text-green-500" : "text-red-500",
+                                        t.type === "income" || t.type === 'credit_card_reversal' ? "text-green-500" : (isTransfer ? "text-yellow-500" : "text-red-500"),
                                         isIgnored && "text-muted-foreground"
                                     )}>
-                                        {t.type === "income" ? "+" : t.type === 'credit_card_reversal' ? '+' : "-"}
+                                        {t.type === "income" ? "+" : t.type === 'credit_card_reversal' ? '+' : isTransfer ? '' : "-"}
                                         {t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                                     </p>
                                     {!t.efetivado && (
@@ -449,9 +460,15 @@ export default function TransactionsPage() {
                             Esta é uma transação recorrente/fixa. Como você gostaria de removê-la?
                         </AlertDialogDescription>
                     ) : (
-                        <AlertDialogDescription>
-                            Você tem certeza que quer remover esta transação? Esta ação não pode ser desfeita.
-                        </AlertDialogDescription>
+                         transactionToDelete?.type === 'transfer' ? (
+                            <AlertDialogDescription>
+                                Esta ação removerá a despesa e a receita correspondente a esta transferência. Deseja continuar?
+                            </AlertDialogDescription>
+                         ) : (
+                            <AlertDialogDescription>
+                                Você tem certeza que quer remover esta transação? Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                         )
                     )}
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:gap-2">
