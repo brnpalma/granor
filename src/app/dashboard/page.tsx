@@ -552,7 +552,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div>
+      <div className="p-4 sm:p-6 space-y-6">
         <div className="space-y-2">
             <div className="flex justify-between items-center px-1">
                 <h2 className="text-lg font-bold">Contas</h2>
@@ -725,5 +725,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

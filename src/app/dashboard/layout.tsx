@@ -282,7 +282,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </aside>
             <div className={cn("flex flex-col", showHeader && "sm:pl-60")}>
                 {showHeader && <Header />}
-                <main className={cn("flex-1", showHeader && "p-4 sm:p-6")}>
+                <main className={cn("flex-1", showHeader && "")}>
                     {isLoading ? (
                         <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
