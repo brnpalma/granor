@@ -167,7 +167,7 @@ function Header() {
 
 
     return (
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-center bg-blue-900 text-white px-4 sm:static sm:h-auto relative">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-center bg-blue-900 text-white px-4 sm:h-auto relative">
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
                     <Button size="icon" variant="outline" className="sm:hidden bg-transparent border-0 hover:bg-white/10 absolute left-4">
