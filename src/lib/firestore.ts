@@ -372,30 +372,30 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
 
             // Expense from source account
             const expenseDocRef = doc(collection(db, transactionsPath));
-            const expenseData: Omit<Transaction, "id" | "type"> & { type: 'expense' } = {
+            const expenseData: Partial<Transaction> = {
                 ...transaction,
                 description: transaction.description || "Transferência",
                 type: 'expense',
                 transferId: transferId,
                 category: 'Transferência',
             };
-            delete (expenseData as any).destinationAccountId;
-            delete (expenseData as any).creditCardId;
-            batch.set(expenseDocRef, { ...expenseData, date: Timestamp.fromDate(expenseData.date) });
+            delete expenseData.destinationAccountId;
+            delete expenseData.creditCardId;
+            batch.set(expenseDocRef, { ...expenseData, date: Timestamp.fromDate(expenseData.date!) });
             
             // Income to destination account
             const incomeDocRef = doc(collection(db, transactionsPath));
-            const incomeData: Omit<Transaction, "id" | "type" | "accountId"> & { type: 'income', accountId: string } = {
+            const incomeData: Partial<Transaction> = {
                 ...transaction,
                 description: transaction.description || "Transferência",
                 type: 'income',
                 transferId: transferId,
-                accountId: transaction.destinationAccountId as string,
+                accountId: transaction.destinationAccountId,
                 category: 'Transferência',
             };
-            delete (incomeData as any).destinationAccountId;
-            delete (incomeData as any).creditCardId;
-            batch.set(incomeDocRef, { ...incomeData, date: Timestamp.fromDate(incomeData.date) });
+            delete incomeData.destinationAccountId;
+            delete incomeData.creditCardId;
+            batch.set(incomeDocRef, { ...incomeData, date: Timestamp.fromDate(incomeData.date!) });
             
             await batch.commit();
 
@@ -926,3 +926,5 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta.", variant: "success" });
     }
 };
+
+    
