@@ -325,8 +325,8 @@ function CategoryForm({
                     <Label htmlFor="name">Nome da Categoria</Label>
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Lazer" />
                 </div>
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
+                 <div className="flex items-end gap-4">
+                    <div className="space-y-2 flex-1">
                         <Label>Tipo</Label>
                         <RadioGroup value={type} onValueChange={(value) => setType(value as "income" | "expense")} className="flex gap-4 pt-2">
                             <div className="flex items-center space-x-2">
@@ -343,10 +343,8 @@ function CategoryForm({
                         <Label>Cor</Label>
                         <DropdownMenu open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="w-full justify-start">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: color }} />
-                                    </div>
+                                <Button variant="ghost" className="h-10 w-10 p-0 border-0 flex items-center justify-center">
+                                    <div className="w-8 h-8 rounded-full" style={{ backgroundColor: color }} />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="max-h-60 overflow-y-auto">
