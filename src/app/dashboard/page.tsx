@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -472,7 +473,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="bg-blue-900 text-white p-6">
+      <div className="bg-blue-900 text-white p-6 -mx-4 -mt-4 sm:-mx-6 sm:-mt-6">
         <div className="flex w-full items-center justify-center text-center gap-4">
             <div className="flex-1 flex flex-col items-center gap-1">
                 <div className="flex items-center justify-center gap-1 text-sm text-gray-300">
@@ -554,7 +555,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="p-4 sm:p-6 space-y-6 bg-background rounded-t-3xl -mt-6">
+      <div className="bg-background rounded-t-3xl -mt-6 p-4 sm:p-6 space-y-6">
         <div className="space-y-2">
             <div className="flex justify-between items-center px-1">
                 <h2 className="text-lg font-bold">Contas</h2>
@@ -727,5 +728,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
