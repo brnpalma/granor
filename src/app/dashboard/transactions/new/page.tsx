@@ -411,9 +411,9 @@ function TransactionForm() {
             return;
         }
     
-        const finalDescription = description.trim() === "" ? category : description;
+        const finalDescription = description.trim() === "" ? (type === 'transfer' ? 'Transferência' : category) : description;
     
-        const transactionData: Omit<Transaction, "id"> = {
+        const transactionData: Partial<Omit<Transaction, "id">> = {
             description: finalDescription,
             amount: finalAmount,
             date,
@@ -423,10 +423,11 @@ function TransactionForm() {
             isBudget: false,
             isRecurring: isRecurring && !isFixed,
             isFixed: isFixed,
-            accountId,
-            creditCardId,
-            destinationAccountId,
         };
+
+        if (accountId) transactionData.accountId = accountId;
+        if (creditCardId) transactionData.creditCardId = creditCardId;
+        if (destinationAccountId) transactionData.destinationAccountId = destinationAccountId;
     
         if (transactionData.isRecurring) {
             transactionData.recurrence = recurrence;
@@ -442,7 +443,7 @@ function TransactionForm() {
                 await updateTransaction(user.uid, transactionId, dataToUpdate, scope, originalTransaction);
                 toast({ title: "Transação atualizada!", variant: "success" });
             } else {
-                await addTransaction(user.uid, transactionData);
+                await addTransaction(user.uid, transactionData as Omit<Transaction, "id">);
                 toast({ title: "Transação adicionada!", variant: "success" });
             }
             router.back();
@@ -882,3 +883,4 @@ export default function NewTransactionPage() {
 
     
     
+
