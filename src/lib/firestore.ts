@@ -371,9 +371,11 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
             const recurrenceId = doc(collection(db, 'transactions')).id; // Generate a unique ID for the group
             const { quantity, period, startInstallment } = transaction.recurrence;
             let currentDate = transaction.date;
+            
+            const installmentsToCreate = quantity - startInstallment + 1;
 
-            for (let i = 0; i < quantity; i++) {
-                const installmentNumber = i + startInstallment;
+            for (let i = 0; i < installmentsToCreate; i++) {
+                const installmentNumber = startInstallment + i;
                 const newDocRef = doc(collection(db, transactionsPath));
                 
                 const installmentTransaction: Omit<Transaction, "id"> = {
