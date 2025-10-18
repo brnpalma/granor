@@ -379,6 +379,7 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
                 category: 'Transferência',
             };
             delete (expenseData as any).destinationAccountId;
+            delete (expenseData as any).creditCardId;
             batch.set(expenseDocRef, { ...expenseData, date: Timestamp.fromDate(expenseData.date) });
             
             // Income to destination account
@@ -391,6 +392,7 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
                 category: 'Transferência',
             };
             delete (incomeData as any).destinationAccountId;
+            delete (incomeData as any).creditCardId;
             batch.set(incomeDocRef, { ...incomeData, date: Timestamp.fromDate(incomeData.date) });
             
             await batch.commit();
