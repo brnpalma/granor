@@ -458,8 +458,8 @@ export default function TransactionsPage() {
         )}
         <div className="pb-24"></div>
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader className="text-left">
+            <AlertDialogContent style={{ maxWidth: 'fit-content' }}>
+                <AlertDialogHeader>
                     <AlertDialogTitle>Remover Transação</AlertDialogTitle>
                     {(transactionToDelete?.isRecurring || transactionToDelete?.isFixed) ? (
                         <AlertDialogDescription>
