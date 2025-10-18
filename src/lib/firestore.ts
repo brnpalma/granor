@@ -374,6 +374,7 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
             const expenseDocRef = doc(collection(db, transactionsPath));
             const expenseData: Omit<Transaction, "id" | "type"> & { type: 'expense' } = {
                 ...transaction,
+                description: transaction.description || "Transferência",
                 type: 'expense',
                 transferId: transferId,
                 category: 'Transferência',
@@ -386,6 +387,7 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
             const incomeDocRef = doc(collection(db, transactionsPath));
             const incomeData: Omit<Transaction, "id" | "type" | "accountId"> & { type: 'income', accountId: string } = {
                 ...transaction,
+                description: transaction.description || "Transferência",
                 type: 'income',
                 transferId: transferId,
                 accountId: transaction.destinationAccountId as string,
