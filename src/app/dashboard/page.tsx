@@ -562,11 +562,11 @@ export default function DashboardPage() {
             </div>
             <Card>
                 <CardContent className="p-0">
-                    {accounts.map((account, index) => {
+                    {accounts.map((account) => {
                         const balance = accountBalances.get(account.id) ?? 0;
                         const forecast = accountForecasts.get(account.id) ?? 0;
                         return (
-                            <div key={account.id} className={cn("flex items-center p-3", index < accounts.length -1 && "border-b")}>
+                            <div key={account.id} className={cn("flex items-center p-3")}>
                                 <div className="flex items-center gap-4 flex-1">
                                     <div className={cn("flex-shrink-0", account.ignoreInTotals && "opacity-50")}>
                                         <BankIcon name={account.name} color={account.color} />
