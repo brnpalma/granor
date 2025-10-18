@@ -472,7 +472,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="bg-blue-900">
         <div className="flex w-full items-center justify-center text-center p-2 gap-4">
             <div className="flex-1 flex flex-col items-center gap-1">
                 <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
@@ -552,7 +552,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div>
         <div className="space-y-2">
             <div className="flex justify-between items-center px-1">
                 <h2 className="text-lg font-bold">Contas</h2>
@@ -566,7 +566,7 @@ export default function DashboardPage() {
                         const balance = accountBalances.get(account.id) ?? 0;
                         const forecast = accountForecasts.get(account.id) ?? 0;
                         return (
-                            <div key={account.id} className={cn("flex items-center p-3 border-b last:border-b-0")}>
+                            <div key={account.id} className={cn("flex items-center p-3", index < accounts.length -1 && "border-b")}>
                                 <div className="flex items-center gap-4 flex-1">
                                     <div className={cn("flex-shrink-0", account.ignoreInTotals && "opacity-50")}>
                                         <BankIcon name={account.name} color={account.color} />
@@ -724,9 +724,6 @@ export default function DashboardPage() {
 
     </div>
   );
-
 }
-
-    
 
     
