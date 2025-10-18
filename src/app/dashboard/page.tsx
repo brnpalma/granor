@@ -563,7 +563,7 @@ export default function DashboardPage() {
                         const balance = accountBalances.get(account.id) ?? 0;
                         const forecast = accountForecasts.get(account.id) ?? 0;
                         return (
-                            <div key={account.id} className={cn("flex items-center p-3", accounts.length -1 !== index && "border-b")}>
+                            <div key={account.id} className={cn("flex items-center p-3")}>
                                 <div className="flex items-center gap-4 flex-1">
                                     <div className={cn("flex-shrink-0", account.ignoreInTotals && "opacity-50")}>
                                         <BankIcon name={account.name} color={account.color} />
@@ -722,3 +722,5 @@ export default function DashboardPage() {
   );
 
 }
+
+    
