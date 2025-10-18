@@ -211,7 +211,8 @@ export default function TransactionsPage() {
   const getSourceName = (t: Transaction) => {
     if (t.transferId) {
         const source = accounts.find(a => a.id === t.accountId);
-        const destination = accounts.find(a => a.id === t.destinationAccountId);
+        const incomePart = transactions.find(trans => trans.transferId === t.transferId && trans.type === 'income');
+        const destination = accounts.find(a => a.id === incomePart?.accountId);
         return `${source?.name || '?'} -> ${destination?.name || '?'}`;
     }
     if (t.accountId) {
@@ -378,7 +379,7 @@ export default function TransactionsPage() {
                                 {transIndex < group.transactions.length - 1 ? <div className="absolute bottom-0 h-1/2 w-0.5 bg-border translate-y-1/2"></div> : null}
                             </div>
                             <div className="flex-1">
-                                <p className={cn("font-medium", isIgnored && "text-muted-foreground")}>{t.description}</p>
+                                <p className={cn("font-medium", isIgnored && "text-muted-foreground", isTransfer && "text-yellow-500")}>{t.description}</p>
                                 <p className="text-sm text-muted-foreground">{getSourceName(t)}</p>
                             </div>
                             <div className="flex items-center gap-2">
