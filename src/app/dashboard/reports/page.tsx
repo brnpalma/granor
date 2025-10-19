@@ -14,7 +14,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
+import { Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell } from "recharts";
 
 import { getTransactions, getCategories } from "@/lib/firestore";
 import type { Transaction, Category } from "@/lib/types";
@@ -72,7 +72,7 @@ export default function ReportsPage() {
         const total = transactions
             .filter(t => t.type === 'expense' && t.category === category.name && !t.isBudget)
             .reduce((sum, t) => sum + t.amount, 0);
-        return { name: category.name, total };
+        return { name: category.name, total, fill: category.color };
     }).filter(c => c.total > 0)
     .sort((a,b) => b.total - a.total);
   }, [transactions, categories]);
@@ -80,7 +80,6 @@ export default function ReportsPage() {
   const chartConfig = {
     total: {
       label: "Total",
-      color: "hsl(var(--primary))",
     },
   };
 
@@ -116,7 +115,11 @@ export default function ReportsPage() {
                         formatter={(value) => (value as number).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     />}
                 />
-                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                    {spendingByCategory.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
@@ -125,3 +128,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
