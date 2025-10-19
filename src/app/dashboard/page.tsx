@@ -17,9 +17,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  ChartContainer
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
 } from "@/components/ui/chart";
-import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Pie, PieChart, Cell, Legend } from "recharts";
+import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid } from "recharts";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, CheckCircle, Clock, Lock, EyeOff, LineChart, MoreVertical } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
@@ -406,23 +408,23 @@ export default function DashboardPage() {
       .reduce((sum, t) => sum + t.amount, 0);
   };
   
-  const expensesByCategory = useMemo(() => {
+  const spendingByCategory = useMemo(() => {
     const expenseCategories = categories.filter(c => c.type === 'expense');
     return expenseCategories.map(category => {
         const total = includedTransactions
-            .filter(t => t.type === 'expense' && t.category === category.name)
+            .filter(t => t.type === 'expense' && t.category === category.name && !t.isBudget)
             .reduce((sum, t) => sum + t.amount, 0);
-        return { name: category.name, value: total, icon: category.icon, color: category.color };
-    }).filter(c => c.value > 0)
-    .sort((a,b) => b.value - a.value);
+        return { name: category.name, total };
+    }).filter(c => c.total > 0)
+    .sort((a,b) => b.total - a.total);
   }, [includedTransactions, categories]);
-
-  const totalExpenses = useMemo(() => {
-    return expensesByCategory.reduce((sum, i) => sum + i.value, 0);
-  }, [expensesByCategory]);
   
-  const PIECHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560"];
-
+  const chartConfig = {
+    total: {
+      label: "Total",
+      color: "hsl(var(--primary))",
+    },
+  };
 
   if (isLoading) {
     return (
@@ -691,37 +693,25 @@ export default function DashboardPage() {
             </div>
              <Card>
                 <CardContent className="p-4">
-                    <div className="h-64 relative">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={expensesByCategory}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    outerRadius="80%"
-                                    innerRadius="60%"
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                    paddingAngle={5}
-                                >
-                                    {expensesByCategory.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color || PIECHART_COLORS[index % PIECHART_COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Legend iconType="circle" />
-                                <Tooltip
-                                    formatter={(value: number, name) => [preferences.showBalance ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : "---", name]}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
-                           <div className="text-2xl font-bold">{renderBalance(totalExpenses)}</div>
-                            <p className="text-sm text-muted-foreground">Total de Despesas</p>
-                        </div>
-                    </div>
+                  <ChartContainer config={chartConfig} className="h-[400px] w-full">
+                     <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={spendingByCategory} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
+                        <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent 
+                                labelFormatter={(label) => { return `${label}`}}
+                                formatter={(value) => (value as number).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            />}
+                        />
+                        <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
-            </Card>
+              </Card>
         </div>
       </div>
 
