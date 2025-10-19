@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -21,7 +20,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid } from "recharts";
+import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid, Cell } from "recharts";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, CheckCircle, Clock, Lock, EyeOff, LineChart, MoreVertical } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
@@ -414,7 +413,7 @@ export default function DashboardPage() {
         const total = includedTransactions
             .filter(t => t.type === 'expense' && t.category === category.name && !t.isBudget)
             .reduce((sum, t) => sum + t.amount, 0);
-        return { name: category.name, total };
+        return { name: category.name, total, fill: category.color };
     }).filter(c => c.total > 0)
     .sort((a,b) => b.total - a.total);
   }, [includedTransactions, categories]);
@@ -422,7 +421,6 @@ export default function DashboardPage() {
   const chartConfig = {
     total: {
       label: "Total",
-      color: "hsl(var(--primary))",
     },
   };
 
@@ -557,7 +555,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="bg-background rounded-t-3xl -mt-6 p-4 sm:p-6 space-y-6">
+      <div className="rounded-t-3xl -mt-6 p-4 sm:p-6 space-y-6 bg-background">
         <div className="space-y-2">
             <div className="flex justify-between items-center px-1">
                 <h2 className="text-lg font-bold">Contas</h2>
@@ -686,8 +684,7 @@ export default function DashboardPage() {
         
         <div className="space-y-2">
             <div className="flex justify-between items-center px-4">
-                <h2 className="text-xl font-bold">Despesas por categoria</h2>
-                <Link href="/dashboard/reports">
+                 <Link href="/dashboard/reports">
                     <Button variant="ghost" size="icon"><ExternalLink className="h-5 w-5 text-muted-foreground" /></Button>
                 </Link>
             </div>
@@ -706,7 +703,11 @@ export default function DashboardPage() {
                                 formatter={(value) => (value as number).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                             />}
                         />
-                        <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                            {spendingByCategory.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
@@ -718,3 +719,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
