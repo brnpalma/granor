@@ -440,7 +440,7 @@ function TransactionForm() {
                 if (scope === 'all' && originalTransaction?.isFixed) {
                    delete dataToUpdate.date;
                 }
-                await updateTransaction(user.uid, transactionId, dataToUpdate, scope, originalTransaction);
+                await updateTransaction(user.uid, transactionId, dataToUpdate, scope, originalTransaction, originalTransaction?.transferId);
                 toast({ title: "Transação atualizada!", variant: "success" });
             } else {
                 await addTransaction(user.uid, transactionData as Omit<Transaction, "id">);

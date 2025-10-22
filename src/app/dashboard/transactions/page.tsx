@@ -39,6 +39,7 @@ import { useDate } from "@/hooks/use-date";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { isFuture, startOfMonth, isSameMonth } from "date-fns";
+import { Transaction } from "firebase/firestore";
 
 
 type GroupedTransactions = {
@@ -159,10 +160,10 @@ export default function TransactionsPage() {
     updateUserPreferences(user.uid, { transactionSortOrder: newSortOrder });
   };
 
-  const handleToggleEfetivado = async (transaction: Transaction) => {
-    if (!user?.uid) return;
-    setIsTogglingEfetivado(prev => [...prev, transaction.id]);
-    try {
+  const handleToggleEfetivado = async (transaction: Transaction, transferId?: string | undefined) => {
+      if (!user?.uid) return;
+      setIsTogglingEfetivado(prev => [...prev, transaction.id]);
+      try {
         if (transaction.isFixed && transaction.id.includes('-projected-')) {
             const { id, ...rest } = transaction;
             const newTransaction: Omit<Transaction, "id"> = {
@@ -184,7 +185,13 @@ export default function TransactionsPage() {
                 }
             }
         } else {
-          await updateTransaction(user.uid, transaction.id, { efetivado: !transaction.efetivado });
+            if (transferId) {
+                await updateTransaction(user.uid, transaction.id, { efetivado: !transaction.efetivado }, 
+                    undefined, null, transferId);
+            }
+            else {
+                await updateTransaction(user.uid, transaction.id, { efetivado: !transaction.efetivado });
+            }
         }
 
         toast({ title: `Transação ${!transaction.efetivado ? 'efetivada' : 'marcada como pendente'}.`, variant: "success" });
@@ -354,12 +361,12 @@ export default function TransactionsPage() {
                 <h2 className="text-sm font-semibold text-muted-foreground mb-2 p-2 rounded-md bg-muted/50">{group.date}</h2>
                 <div className="space-y-1">
                     {group.transactions.map((t, transIndex) => {
-                      const isIgnored = isTransactionIgnored(t);
-                      const isToggling = isTogglingEfetivado.includes(t.id);
-                      const categoryInfo = categories.find(c => c.name === t.category);
-                      const isTransfer = !!t.transferId;
-                      const isLastItemInGroup = transIndex === group.transactions.length - 1;
-
+                        const isIgnored = isTransactionIgnored(t);
+                        const isToggling = isTogglingEfetivado.includes(t.id);
+                        const categoryInfo = categories.find(c => c.name === t.category);
+                        const isTransfer = !!t.transferId;
+                        const isLastItemInGroup = transIndex === group.transactions.length - 1;
+                        
                       return (
                         <div key={t.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                             <div className="relative flex flex-col items-center">
@@ -404,7 +411,7 @@ export default function TransactionsPage() {
                                                         ? "border-green-500 text-green-500 hover:bg-green-500/10 hover:text-green-600"
                                                         : "border-red-500 text-red-500 hover:bg-red-500/10 hover:text-red-600")
                                             )} 
-                                            onClick={() => handleToggleEfetivado(t)} 
+                                            onClick={() => handleToggleEfetivado(t, t.transferId)} 
                                             disabled={isToggling}
                                         >
                                             {isToggling ? "Aguarde..." : "Efetivar"}
