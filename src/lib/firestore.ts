@@ -445,7 +445,8 @@ export const updateTransaction = async (
   transactionId: string,
   dataToUpdate: Partial<Omit<Transaction, "id">>,
   scope: RecurrenceEditScope = "single",
-  originalTransaction?: Transaction | null
+  originalTransaction?: Transaction | null,
+  transferId?: string | undefined
 ) => {
     const transactionsPath = getCollectionPath(userId, "transactions");
     if (!transactionsPath) return;
@@ -503,6 +504,43 @@ export const updateTransaction = async (
         } else { // 'all' scope for fixed, or any other single update
             const mainTransactionRef = doc(db, transactionsPath, transactionId);
             await updateDoc(mainTransactionRef, dataWithTimestamp);
+            
+            if(transferId) {
+                const q = query(
+                    collection(db, transactionsPath),
+                    where("transferId", "==", transferId)
+                );
+
+                const querySnapshot = await getDocs(q);
+
+                const matchingTransaction = querySnapshot.docs.find(doc => doc.id !== transactionId);
+
+                if (matchingTransaction){
+                    type UpdatableTransactionFields = keyof Omit<Transaction, "id">;
+
+                    const fieldsToInclude: UpdatableTransactionFields[] = [
+                        "amount",
+                        "description",
+                        "efetivado",
+                        "isFixed",
+                        "isRecurring",
+                        "date"
+                    ];
+
+                    const dataUpdate = fieldsToInclude.reduce((acc, key) => {
+                        const value = dataToUpdate[key];
+                        if (value !== undefined) {
+                            acc[key] = key === "date" && value instanceof Date
+                                ? Timestamp.fromDate(value)
+                                : value;
+                        }
+                        return acc;
+                    }, {} as Record<string, any>) as Partial<Omit<Transaction, "id">>;
+
+                    const transRef = doc(db, transactionsPath, matchingTransaction.id);
+                    await updateDoc(transRef, dataUpdate);
+                }
+            }
         }
     } catch (error) {
         console.error("Error updating transaction(s): ", error);
