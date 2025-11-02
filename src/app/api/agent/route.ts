@@ -17,6 +17,36 @@ export async function OPTIONS() {
   });
 }
 
+async function getUserTelegramPrefs(userId: string): Promise<{ token: string, chatId: string }> {
+    if (!admin.apps.length) {
+        admin.initializeApp({
+            credential: admin.credential.cert({
+                projectId: process.env.FIREBASE_PROJECT_ID,
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+            }),
+        });
+    }
+
+    const db = admin.firestore();
+    const prefDocRef = db.collection("users").doc(userId).collection("preferences").doc('user');
+    const docSnap = await prefDocRef.get();
+
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+            token: data?.telegramToken || process.env.TELEGRAM_TOKEN || '',
+            chatId: data?.telegramChatId || process.env.TELEGRAM_CHAT_ID || '',
+        };
+    }
+    
+    return {
+        token: process.env.TELEGRAM_TOKEN || '',
+        chatId: process.env.TELEGRAM_CHAT_ID || '',
+    };
+}
+
+
 export async function POST(request: Request) {
     try {
         console.log("🚀 Recebido POST Granor AI!");
@@ -83,17 +113,21 @@ export async function POST(request: Request) {
                             \n\nSolicitação original: ${mensagemUsuario}
                             \n\nResposta do assistente: ${jsonIA}`;
 
-            // Se veio do Telegram, envie para o chat correto; caso contrário, use CHAT_ID padrão
-            const chatId = body.message?.chat?.id ?? process.env.TELEGRAM_CHAT_ID;
+            const { token: telegramToken, chatId: userChatId } = await getUserTelegramPrefs(userId);
+            const chatId = body.message?.chat?.id ?? userChatId;
 
-            await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({   
-                    chat_id: chatId,
-                    text: reply,
-                }),
-            });
+            if (telegramToken && chatId) {
+                await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({   
+                        chat_id: chatId,
+                        text: reply,
+                    }),
+                });
+            } else {
+                console.log("⚠️ Token ou Chat ID do Telegram não configurados para o usuário.");
+            }
 
             return NextResponse.json({ success: true, reply });
         }
