@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
   const [telegramToken, setTelegramToken] = useState("");
@@ -65,17 +66,15 @@ export default function SettingsPage() {
         });
 
         if (!response.ok) {
-            // Em vez de lançar um erro, mostramos o toast e paramos a execução
             toast({ 
                 title: "Falha na Comunicação", 
                 description: "Não foi possível enviar a mensagem de teste. Por favor, verifique se o Token e o ID do Chat estão corretos e tente novamente.", 
                 variant: "destructive" 
             });
             setIsSaving(false);
-            return; // Interrompe a função aqui
+            return;
         }
 
-        // Se a comunicação for bem-sucedida, salvar no Firestore
         await updateUserPreferences(user.uid, { telegramToken, telegramChatId });
         setSavedTelegramToken(telegramToken);
         setSavedTelegramChatId(telegramChatId);
@@ -138,12 +137,6 @@ export default function SettingsPage() {
                 <p>Carregando configurações...</p>
             ) : (
               <>
-                {savedTelegramToken && savedTelegramChatId && (
-                  <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
-                      <CheckCircle className="h-5 w-5" />
-                      <span>Telegram configurado e ativo.</span>
-                  </div>
-                )}
                 <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="telegram-token">Token BOT Telegram</Label>
@@ -165,7 +158,7 @@ export default function SettingsPage() {
                       placeholder="Cole o ID do seu chat aqui"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex w-full items-center gap-2">
                     <Button type="submit" disabled={isSaving || !telegramToken || !telegramChatId}>
                         {isSaving ? "Salvando..." : "Salvar"}
                     </Button>
@@ -191,6 +184,12 @@ export default function SettingsPage() {
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
+                    )}
+                     {savedTelegramToken && savedTelegramChatId && (
+                        <div className={cn("ml-auto flex items-center gap-2 rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400")}>
+                            <CheckCircle className="h-5 w-5" />
+                            <span>Configurado</span>
+                        </div>
                     )}
                   </div>
                 </form>
