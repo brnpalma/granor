@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { getUserPreferences, updateUserPreferences } from "@/lib/firestore";
 import type { UserPreferences } from "@/lib/types";
+import { Sparkles } from "lucide-react";
 
 export default function SettingsPage() {
   const [telegramToken, setTelegramToken] = useState("");
@@ -59,7 +60,10 @@ export default function SettingsPage() {
       <div className="grid gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Granor IA</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-6 w-6 text-primary" />
+                <span>Granor IA</span>
+            </CardTitle>
             <CardDescription>
               Libere todo o potencial da inteligência artificial para automatizar o registro de despesas e receitas, gerar relatórios e obter informações valiosas.
             </CardDescription>
