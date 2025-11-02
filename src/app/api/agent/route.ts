@@ -33,7 +33,7 @@ async function getUserTelegramPrefs(userId: string): Promise<{ token: string, ch
     const prefDocRef = db.collection("users").doc(userId).collection("preferences").doc('user');
     const docSnap = await prefDocRef.get();
 
-    if (docSnap.exists()) {
+    if (docSnap.exists) {
         const data = docSnap.data();
         return {
             token: data?.telegramToken || process.env.TELEGRAM_TOKEN || '',
