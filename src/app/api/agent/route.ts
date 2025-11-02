@@ -18,7 +18,7 @@ export async function OPTIONS() {
   });
 }
 
-async function getUserTelegramPrefs(userId: string): Promise<{ token: string, chatId: string }> {
+async function initializeFirebaseAdmin() {
     if (!admin.apps.length) {
         admin.initializeApp({
             credential: admin.credential.cert({
@@ -28,8 +28,11 @@ async function getUserTelegramPrefs(userId: string): Promise<{ token: string, ch
             }),
         });
     }
+    return admin.firestore();
+}
 
-    const db = admin.firestore();
+async function getUserTelegramPrefs(userId: string): Promise<{ token: string, chatId: string }> {
+    const db = await initializeFirebaseAdmin();
     const prefDocRef = db.collection("users").doc(userId).collection("preferences").doc('user');
     const docSnap = await prefDocRef.get();
 
@@ -45,6 +48,28 @@ async function getUserTelegramPrefs(userId: string): Promise<{ token: string, ch
         token: process.env.TELEGRAM_TOKEN || '',
         chatId: process.env.TELEGRAM_CHAT_ID || '',
     };
+}
+
+async function getConversationContext(userId: string, chatId: string): Promise<string> {
+    const db = await initializeFirebaseAdmin();
+    const contextRef = db.collection("users").doc(userId).collection("telegram_context").doc(chatId);
+    const contextSnap = await contextRef.get();
+    if (contextSnap.exists) {
+        return contextSnap.data()?.history || "";
+    }
+    return "";
+}
+
+async function saveConversationContext(userId: string, chatId: string, history: string) {
+    const db = await initializeFirebaseAdmin();
+    const contextRef = db.collection("users").doc(userId).collection("telegram_context").doc(chatId);
+    await contextRef.set({ history });
+}
+
+async function clearContext(userId: string, chatId: string) {
+    const db = await initializeFirebaseAdmin();
+    const contextRef = db.collection("users").doc(userId).collection("telegram_context").doc(chatId);
+    await contextRef.delete();
 }
 
 
@@ -67,7 +92,7 @@ export async function POST(request: Request) {
         }
 
         const { token: telegramToken, chatId: userChatId } = await getUserTelegramPrefs(userId);
-        const chatId = body.message?.chat?.id ?? userChatId;
+        const chatId = body.message?.chat?.id?.toString() ?? userChatId;
 
         // Send initial "Processing..." message
         if (telegramToken && chatId) {
@@ -82,24 +107,21 @@ export async function POST(request: Request) {
         }
         
         const incomeMessage = body.message?.text ?? body.text ?? body.message ?? body;
-
-        const mensagemUsuario = typeof incomeMessage === "string" 
+        
+        const currentUserMessage = typeof incomeMessage === "string" 
             ? incomeMessage 
             : (incomeMessage.text ?? JSON.stringify(incomeMessage));
+
+        const previousContext = await getConversationContext(userId, chatId);
+        const fullPrompt = previousContext ? `${previousContext}\n\nUsuário: ${currentUserMessage}` : currentUserMessage;
         
-        var { text: jsonIA } = await generateText({
-            model: google("models/gemini-2.5-flash"),
-            system: agentSystemPrompt,
-            prompt: mensagemUsuario,
-        });
-        
-        console.log("🧪 Texto bruto da IA:", jsonIA);
+        console.log("📝 Prompt Completo para IA:", fullPrompt);
 
         const { object } = await generateObject({
             model: google("models/gemini-2.5-flash"),
             system: agentSystemPrompt,
             schema: transactionSchema,
-            prompt: mensagemUsuario,
+            prompt: fullPrompt,
         });
         
         if(!object.date){
@@ -112,6 +134,9 @@ export async function POST(request: Request) {
         if(object){
             if(object.iaDoubt){
                 const doubtReply = `🤔 Dúvida: ${object.iaReply}`;
+                const newContext = `Contexto anterior: ${fullPrompt}\n\nDúvida da IA: ${object.iaReply}`;
+                await saveConversationContext(userId, chatId, newContext);
+
                  if (telegramToken && chatId) {
                     await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                         method: "POST",
@@ -129,6 +154,7 @@ export async function POST(request: Request) {
             }
 
             await addTransactionServer(userId, object as Transaction);
+            await clearContext(userId, chatId);
 
             const tipoPtBr = object.type === "income" ? "Receita" 
                 : object.type === "expense" ? "Despesa" 
@@ -137,7 +163,7 @@ export async function POST(request: Request) {
                 : "Transação";
 
             const reply = `✅ ${tipoPtBr} de R$${object.amount} registrada na categoria ${object.category}.
-                            \n\nSolicitação original: ${mensagemUsuario}
+                            \n\nSolicitação original: ${currentUserMessage}
                             \n\nResposta do assistente: ${object.iaReply}`;
 
             if (telegramToken && chatId) {
@@ -156,7 +182,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: true, reply });
         }
         
-        const errorMessage = jsonIA || "❌ Não foi possível entender a transação.";
+        const errorMessage = object.iaReply || "❌ Não foi possível entender a transação.";
         if (telegramToken && chatId) {
             await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                 method: "POST",
@@ -175,13 +201,20 @@ export async function POST(request: Request) {
     } catch (error: any) {
         console.error("❌ Erro ao processar a mensagem do agente:", error);
         
+        // Ensure request body is read only once
+        let bodyToLog;
+        try {
+          bodyToLog = await request.json();
+        } catch (e) {
+          bodyToLog = {};
+        }
+
         const { searchParams } = new URL(request.url);
         const userId = searchParams.get("userId");
-        const body = await request.json().catch(() => ({}));
         
         if (userId) {
             const { token: telegramToken, chatId: userChatId } = await getUserTelegramPrefs(userId).catch(() => ({ token: '', chatId: '' }));
-            const chatId = body.message?.chat?.id ?? userChatId;
+            const chatId = bodyToLog.message?.chat?.id ?? userChatId;
 
             if (telegramToken && chatId) {
                 await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
@@ -203,17 +236,7 @@ export async function POST(request: Request) {
 }
 
 export async function addTransactionServer(userId: string, transaction: Transaction) {
-    if (!admin.apps.length) {
-        admin.initializeApp({
-            credential: admin.credential.cert({
-                projectId: process.env.FIREBASE_PROJECT_ID,
-                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-            }),
-        });
-    }
-
-    const db = admin.firestore();
+    const db = await initializeFirebaseAdmin();
 
     if (transaction.accountId) {
         const accountNameNormalized = normalizeName(transaction.accountId);
@@ -243,6 +266,7 @@ export async function addTransactionServer(userId: string, transaction: Transact
 }
 
 function normalizeName(name: string): string {
+  if (typeof name !== 'string') return '';
   return name
     .normalize("NFD")               // separa letras e acentos
     .replace(/[\u0300-\u036f]/g, "") // remove acentos
