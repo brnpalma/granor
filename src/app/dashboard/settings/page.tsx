@@ -26,6 +26,8 @@ import {
 export default function SettingsPage() {
   const [telegramToken, setTelegramToken] = useState("");
   const [telegramChatId, setTelegramChatId] = useState("");
+  const [savedTelegramToken, setSavedTelegramToken] = useState("");
+  const [savedTelegramChatId, setSavedTelegramChatId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { user } = useAuth();
@@ -35,8 +37,12 @@ export default function SettingsPage() {
     if (user?.uid) {
       setIsLoading(true);
       const unsubscribe = getUserPreferences(user.uid, (prefs) => {
-        setTelegramToken(prefs.telegramToken || "");
-        setTelegramChatId(prefs.telegramChatId || "");
+        const token = prefs.telegramToken || "";
+        const chatId = prefs.telegramChatId || "";
+        setTelegramToken(token);
+        setTelegramChatId(chatId);
+        setSavedTelegramToken(token);
+        setSavedTelegramChatId(chatId);
         setIsLoading(false);
       });
       return () => unsubscribe();
@@ -51,6 +57,8 @@ export default function SettingsPage() {
     setIsSaving(true);
     try {
       await updateUserPreferences(user.uid, { telegramToken, telegramChatId });
+      setSavedTelegramToken(telegramToken);
+      setSavedTelegramChatId(telegramChatId);
       toast({ title: "Sucesso!", description: "Configurações salvas.", variant: "success" });
     } catch (error) {
       console.error("Failed to save settings:", error);
@@ -70,6 +78,8 @@ export default function SettingsPage() {
       await updateUserPreferences(user.uid, { telegramToken: "", telegramChatId: "" });
       setTelegramToken("");
       setTelegramChatId("");
+      setSavedTelegramToken("");
+      setSavedTelegramChatId("");
       toast({ title: "Sucesso!", description: "Configurações removidas.", variant: "success" });
     } catch (error) {
       console.error("Failed to remove settings:", error);
@@ -127,7 +137,7 @@ export default function SettingsPage() {
                     <Button type="submit" disabled={isSaving || !telegramToken || !telegramChatId}>
                         {isSaving ? "Salvando..." : "Salvar"}
                     </Button>
-                    {(telegramToken || telegramChatId) && (
+                    {(savedTelegramToken && savedTelegramChatId) && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="destructive" type="button" disabled={isSaving}>
