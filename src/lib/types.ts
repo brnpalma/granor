@@ -1,4 +1,4 @@
-
+import { z } from "zod";
 
 export type RecurrenceEditScope = "single" | "future" | "all";
 
@@ -58,7 +58,42 @@ export interface Recurrence {
 
 export type TransactionType = 'income' | 'expense' | 'credit_card_reversal' | 'transfer';
 
-export interface Transaction {
+export const transactionSchema = z.object({
+    id: z.string(),
+    iaDoubt: z.boolean().optional(),
+    iaReply: z.string(),
+    amount: z.number(),
+    category: z.string(),
+    date: z.preprocess(
+      (val) => {
+        if(!val) return null;
+        const d = new Date(val as string);
+        return isNaN(d.getTime()) ? null : d;
+      },
+      z.date().nullable()
+    ),
+    description: z.string(),
+    efetivado: z.boolean(),
+    accountId: z.string().optional(),
+    creditCardId: z.string().optional(),
+    destinationAccountId: z.string().optional(),
+    transferId: z.string().optional(),
+    type: z.enum(["income", "expense", "credit_card_reversal", "transfer"]),
+    isBudget: z.boolean().optional(),
+    isRecurring: z.boolean().optional(),
+    isFixed: z.boolean().optional(),
+    recurrenceId: z.string().optional(),
+    endDate: z.preprocess(
+      (val) => {
+        if(!val) return null;
+        const d = new Date(val as string);
+        return isNaN(d.getTime()) ? null : d;
+      },
+      z.date().nullable().optional()
+    ),
+});
+
+export interface Transaction { // Sempre que algo for alterado aqui, verifique se não precisa alterar no ZOD acima para uso da IA.
   id: string;
   date: Date;
   description: string;
