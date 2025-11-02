@@ -54,8 +54,18 @@ async function getConversationContext(userId: string, chatId: string): Promise<s
     const db = await initializeFirebaseAdmin();
     const contextRef = db.collection("users").doc(userId).collection("telegram_context").doc(chatId);
     const contextSnap = await contextRef.get();
+
     if (contextSnap.exists) {
-        return contextSnap.data()?.history || "";
+        const data = contextSnap.data();
+        if (data) {
+            const historyTimestamp = data.timestamp?.toDate();
+            // Check if context is older than 15 minutes
+            if (historyTimestamp && (new Date().getTime() - historyTimestamp.getTime()) > 15 * 60 * 1000) {
+                await contextRef.delete();
+                return ""; // Context expired
+            }
+            return data.history || "";
+        }
     }
     return "";
 }
@@ -63,7 +73,10 @@ async function getConversationContext(userId: string, chatId: string): Promise<s
 async function saveConversationContext(userId: string, chatId: string, history: string) {
     const db = await initializeFirebaseAdmin();
     const contextRef = db.collection("users").doc(userId).collection("telegram_context").doc(chatId);
-    await contextRef.set({ history });
+    await contextRef.set({ 
+        history,
+        timestamp: admin.firestore.FieldValue.serverTimestamp() 
+    });
 }
 
 async function clearContext(userId: string, chatId: string) {
@@ -93,6 +106,29 @@ export async function POST(request: Request) {
 
         const { token: telegramToken, chatId: userChatId } = await getUserTelegramPrefs(userId);
         const chatId = body.message?.chat?.id?.toString() ?? userChatId;
+        
+        const incomeMessage = body.message?.text ?? body.text ?? body.message ?? body;
+        
+        const currentUserMessage = typeof incomeMessage === "string" 
+            ? incomeMessage 
+            : (incomeMessage.text ?? JSON.stringify(incomeMessage));
+
+        const normalizedMessage = currentUserMessage.trim().toLowerCase();
+        if (normalizedMessage === 'cancelar' || normalizedMessage === 'limpar contexto') {
+            await clearContext(userId, chatId);
+            if (telegramToken && chatId) {
+                await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        text: "Contexto anterior limpo. Vamos começar de novo!",
+                    }),
+                });
+            }
+            return NextResponse.json({ success: true, reply: "Contexto limpo." });
+        }
+
 
         // Send initial "Processing..." message
         if (telegramToken && chatId) {
@@ -106,19 +142,13 @@ export async function POST(request: Request) {
             });
         }
         
-        const incomeMessage = body.message?.text ?? body.text ?? body.message ?? body;
-        
-        const currentUserMessage = typeof incomeMessage === "string" 
-            ? incomeMessage 
-            : (incomeMessage.text ?? JSON.stringify(incomeMessage));
-
         const previousContext = await getConversationContext(userId, chatId);
         const fullPrompt = previousContext ? `${previousContext}\n\nUsuário: ${currentUserMessage}` : currentUserMessage;
         
         console.log("📝 Prompt Completo para IA:", fullPrompt);
 
         const { object } = await generateObject({
-            model: google("models/gemini-2.5-flash"),
+            model: google("models/gemini-1.5-flash"),
             system: agentSystemPrompt,
             schema: transactionSchema,
             prompt: fullPrompt,
