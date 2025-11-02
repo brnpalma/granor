@@ -8,6 +8,8 @@ export interface UserPreferences {
   includeBudgetsInForecast?: boolean;
   includeBudgetsInPastForecast?: boolean;
   transactionSortOrder?: 'asc' | 'desc';
+  telegramToken?: string;
+  telegramChatId?: string;
 }
 
 export interface Category {

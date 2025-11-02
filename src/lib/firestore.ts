@@ -162,6 +162,8 @@ export const getUserPreferences = (
             includeBudgetsInForecast: false,
             includeBudgetsInPastForecast: false,
             transactionSortOrder: 'desc',
+            telegramToken: '',
+            telegramChatId: '',
         };
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -171,6 +173,8 @@ export const getUserPreferences = (
                 includeBudgetsInForecast: data.includeBudgetsInForecast ?? defaultPrefs.includeBudgetsInForecast,
                 includeBudgetsInPastForecast: data.includeBudgetsInPastForecast ?? defaultPrefs.includeBudgetsInPastForecast,
                 transactionSortOrder: data.transactionSortOrder ?? defaultPrefs.transactionSortOrder,
+                telegramToken: data.telegramToken ?? defaultPrefs.telegramToken,
+                telegramChatId: data.telegramChatId ?? defaultPrefs.telegramChatId,
             });
         } else {
             // Return default preferences if document doesn't exist
@@ -512,34 +516,12 @@ export const updateTransaction = async (
                 );
 
                 const querySnapshot = await getDocs(q);
+                const batch = writeBatch(db);
 
-                const matchingTransaction = querySnapshot.docs.find(doc => doc.id !== transactionId);
-
-                if (matchingTransaction){
-                    type UpdatableTransactionFields = keyof Omit<Transaction, "id">;
-
-                    const fieldsToInclude: UpdatableTransactionFields[] = [
-                        "amount",
-                        "description",
-                        "efetivado",
-                        "isFixed",
-                        "isRecurring",
-                        "date"
-                    ];
-
-                    const dataUpdate = fieldsToInclude.reduce((acc, key) => {
-                        const value = dataToUpdate[key];
-                        if (value !== undefined) {
-                            acc[key] = key === "date" && value instanceof Date
-                                ? Timestamp.fromDate(value)
-                                : value;
-                        }
-                        return acc;
-                    }, {} as Record<string, any>) as Partial<Omit<Transaction, "id">>;
-
-                    const transRef = doc(db, transactionsPath, matchingTransaction.id);
-                    await updateDoc(transRef, dataUpdate);
-                }
+                querySnapshot.docs.forEach(docToUpdate => {
+                    batch.update(docToUpdate.ref, dataWithTimestamp);
+                });
+                await batch.commit();
             }
         }
     } catch (error) {
@@ -964,5 +946,3 @@ export const migrateLocalDataToFirestore = async (userId: string) => {
         showToast({ title: "Dados Sincronizados!", description: "Seus dados locais foram salvos na sua conta.", variant: "success" });
     }
 };
-
-    
