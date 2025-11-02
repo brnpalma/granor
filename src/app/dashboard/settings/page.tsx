@@ -69,32 +69,35 @@ export default function SettingsPage() {
     
     try {
         const welcomeMessage = "Olá! 👋 Sou o Granor, seu assistente financeiro. Suas configurações do Telegram foram conectadas com sucesso! Agora você pode me enviar suas transações por aqui.";
-        const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+        const testResponse = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chat_id: telegramChatId, text: welcomeMessage })
         });
 
-        if (!response.ok) {
-            toast({ 
-                title: "Falha na Comunicação", 
-                description: "Não foi possível enviar a mensagem de teste. Por favor, verifique se o Token e o ID do Chat estão corretos e tente novamente.", 
-                variant: "destructive" 
-            });
-            setIsSaving(false);
-            return;
+        if (!testResponse.ok) {
+            throw new Error("Não foi possível enviar a mensagem de teste. Verifique o Token e o ID do Chat.");
+        }
+
+        const webhookUrl = `https://granor.vercel.app/api/agent?userId=${user.uid}`;
+        const encodedWebhookUrl = encodeURIComponent(webhookUrl);
+        const setWebhookResponse = await fetch(`https://api.telegram.org/bot${telegramToken}/setWebhook?url=${encodedWebhookUrl}`);
+
+        if (!setWebhookResponse.ok) {
+            const errorData = await setWebhookResponse.json();
+            throw new Error(`Falha ao configurar o webhook: ${errorData.description}`);
         }
 
         await updateUserPreferences(user.uid, { telegramToken, telegramChatId });
         setSavedTelegramToken(telegramToken);
         setSavedTelegramChatId(telegramChatId);
-        toast({ title: "Sucesso!", description: "Configurações salvas e testadas.", variant: "success" });
+        toast({ title: "Sucesso!", description: "Configurações salvas, testadas e webhook registrado.", variant: "success" });
 
-    } catch (error) {
-        console.error("Failed to save settings or send Telegram message:", error);
+    } catch (error: any) {
+        console.error("Failed to save settings:", error);
         toast({ 
-            title: "Falha na Comunicação", 
-            description: "Não foi possível enviar a mensagem de teste. Por favor, verifique se o Token e o ID do Chat estão corretos e tente novamente.", 
+            title: "Falha na Configuração", 
+            description: error.message || "Ocorreu um erro. Por favor, tente novamente.", 
             variant: "destructive" 
         });
     } finally {
@@ -109,12 +112,14 @@ export default function SettingsPage() {
     }
     setIsSaving(true);
     try {
+      await fetch(`https://api.telegram.org/bot${savedTelegramToken}/deleteWebhook`);
+
       await updateUserPreferences(user.uid, { telegramToken: "", telegramChatId: "" });
       setTelegramToken("");
       setTelegramChatId("");
       setSavedTelegramToken("");
       setSavedTelegramChatId("");
-      toast({ title: "Sucesso!", description: "Configurações removidas.", variant: "success" });
+      toast({ title: "Sucesso!", description: "Configurações e webhook removidos.", variant: "success" });
     } catch (error) {
       console.error("Failed to remove settings:", error);
       toast({ title: "Erro", description: "Não foi possível remover as configurações.", variant: "destructive" });
