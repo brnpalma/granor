@@ -55,14 +55,33 @@ export default function SettingsPage() {
       return;
     }
     setIsSaving(true);
+    
+    // 1. Testar a comunicação com o Telegram
     try {
-      await updateUserPreferences(user.uid, { telegramToken, telegramChatId });
-      setSavedTelegramToken(telegramToken);
-      setSavedTelegramChatId(telegramChatId);
-      toast({ title: "Sucesso!", description: "Configurações salvas.", variant: "success" });
+        const welcomeMessage = "Olá! 👋 Sou o Granor, seu assistente financeiro. Suas configurações do Telegram foram conectadas com sucesso! Agora você pode me enviar suas transações por aqui.";
+        const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: telegramChatId, text: welcomeMessage })
+        });
+
+        if (!response.ok) {
+            throw new Error("A resposta da API do Telegram não foi bem-sucedida.");
+        }
+
+        // 2. Se a comunicação for bem-sucedida, salvar no Firestore
+        await updateUserPreferences(user.uid, { telegramToken, telegramChatId });
+        setSavedTelegramToken(telegramToken);
+        setSavedTelegramChatId(telegramChatId);
+        toast({ title: "Sucesso!", description: "Configurações salvas e testadas.", variant: "success" });
+
     } catch (error) {
-      console.error("Failed to save settings:", error);
-      toast({ title: "Erro", description: "Não foi possível salvar as configurações.", variant: "destructive" });
+        console.error("Failed to save settings or send Telegram message:", error);
+        toast({ 
+            title: "Falha na Comunicação", 
+            description: "Não foi possível enviar a mensagem de teste. Por favor, verifique se o Token e o ID do Chat estão corretos e tente novamente.", 
+            variant: "destructive" 
+        });
     } finally {
         setIsSaving(false);
     }
@@ -105,7 +124,7 @@ export default function SettingsPage() {
                 <span>Granor IA</span>
             </CardTitle>
             <CardDescription>
-              Libere todo o potencial da inteligência artificial para automatizar o registro de despesas e receitas, gerar relatórios e obter informações valiosas.
+             Libere todo o potencial da inteligência artificial para automatizar o registro de despesas e receitas, gerar relatórios e obter informações valiosas.
             </CardDescription>
           </CardHeader>
           <CardContent>
