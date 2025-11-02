@@ -129,9 +129,9 @@ export async function POST(request: Request) {
             object.date = spNow.toJSDate();
         }
         
-        console.log("🧪 Objeto gerado pela IA:", object);
-        
         if(object){
+            console.log("🧪 Objeto gerado pela IA:", object);
+
             if(object.iaDoubt){
                 const doubtReply = `🤔 Dúvida: ${object.iaReply}`;
                 const newContext = `Contexto anterior: ${fullPrompt}\n\nDúvida da IA: ${object.iaReply}`;
@@ -182,7 +182,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: true, reply });
         }
         
-        const errorMessage = object.iaReply || "❌ Não foi possível entender a transação.";
+        const errorMessage = "❌ Não foi possível entender a transação e OBJECT é null.";
+
         if (telegramToken && chatId) {
             await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                 method: "POST",
