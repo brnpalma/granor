@@ -148,7 +148,7 @@ export async function POST(request: Request) {
         console.log("📝 Prompt Completo para IA:", fullPrompt);
 
         const { object } = await generateObject({
-            model: google("models/gemini-1.5-flash"),
+            model: google("models/gemini-2.5-flash"),
             system: agentSystemPrompt,
             schema: transactionSchema,
             prompt: fullPrompt,
