@@ -137,7 +137,7 @@ export default function SettingsPage() {
           <CardHeader>
             <div className="flex w-full items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-6 w-6 text-primary" />
+                  <Sparkles className="h-6 w-6 text-yellow-500" />
                   <span>Granor IA</span>
               </CardTitle>
               <Dialog>
@@ -256,4 +256,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
