@@ -4,7 +4,6 @@ import { Transaction, transactionSchema } from "@/lib/types";
 import { agentSystemPrompt } from "@/ai/rules";
 import { google } from "@ai-sdk/google";
 import admin from "firebase-admin";
-import { firebaseConfig } from "@/lib/firebase";
 import { DateTime } from "luxon";
 
 export async function OPTIONS() {
@@ -116,7 +115,7 @@ export async function addTransactionServer(userId: string, transaction: Transact
     if (!admin.apps.length) {
         admin.initializeApp({
             credential: admin.credential.cert({
-                projectId: process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId,
+                projectId: process.env.FIREBASE_PROJECT_ID,
                 clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
                 privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
             }),
