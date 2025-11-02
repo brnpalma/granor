@@ -11,6 +11,17 @@ import { useToast } from "@/hooks/use-toast";
 import { getUserPreferences, updateUserPreferences } from "@/lib/firestore";
 import type { UserPreferences } from "@/lib/types";
 import { Sparkles } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function SettingsPage() {
   const [telegramToken, setTelegramToken] = useState("");
@@ -46,6 +57,25 @@ export default function SettingsPage() {
       toast({ title: "Erro", description: "Não foi possível salvar as configurações.", variant: "destructive" });
     } finally {
         setIsSaving(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!user?.uid) {
+      toast({ title: "Erro", description: "Você precisa estar logado.", variant: "destructive" });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await updateUserPreferences(user.uid, { telegramToken: "", telegramChatId: "" });
+      setTelegramToken("");
+      setTelegramChatId("");
+      toast({ title: "Sucesso!", description: "Configurações removidas.", variant: "success" });
+    } catch (error) {
+      console.error("Failed to remove settings:", error);
+      toast({ title: "Erro", description: "Não foi possível remover as configurações.", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -93,9 +123,32 @@ export default function SettingsPage() {
                       placeholder="Cole o ID do seu chat aqui"
                     />
                   </div>
-                  <Button type="submit" disabled={isSaving}>
-                      {isSaving ? "Salvando..." : "Salvar"}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button type="submit" disabled={isSaving}>
+                        {isSaving ? "Salvando..." : "Salvar"}
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" type="button" disabled={isSaving}>
+                          Remover
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação removerá permanentemente suas configurações do Telegram. Você poderá adicioná-las novamente mais tarde.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleRemove}>
+                            Sim, remover
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </form>
             )}
           </CardContent>
