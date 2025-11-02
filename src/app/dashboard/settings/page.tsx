@@ -56,7 +56,6 @@ export default function SettingsPage() {
     }
     setIsSaving(true);
     
-    // 1. Testar a comunicação com o Telegram
     try {
         const welcomeMessage = "Olá! 👋 Sou o Granor, seu assistente financeiro. Suas configurações do Telegram foram conectadas com sucesso! Agora você pode me enviar suas transações por aqui.";
         const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
@@ -66,10 +65,17 @@ export default function SettingsPage() {
         });
 
         if (!response.ok) {
-            throw new Error("A resposta da API do Telegram não foi bem-sucedida.");
+            // Em vez de lançar um erro, mostramos o toast e paramos a execução
+            toast({ 
+                title: "Falha na Comunicação", 
+                description: "Não foi possível enviar a mensagem de teste. Por favor, verifique se o Token e o ID do Chat estão corretos e tente novamente.", 
+                variant: "destructive" 
+            });
+            setIsSaving(false);
+            return; // Interrompe a função aqui
         }
 
-        // 2. Se a comunicação for bem-sucedida, salvar no Firestore
+        // Se a comunicação for bem-sucedida, salvar no Firestore
         await updateUserPreferences(user.uid, { telegramToken, telegramChatId });
         setSavedTelegramToken(telegramToken);
         setSavedTelegramChatId(telegramChatId);
