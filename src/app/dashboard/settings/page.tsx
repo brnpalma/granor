@@ -68,7 +68,12 @@ export default function SettingsPage() {
     setIsSaving(true);
     
     try {
-        const welcomeMessage = "Olá! 👋 Sou o Granor, seu assistente financeiro. Suas configurações do Telegram foram conectadas com sucesso! Agora você pode me enviar suas transações por aqui.";
+        const webhookUrl = `https://granor.vercel.app/api/agent?userId=${user.uid}`;
+        const setWebhookResponse = await fetch(`https://api.telegram.org/bot${telegramToken}/setWebhook?url=${encodeURIComponent(webhookUrl)}`);
+        const webhookResult = await setWebhookResponse.json();
+
+        const welcomeMessage = `Olá! 👋 Sou o Granor, seu assistente financeiro. Suas configurações do Telegram foram conectadas com sucesso! Agora você pode me enviar suas transações por aqui.\n\nDebug Webhook: ${JSON.stringify(webhookResult)}`;
+
         const testResponse = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -84,14 +89,9 @@ export default function SettingsPage() {
             setIsSaving(false);
             return;
         }
-
-        const webhookUrl = `https://granor.vercel.app/api/agent?userId=${user.uid}`;
-        const encodedWebhookUrl = encodeURIComponent(webhookUrl);
-        const setWebhookResponse = await fetch(`https://api.telegram.org/bot${telegramToken}/setWebhook?url=${encodedWebhookUrl}`);
-
-        if (!setWebhookResponse.ok) {
-            const errorData = await setWebhookResponse.json();
-            throw new Error(`Falha ao configurar o webhook: ${errorData.description}`);
+        
+        if (!webhookResult.ok) {
+            throw new Error(`Falha ao configurar o webhook: ${webhookResult.description}`);
         }
 
         await updateUserPreferences(user.uid, { telegramToken, telegramChatId });
