@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { getUserPreferences, updateUserPreferences } from "@/lib/firestore";
 import type { UserPreferences } from "@/lib/types";
-import { Sparkles, CheckCircle, HelpCircle } from "lucide-react";
+import { Bot, CheckCircle, HelpCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -137,7 +137,7 @@ export default function SettingsPage() {
           <CardHeader>
             <div className="flex w-full items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-6 w-6 text-yellow-500" />
+                  <Bot className="h-6 w-6 text-yellow-500" />
                   <span>Granor IA</span>
               </CardTitle>
               <Dialog>
