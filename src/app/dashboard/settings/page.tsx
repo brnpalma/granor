@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { getUserPreferences, updateUserPreferences } from "@/lib/firestore";
 import type { UserPreferences } from "@/lib/types";
-import { Sparkles, CheckCircle } from "lucide-react";
+import { Sparkles, CheckCircle, HelpCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +22,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+
 
 export default function SettingsPage() {
   const [telegramToken, setTelegramToken] = useState("");
@@ -113,6 +123,7 @@ export default function SettingsPage() {
     }
   };
 
+
   return (
     <div className="space-y-6">
       <div>
@@ -123,14 +134,58 @@ export default function SettingsPage() {
       </div>
       <div className="grid gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-6 w-6 text-primary" />
-                <span>Granor IA</span>
-            </CardTitle>
-            <CardDescription>
-             Libere todo o potencial da inteligência artificial para automatizar o registro de despesas e receitas, gerar relatórios e obter informações valiosas.
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="space-y-1.5">
+              <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                  <span>Granor IA</span>
+              </CardTitle>
+              <CardDescription>
+               Libere todo o potencial da inteligência artificial para automatizar o registro de despesas e receitas, gerar relatórios e obter informações valiosas.
+              </CardDescription>
+            </div>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <HelpCircle className="h-5 w-5 text-muted-foreground" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Como configurar o Telegram</DialogTitle>
+                  <DialogDescription>
+                    Siga os passos abaixo para integrar o Granor com seu Telegram.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 text-sm text-muted-foreground overflow-auto max-h-[60vh] p-1">
+                  <div>
+                    <h3 className="font-bold text-foreground mb-2">1. Como obter o Token do Bot</h3>
+                    <ul className="list-decimal list-inside space-y-2">
+                      <li>No Telegram, procure por <code className="bg-muted text-muted-foreground p-1 rounded-sm">@BotFather</code> e inicie uma conversa.</li>
+                      <li>Digite o comando <code className="bg-muted text-muted-foreground p-1 rounded-sm">/newbot</code>.</li>
+                      <li>Siga as instruções para dar um nome e um username para o seu bot.</li>
+                      <li>Ao final, o BotFather enviará uma mensagem com o token. Copie este token e cole no campo "Token BOT Telegram".</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-foreground mb-2">2. Como obter o ID do Chat</h3>
+                    <ul className="list-decimal list-inside space-y-2">
+                       <li>No Telegram, procure por <code className="bg-muted text-muted-foreground p-1 rounded-sm">@userinfobot</code> e inicie uma conversa.</li>
+                       <li>O bot responderá imediatamente com o seu ID. Copie este número e cole no campo "ID Chat Bot Telegram".</li>
+                       <li><strong>Importante:</strong> Após configurar, você precisa iniciar a conversa com o bot que você criou (enviando um <code className="bg-muted text-muted-foreground p-1 rounded-sm">/start</code> ou qualquer mensagem) para que ele possa te enviar notificações.</li>
+                    </ul>
+                  </div>
+                   <div>
+                    <h3 className="font-bold text-foreground mb-2">3. Como obter o ID de um Grupo</h3>
+                     <ul className="list-decimal list-inside space-y-2">
+                       <li>Adicione o <code className="bg-muted text-muted-foreground p-1 rounded-sm">@userinfobot</code> ao seu grupo.</li>
+                       <li>O bot enviará uma mensagem no grupo com o ID do chat do grupo. Ele começa com um sinal de menos (-).</li>
+                       <li>Copie este ID (incluindo o sinal de menos) e cole no campo "ID Chat Bot Telegram".</li>
+                    </ul>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -162,7 +217,7 @@ export default function SettingsPage() {
                     <Button type="submit" disabled={isSaving || !telegramToken || !telegramChatId}>
                         {isSaving ? "Salvando..." : "Salvar"}
                     </Button>
-                    {(savedTelegramToken && savedTelegramChatId) && (
+                    {savedTelegramToken && savedTelegramChatId && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="destructive" type="button" disabled={isSaving}>
@@ -201,3 +256,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
