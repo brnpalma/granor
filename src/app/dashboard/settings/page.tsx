@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { getUserPreferences, updateUserPreferences } from "@/lib/firestore";
 import type { UserPreferences } from "@/lib/types";
-import { Sparkles } from "lucide-react";
+import { Sparkles, CheckCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -137,6 +137,13 @@ export default function SettingsPage() {
             {isLoading ? (
                 <p>Carregando configurações...</p>
             ) : (
+              <>
+                {savedTelegramToken && savedTelegramChatId && (
+                  <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
+                      <CheckCircle className="h-5 w-5" />
+                      <span>Telegram configurado e ativo.</span>
+                  </div>
+                )}
                 <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="telegram-token">Token BOT Telegram</Label>
@@ -187,6 +194,7 @@ export default function SettingsPage() {
                     )}
                   </div>
                 </form>
+              </>
             )}
           </CardContent>
         </Card>
