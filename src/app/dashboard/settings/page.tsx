@@ -15,6 +15,7 @@ export default function SettingsPage() {
   const [telegramToken, setTelegramToken] = useState("");
   const [telegramChatId, setTelegramChatId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -35,12 +36,15 @@ export default function SettingsPage() {
       toast({ title: "Erro", description: "Você precisa estar logado para salvar.", variant: "destructive" });
       return;
     }
+    setIsSaving(true);
     try {
       await updateUserPreferences(user.uid, { telegramToken, telegramChatId });
       toast({ title: "Sucesso!", description: "Configurações salvas.", variant: "success" });
     } catch (error) {
       console.error("Failed to save settings:", error);
       toast({ title: "Erro", description: "Não foi possível salvar as configurações.", variant: "destructive" });
+    } finally {
+        setIsSaving(false);
     }
   };
 
@@ -85,7 +89,9 @@ export default function SettingsPage() {
                       placeholder="Cole o ID do seu chat aqui"
                     />
                   </div>
-                  <Button type="submit">Salvar</Button>
+                  <Button type="submit" disabled={isSaving}>
+                      {isSaving ? "Salvando..." : "Salvar"}
+                  </Button>
                 </form>
             )}
           </CardContent>
