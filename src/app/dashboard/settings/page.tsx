@@ -18,7 +18,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Granor IA</CardTitle>
             <CardDescription>
-              Configurações para automatizar o registro de despesas receitas, gerar relatorios ou obter informações.
+              Libere todo o potencial da inteligência artificial para automatizar o registro de despesas e receitas, gerar relatórios e obter informações valiosas.
             </CardDescription>
           </CardHeader>
           <CardContent>
