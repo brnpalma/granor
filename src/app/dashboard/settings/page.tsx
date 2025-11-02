@@ -124,7 +124,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button type="submit" disabled={isSaving}>
+                    <Button type="submit" disabled={isSaving || !telegramToken || !telegramChatId}>
                         {isSaving ? "Salvando..." : "Salvar"}
                     </Button>
                     <AlertDialog>
