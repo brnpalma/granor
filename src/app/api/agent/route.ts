@@ -84,8 +84,8 @@ export async function POST(request: Request) {
         const incomeMessage = body.message?.text ?? body.text ?? body.message ?? body;
 
         const mensagemUsuario = typeof incomeMessage === "string" 
-        ? incomeMessage 
-        : (incomeMessage.text ?? JSON.stringify(incomeMessage));
+            ? incomeMessage 
+            : (incomeMessage.text ?? JSON.stringify(incomeMessage));
         
         var { text: jsonIA } = await generateText({
             model: google("models/gemini-2.5-flash"),
@@ -102,12 +102,9 @@ export async function POST(request: Request) {
             prompt: mensagemUsuario,
         });
         
-        console.log("🧪 Data :", object.date);
-
         if(!object.date){
             const spNow = DateTime.now().setZone("America/Sao_Paulo");
-            object.date = spNow.toJSDate(); // Luxon já gera o Date correto
-            console.log("🧪 Data ajustada para SP:", object.date);
+            object.date = spNow.toJSDate();
         }
         
         console.log("🧪 Objeto gerado pela IA:", object);
@@ -130,15 +127,18 @@ export async function POST(request: Request) {
                     { status: 200 } // Respond 200 to Telegram to avoid retries
                 );
             }
-            else{
-                console.log("IA SEM DUVIDAS");
-            }
 
             await addTransactionServer(userId, object as Transaction);
 
-            const reply = `✅ ${object.type} de R$${object.amount} registrada na categoria ${object.category}.
+            const tipoPtBr = object.type === "income" ? "Receita" 
+                : object.type === "expense" ? "Despesa" 
+                : object.type === "transfer" ? "Transferência" 
+                : object.type === "credit_card_reversal" ? "Estorno de Cartão de Crédito" 
+                : "Transação";
+
+            const reply = `✅ ${tipoPtBr} de R$${object.amount} registrada na categoria ${object.category}.
                             \n\nSolicitação original: ${mensagemUsuario}
-                            \n\nResposta do assistente: ${jsonIA}`;
+                            \n\nResposta do assistente: ${object.iaReply}`;
 
             if (telegramToken && chatId) {
                 await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
