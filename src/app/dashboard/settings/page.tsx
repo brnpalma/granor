@@ -76,7 +76,13 @@ export default function SettingsPage() {
         });
 
         if (!testResponse.ok) {
-            throw new Error("Não foi possível enviar a mensagem de teste. Verifique o Token e o ID do Chat.");
+            toast({
+                title: "Falha na Configuração",
+                description: "Não foi possível enviar a mensagem de teste. Verifique o Token e o ID do Chat.",
+                variant: "destructive"
+            });
+            setIsSaving(false);
+            return;
         }
 
         const webhookUrl = `https://granor.vercel.app/api/agent?userId=${user.uid}`;
