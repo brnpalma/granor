@@ -88,7 +88,7 @@ export async function POST(request: Request) {
         : (incomeMessage.text ?? JSON.stringify(incomeMessage));
         
         var { text: jsonIA } = await generateText({
-            model: google("models/gemini-1.5-flash"),
+            model: google("models/gemini-2.5-flash"),
             system: agentSystemPrompt,
             prompt: mensagemUsuario,
         });
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
         console.log("🧪 Texto bruto da IA:", jsonIA);
 
         const { object } = await generateObject({
-            model: google("models/gemini-1.5-flash"),
+            model: google("models/gemini-2.5-flash"),
             system: agentSystemPrompt,
             schema: transactionSchema,
             prompt: mensagemUsuario,
