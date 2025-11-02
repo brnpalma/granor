@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { generateObject, generateText } from "ai";
 import { Transaction, transactionSchema } from "@/lib/types";
@@ -17,6 +18,36 @@ export async function OPTIONS() {
   });
 }
 
+async function getUserTelegramPrefs(userId: string): Promise<{ token: string, chatId: string }> {
+    if (!admin.apps.length) {
+        admin.initializeApp({
+            credential: admin.credential.cert({
+                projectId: process.env.FIREBASE_PROJECT_ID,
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+            }),
+        });
+    }
+
+    const db = admin.firestore();
+    const prefDocRef = db.collection("users").doc(userId).collection("preferences").doc('user');
+    const docSnap = await prefDocRef.get();
+
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+            token: data?.telegramToken || process.env.TELEGRAM_TOKEN || '',
+            chatId: data?.telegramChatId || process.env.TELEGRAM_CHAT_ID || '',
+        };
+    }
+    
+    return {
+        token: process.env.TELEGRAM_TOKEN || '',
+        chatId: process.env.TELEGRAM_CHAT_ID || '',
+    };
+}
+
+
 export async function POST(request: Request) {
     try {
         console.log("🚀 Recebido POST Granor AI!");
@@ -34,6 +65,21 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
+
+        const { token: telegramToken, chatId: userChatId } = await getUserTelegramPrefs(userId);
+        const chatId = body.message?.chat?.id ?? userChatId;
+
+        // Send initial "Processing..." message
+        if (telegramToken && chatId) {
+            await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: "Processando...",
+                }),
+            });
+        }
         
         const incomeMessage = body.message?.text ?? body.text ?? body.message ?? body;
 
@@ -42,7 +88,7 @@ export async function POST(request: Request) {
         : (incomeMessage.text ?? JSON.stringify(incomeMessage));
         
         var { text: jsonIA } = await generateText({
-            model: google("models/gemini-2.5-flash"),
+            model: google("models/gemini-1.5-flash"),
             system: agentSystemPrompt,
             prompt: mensagemUsuario,
         });
@@ -50,7 +96,7 @@ export async function POST(request: Request) {
         console.log("🧪 Texto bruto da IA:", jsonIA);
 
         const { object } = await generateObject({
-            model: google("models/gemini-2.5-flash"),
+            model: google("models/gemini-1.5-flash"),
             system: agentSystemPrompt,
             schema: transactionSchema,
             prompt: mensagemUsuario,
@@ -68,9 +114,20 @@ export async function POST(request: Request) {
         
         if(object){
             if(object.iaDoubt){
+                const doubtReply = `🤔 Dúvida: ${object.iaReply}`;
+                 if (telegramToken && chatId) {
+                    await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({   
+                            chat_id: chatId,
+                            text: doubtReply,
+                        }),
+                    });
+                }
                 return NextResponse.json(
-                    { success: false, reply: "❌ Duvida da IA: " + object.iaReply },
-                    { status: 428 }
+                    { success: false, reply: doubtReply },
+                    { status: 200 } // Respond 200 to Telegram to avoid retries
                 );
             }
             else{
@@ -83,27 +140,61 @@ export async function POST(request: Request) {
                             \n\nSolicitação original: ${mensagemUsuario}
                             \n\nResposta do assistente: ${jsonIA}`;
 
-            // Se veio do Telegram, envie para o chat correto; caso contrário, use CHAT_ID padrão
-            const chatId = body.message?.chat?.id ?? process.env.TELEGRAM_CHAT_ID;
-
-            await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({   
-                    chat_id: chatId,
-                    text: reply,
-                }),
-            });
+            if (telegramToken && chatId) {
+                await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({   
+                        chat_id: chatId,
+                        text: reply,
+                    }),
+                });
+            } else {
+                console.log("⚠️ Token ou Chat ID do Telegram não configurados para o usuário.");
+            }
 
             return NextResponse.json({ success: true, reply });
         }
         
+        const errorMessage = jsonIA || "❌ Não foi possível entender a transação.";
+        if (telegramToken && chatId) {
+            await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({   
+                    chat_id: chatId,
+                    text: errorMessage,
+                }),
+            });
+        }
         return NextResponse.json({ 
             success: false, 
-            reply: jsonIA || "❌ Não foi possível entender a transação." 
-        });
+            reply: errorMessage
+        }, { status: 200 }); // Respond 200 to Telegram to avoid retries
+
     } catch (error: any) {
         console.error("❌ Erro ao processar a mensagem do agente:", error);
+        
+        const { searchParams } = new URL(request.url);
+        const userId = searchParams.get("userId");
+        const body = await request.json().catch(() => ({}));
+        
+        if (userId) {
+            const { token: telegramToken, chatId: userChatId } = await getUserTelegramPrefs(userId).catch(() => ({ token: '', chatId: '' }));
+            const chatId = body.message?.chat?.id ?? userChatId;
+
+            if (telegramToken && chatId) {
+                await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        text: `Ocorreu um erro no servidor: ${error.message}`,
+                    }),
+                });
+            }
+        }
+
         return NextResponse.json(
             { success: false, reply: error.message },
             { status: 500 }
