@@ -16,20 +16,9 @@ export default function SettingsPage() {
       <div className="grid gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Preferências</CardTitle>
+            <CardTitle>Granor IA</CardTitle>
             <CardDescription>
-              Personalize a aparência e o comportamento do aplicativo.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Em breve...</p>
-          </CardContent>
-        </Card>
-         <Card>
-          <CardHeader>
-            <CardTitle>Segurança</CardTitle>
-            <CardDescription>
-              Altere sua senha e gerencie a segurança da conta.
+              Configurações para automatizar o registro de despesas receitas, gerar relatorios ou obter informações.
             </CardDescription>
           </CardHeader>
           <CardContent>
