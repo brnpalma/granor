@@ -1,10 +1,21 @@
 
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function SettingsPage() {
+  const [telegramToken, setTelegramToken] = useState("");
+  const [telegramChatId, setTelegramChatId] = useState("");
+
+  const handleSave = () => {
+    // Lógica para salvar será implementada futuramente
+    console.log("Saving settings:", { telegramToken, telegramChatId });
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -22,7 +33,29 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Em breve...</p>
+            <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="telegram-token">Token BOT Telegram</Label>
+                <Input
+                  id="telegram-token"
+                  type="password"
+                  value={telegramToken}
+                  onChange={(e) => setTelegramToken(e.target.value)}
+                  placeholder="Cole seu token aqui"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="telegram-chat-id">ID Chat Bot Telegram</Label>
+                <Input
+                  id="telegram-chat-id"
+                  type="text"
+                  value={telegramChatId}
+                  onChange={(e) => setTelegramChatId(e.target.value)}
+                  placeholder="Cole o ID do seu chat aqui"
+                />
+              </div>
+              <Button type="submit">Salvar</Button>
+            </form>
           </CardContent>
         </Card>
       </div>
