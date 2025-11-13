@@ -742,6 +742,36 @@ function TransactionForm() {
                         onChange={handleAmountChange}
                     />
                 </div>
+
+                {isCreditCardParam && (
+                    <Popover open={isInvoiceCalendarOpen} onOpenChange={setIsInvoiceCalendarOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start font-normal h-auto p-3 border">
+                                <div className="flex items-center justify-between w-full">
+                                    <div className='flex items-center gap-4'>
+                                        <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                                        <span>Fatura</span>
+                                    </div>
+                                    <span className="text-muted-foreground">{invoiceDate ? invoiceDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric'}) : 'Selecione'}</span>
+                                </div>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={invoiceDate}
+                                onSelect={(newDate) => {
+                                    setInvoiceDate(newDate ? startOfMonth(newDate) : undefined);
+                                    setIsInvoiceCalendarOpen(false);
+                                }}
+                                initialFocus
+                                captionLayout="dropdown-buttons"
+                                fromYear={new Date().getFullYear() - 5}
+                                toYear={new Date().getFullYear() + 5}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                )}
                 
                 {type !== 'transfer' && (
                   <Button variant="outline" className="w-full justify-start font-normal h-auto p-3 border" onClick={() => setIsRecurrenceDialogOpen(true)} disabled={isEditing}>
@@ -792,38 +822,6 @@ function TransactionForm() {
                         />
                     </PopoverContent>
                 </Popover>
-                
-                {isCreditCardParam && (
-                  <Popover open={isInvoiceCalendarOpen} onOpenChange={setIsInvoiceCalendarOpen}>
-                      <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start font-normal h-auto p-3 border">
-                              <div className="flex items-center justify-between w-full">
-                                  <div className='flex items-center gap-4'>
-                                      <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                                      <span>Fatura</span>
-                                  </div>
-                                  <span className="text-muted-foreground">{invoiceDate ? invoiceDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric'}) : 'Selecione'}</span>
-                              </div>
-                          </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                          <Calendar
-                              mode="single"
-                              selected={invoiceDate}
-                              onSelect={(newDate) => {
-                                  setInvoiceDate(newDate ? startOfMonth(newDate) : undefined);
-                                  setIsInvoiceCalendarOpen(false);
-                              }}
-                              initialFocus
-                              fixedWeeks
-                              captionLayout="dropdown-buttons"
-                              fromYear={new Date().getFullYear() - 5}
-                              toYear={new Date().getFullYear() + 5}
-                          />
-                      </PopoverContent>
-                  </Popover>
-                )}
-
 
                 <div className="flex items-center justify-between gap-4 p-3 rounded-lg border">
                     <div className="flex items-center gap-4">
