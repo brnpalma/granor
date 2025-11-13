@@ -29,7 +29,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus, Minus, ArrowRightLeft, PlusCircle, Check } from 'lucide-react';
-import { startOfMonth } from 'date-fns';
+import { startOfMonth, format, addMonths, subMonths } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { BankIcon, CreditCardDisplayIcon, CategoryIcon } from '@/components/icons';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -271,6 +272,7 @@ function TransactionForm() {
     const [description, setDescription] = useState("");
     const [amount, setAmount] = useState(0); // Store amount as a number (cents)
     const [date, setDate] = useState<Date | undefined>(overrideDateParam ? new Date(overrideDateParam) : new Date());
+    const [invoiceDate, setInvoiceDate] = useState<Date | undefined>(new Date());
     const [type, setType] = useState<TransactionType | null>(typeParam);
     const [category, setCategory] = useState("");
     const [accountId, setAccountId] = useState<string | undefined>();
@@ -317,8 +319,10 @@ function TransactionForm() {
                        const overrideDate = new Date(overrideDateParam);
                        const originalDay = t.date.getDate();
                        setDate(new Date(overrideDate.getFullYear(), overrideDate.getMonth(), originalDay));
+                       setInvoiceDate(new Date(overrideDate.getFullYear(), overrideDate.getMonth(), 1));
                     } else {
                        setDate(t.date);
+                       setInvoiceDate(startOfMonth(t.date));
                     }
                     setType(t.type);
                     setCategory(t.category);
@@ -413,10 +417,12 @@ function TransactionForm() {
     
         const finalDescription = description.trim() === "" ? (type === 'transfer' ? 'Transferência' : category) : description;
     
+        const transactionDate = isCreditCardParam ? invoiceDate || date : date;
+
         const transactionData: Partial<Omit<Transaction, "id">> = {
             description: finalDescription,
             amount: finalAmount,
-            date,
+            date: transactionDate,
             type,
             category,
             efetivado,
@@ -492,6 +498,14 @@ function TransactionForm() {
     }
     
     const selectedCategoryData = categories.find(c => c.name === category);
+
+    const monthOptions = Array.from({ length: 25 }, (_, i) => {
+        const date = subMonths(new Date(), 12 - i);
+        return {
+            value: date.toISOString(),
+            label: format(date, "MMMM/yyyy", { locale: ptBR }),
+        };
+    });
 
     if (isLoading) {
         return (
@@ -736,6 +750,32 @@ function TransactionForm() {
                         onChange={handleAmountChange}
                     />
                 </div>
+
+                {isCreditCardParam && (
+                    <div className="flex items-center gap-2 p-1 rounded-lg border">
+                        <div className="p-2 rounded-full bg-muted flex items-center gap-4">
+                           <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                           <span className="text-muted-foreground font-medium">Fatura</span>
+                        </div>
+                        <Select 
+                            value={invoiceDate?.toISOString()}
+                            onValueChange={(value) => setInvoiceDate(value ? new Date(value) : undefined)}
+                        >
+                            <SelectTrigger className="border-0 focus:ring-0 w-full">
+                                <SelectValue placeholder="Selecione a fatura">
+                                    {invoiceDate ? format(invoiceDate, "MMMM/yyyy", { locale: ptBR }) : 'Selecione a fatura'}
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {monthOptions.map(option => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
                 
                 {type !== 'transfer' && (
                   <Button variant="outline" className="w-full justify-start font-normal h-auto p-3 border" onClick={() => setIsRecurrenceDialogOpen(true)} disabled={isEditing}>
@@ -767,7 +807,7 @@ function TransactionForm() {
                             <div className="flex items-center justify-between w-full">
                                 <div className='flex items-center gap-4'>
                                     <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                                    <span>Data vencimento</span>
+                                    <span>{isCreditCardParam ? 'Data da Compra' : 'Data vencimento'}</span>
                                 </div>
                                 <span className="text-muted-foreground">{date ? date.toLocaleDateString('pt-BR') : 'Selecione'}</span>
                             </div>
@@ -880,7 +920,3 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
-
-    
-    
-
