@@ -35,7 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useDate } from "@/hooks/use-date";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
 
 type GroupedTransactions = {
@@ -44,7 +44,7 @@ type GroupedTransactions = {
 };
 
 
-export default function CreditCardTransactionsPage({ params }: { params: { id: string } }) {
+export default function CreditCardTransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [creditCard, setCreditCard] = useState<CreditCardType | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -54,11 +54,12 @@ export default function CreditCardTransactionsPage({ params }: { params: { id: s
   const { toast } = useToast();
   const { selectedDate, getMonthDateRange, clearBalanceCache } = useDate();
   const router = useRouter();
+  const params = useParams();
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
 
-  const cardId = params.id;
+  const cardId = params.id as string;
 
   useEffect(() => {
     if (typeof window === 'undefined' || !user?.uid) {
@@ -348,5 +349,7 @@ export default function CreditCardTransactionsPage({ params }: { params: { id: s
     </div>
   );
 }
+
+    
 
     
