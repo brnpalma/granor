@@ -20,19 +20,7 @@ interface DateContextType {
 const DateContext = createContext<DateContextType | undefined>(undefined);
 
 export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [selectedDate, setSelectedDateState] = useState(() => {
-    if (typeof window !== 'undefined') {
-        const savedDate = localStorage.getItem(DATE_CACHE_KEY);
-        if (savedDate) {
-            const date = new Date(savedDate);
-            // Check if date is valid
-            if (!isNaN(date.getTime())) {
-                return date;
-            }
-        }
-    }
-    return new Date();
-  });
+  const [selectedDate, setSelectedDateState] = useState(new Date());
 
   const setSelectedDate = (date: Date) => {
     if (typeof window !== 'undefined') {
