@@ -753,8 +753,9 @@ function TransactionForm() {
 
                 {isCreditCardParam && (
                     <div className="flex items-center gap-2 p-1 rounded-lg border">
-                        <div className="p-2 rounded-full bg-muted">
+                        <div className="p-2 rounded-full bg-muted flex items-center gap-4">
                            <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                           <span className="text-muted-foreground font-medium">Fatura</span>
                         </div>
                         <Select 
                             value={invoiceDate?.toISOString()}
