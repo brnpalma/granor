@@ -29,7 +29,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { ArrowLeft, AlignLeft, CircleDollarSign, CalendarIcon, CheckSquare, Shapes, Wallet, CreditCard, Repeat, Plus, Minus, ArrowRightLeft, PlusCircle, Check } from 'lucide-react';
-import { startOfMonth } from 'date-fns';
+import { startOfMonth, format, addMonths, subMonths } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { BankIcon, CreditCardDisplayIcon, CategoryIcon } from '@/components/icons';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -294,7 +295,6 @@ function TransactionForm() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-    const [isInvoiceCalendarOpen, setIsInvoiceCalendarOpen] = useState(false);
     const [showEditScopeDialog, setShowEditScopeDialog] = useState(false);
     const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
@@ -498,6 +498,14 @@ function TransactionForm() {
     }
     
     const selectedCategoryData = categories.find(c => c.name === category);
+
+    const monthOptions = Array.from({ length: 25 }, (_, i) => {
+        const date = subMonths(new Date(), 12 - i);
+        return {
+            value: date.toISOString(),
+            label: format(date, "MMMM/yyyy", { locale: ptBR }),
+        };
+    });
 
     if (isLoading) {
         return (
@@ -744,33 +752,28 @@ function TransactionForm() {
                 </div>
 
                 {isCreditCardParam && (
-                    <Popover open={isInvoiceCalendarOpen} onOpenChange={setIsInvoiceCalendarOpen}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start font-normal h-auto p-3 border">
-                                <div className="flex items-center justify-between w-full">
-                                    <div className='flex items-center gap-4'>
-                                        <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                                        <span>Fatura</span>
-                                    </div>
-                                    <span className="text-muted-foreground">{invoiceDate ? invoiceDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric'}) : 'Selecione'}</span>
-                                </div>
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={invoiceDate}
-                                onSelect={(newDate) => {
-                                    setInvoiceDate(newDate ? startOfMonth(newDate) : undefined);
-                                    setIsInvoiceCalendarOpen(false);
-                                }}
-                                initialFocus
-                                captionLayout="dropdown-buttons"
-                                fromYear={new Date().getFullYear() - 5}
-                                toYear={new Date().getFullYear() + 5}
-                            />
-                        </PopoverContent>
-                    </Popover>
+                    <div className="flex items-center gap-2 p-1 rounded-lg border">
+                        <div className="p-2 rounded-full bg-muted">
+                           <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <Select 
+                            value={invoiceDate?.toISOString()}
+                            onValueChange={(value) => setInvoiceDate(value ? new Date(value) : undefined)}
+                        >
+                            <SelectTrigger className="border-0 focus:ring-0 w-full">
+                                <SelectValue placeholder="Selecione a fatura">
+                                    {invoiceDate ? format(invoiceDate, "MMMM/yyyy", { locale: ptBR }) : 'Selecione a fatura'}
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {monthOptions.map(option => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 )}
                 
                 {type !== 'transfer' && (
