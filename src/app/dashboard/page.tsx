@@ -619,7 +619,8 @@ export default function DashboardPage() {
                     const isClosed = new Date().getDate() > card.closingDay;
 
                     return (
-                        <div key={card.id} className="flex items-center gap-4">
+                      <Link key={card.id} href={`/dashboard/credit-cards/${card.id}`} className="block">
+                        <div className="flex items-center gap-4 hover:bg-muted/50 p-2 rounded-lg transition-colors">
                             <CreditCardDisplayIcon color={card.color} />
                             <div className="flex-1">
                                 <p className="font-bold uppercase">{card.name}</p>
@@ -633,6 +634,7 @@ export default function DashboardPage() {
                                 <p className="text-sm text-muted-foreground">{dueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}</p>
                             </div>
                         </div>
+                      </Link>
                     )
                 })}
               </CardContent>

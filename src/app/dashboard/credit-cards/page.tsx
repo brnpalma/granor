@@ -52,6 +52,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useDate } from "@/hooks/use-date";
 import { BankIcon, CreditCardDisplayIcon } from "@/components/icons";
+import Link from "next/link";
 
 const accountColors = [
     '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#2196F3', '#03A9F4', 
@@ -205,84 +206,86 @@ export default function CreditCardsPage() {
           const availableLimit = card.limit - card.invoiceTotal;
           const progress = card.limit > 0 ? (card.invoiceTotal / card.limit) * 100 : 0;
           return (
-            <Card key={card.id}>
-              <CardContent className="p-4 space-y-4">
-                <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                        <CreditCardDisplayIcon color={card.color} />
-                        <div>
-                            <p className="font-bold">{card.name}</p>
-                            <p className="text-sm text-muted-foreground">MasterCard</p>
-                        </div>
-                    </div>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="shrink-0 -mr-2 -mt-2">
-                                <MoreVertical className="h-5 w-5" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => handleOpenDialogForEdit(card)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                <span>Editar</span>
-                            </DropdownMenuItem>
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                                        <span className="text-destructive">Remover</span>
-                                    </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                           Esta ação não pode ser desfeita. Isso removerá permanentemente o cartão e todas as transações associadas a ele.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDeleteCreditCard(card.id)}>Remover</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
+            <Link key={card.id} href={`/dashboard/credit-cards/${card.id}`} className="block">
+              <Card className="hover:bg-muted/50 transition-colors">
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-4">
+                          <CreditCardDisplayIcon color={card.color} />
+                          <div>
+                              <p className="font-bold">{card.name}</p>
+                              <p className="text-sm text-muted-foreground">MasterCard</p>
+                          </div>
+                      </div>
+                      <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="shrink-0 -mr-2 -mt-2" onClick={(e) => e.preventDefault()}>
+                                  <MoreVertical className="h-5 w-5" />
+                              </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                              <DropdownMenuItem onClick={(e) => { e.preventDefault(); handleOpenDialogForEdit(card); }}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  <span>Editar</span>
+                              </DropdownMenuItem>
+                               <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                       <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={(e) => e.preventDefault()}>
+                                          <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                                          <span className="text-destructive">Remover</span>
+                                      </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                             Esta ação não pode ser desfeita. Isso removerá permanentemente o cartão e todas as transações associadas a ele.
+                                          </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteCreditCard(card.id)}>Remover</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                  </AlertDialogContent>
+                              </AlertDialog>
+                          </DropdownMenuContent>
+                      </DropdownMenu>
+                  </div>
 
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div>
-                        <p className="text-muted-foreground">Limite</p>
-                        <p className="font-semibold">{card.limit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
-                    </div>
-                    <div>
-                        <p className="text-muted-foreground">Em aberto</p>
-                        <p className="font-semibold">{card.invoiceTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-muted-foreground">Lim. disponível</p>
-                        <p className="font-semibold text-green-500">{availableLimit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
-                    </div>
-                </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div>
+                          <p className="text-muted-foreground">Limite</p>
+                          <p className="font-semibold">{card.limit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
+                      </div>
+                      <div>
+                          <p className="text-muted-foreground">Em aberto</p>
+                          <p className="font-semibold">{card.invoiceTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
+                      </div>
+                      <div className="text-right">
+                          <p className="text-muted-foreground">Lim. disponível</p>
+                          <p className="font-semibold text-green-500">{availableLimit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
+                      </div>
+                  </div>
 
-                <Progress value={progress} className="h-2" />
+                  <Progress value={progress} className="h-2" />
 
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div>
-                        <p className="text-muted-foreground">Conta</p>
-                        <p className="font-semibold">{getAccountName(card.defaultAccountId)}</p>
-                    </div>
-                     <div>
-                        <p className="text-muted-foreground">Fechamento</p>
-                        <p className="font-semibold">{card.closingDay}/{new Date(selectedDate).toLocaleDateString('pt-BR', { month: 'short' }).replace('.','').toUpperCase()}</p>
-                    </div>
-                     <div className="text-right">
-                        <p className="text-muted-foreground">Vencimento</p>
-                        <p className="font-semibold">{card.dueDay}/{new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.','').toUpperCase()}</p>
-                    </div>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div>
+                          <p className="text-muted-foreground">Conta</p>
+                          <p className="font-semibold">{getAccountName(card.defaultAccountId)}</p>
+                      </div>
+                       <div>
+                          <p className="text-muted-foreground">Fechamento</p>
+                          <p className="font-semibold">{card.closingDay}/{new Date(selectedDate).toLocaleDateString('pt-BR', { month: 'short' }).replace('.','').toUpperCase()}</p>
+                      </div>
+                       <div className="text-right">
+                          <p className="text-muted-foreground">Vencimento</p>
+                          <p className="font-semibold">{card.dueDay}/{new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.','').toUpperCase()}</p>
+                      </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           );
         })}
       </div>
@@ -456,3 +459,5 @@ function CreditCardForm({
         </DialogContent>
     );
 }
+
+    
