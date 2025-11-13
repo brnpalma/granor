@@ -271,6 +271,7 @@ function TransactionForm() {
     const [description, setDescription] = useState("");
     const [amount, setAmount] = useState(0); // Store amount as a number (cents)
     const [date, setDate] = useState<Date | undefined>(overrideDateParam ? new Date(overrideDateParam) : new Date());
+    const [invoiceDate, setInvoiceDate] = useState<Date | undefined>(new Date());
     const [type, setType] = useState<TransactionType | null>(typeParam);
     const [category, setCategory] = useState("");
     const [accountId, setAccountId] = useState<string | undefined>();
@@ -293,6 +294,7 @@ function TransactionForm() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [isInvoiceCalendarOpen, setIsInvoiceCalendarOpen] = useState(false);
     const [showEditScopeDialog, setShowEditScopeDialog] = useState(false);
     const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
@@ -317,8 +319,10 @@ function TransactionForm() {
                        const overrideDate = new Date(overrideDateParam);
                        const originalDay = t.date.getDate();
                        setDate(new Date(overrideDate.getFullYear(), overrideDate.getMonth(), originalDay));
+                       setInvoiceDate(new Date(overrideDate.getFullYear(), overrideDate.getMonth(), 1));
                     } else {
                        setDate(t.date);
+                       setInvoiceDate(startOfMonth(t.date));
                     }
                     setType(t.type);
                     setCategory(t.category);
@@ -413,10 +417,12 @@ function TransactionForm() {
     
         const finalDescription = description.trim() === "" ? (type === 'transfer' ? 'Transferência' : category) : description;
     
+        const transactionDate = isCreditCardParam ? invoiceDate || date : date;
+
         const transactionData: Partial<Omit<Transaction, "id">> = {
             description: finalDescription,
             amount: finalAmount,
-            date,
+            date: transactionDate,
             type,
             category,
             efetivado,
@@ -767,7 +773,7 @@ function TransactionForm() {
                             <div className="flex items-center justify-between w-full">
                                 <div className='flex items-center gap-4'>
                                     <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                                    <span>Data vencimento</span>
+                                    <span>{isCreditCardParam ? 'Data da Compra' : 'Data vencimento'}</span>
                                 </div>
                                 <span className="text-muted-foreground">{date ? date.toLocaleDateString('pt-BR') : 'Selecione'}</span>
                             </div>
@@ -786,6 +792,38 @@ function TransactionForm() {
                         />
                     </PopoverContent>
                 </Popover>
+                
+                {isCreditCardParam && (
+                  <Popover open={isInvoiceCalendarOpen} onOpenChange={setIsInvoiceCalendarOpen}>
+                      <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start font-normal h-auto p-3 border">
+                              <div className="flex items-center justify-between w-full">
+                                  <div className='flex items-center gap-4'>
+                                      <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                                      <span>Fatura</span>
+                                  </div>
+                                  <span className="text-muted-foreground">{invoiceDate ? invoiceDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric'}) : 'Selecione'}</span>
+                              </div>
+                          </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                          <Calendar
+                              mode="single"
+                              selected={invoiceDate}
+                              onSelect={(newDate) => {
+                                  setInvoiceDate(newDate ? startOfMonth(newDate) : undefined);
+                                  setIsInvoiceCalendarOpen(false);
+                              }}
+                              initialFocus
+                              fixedWeeks
+                              captionLayout="dropdown-buttons"
+                              fromYear={new Date().getFullYear() - 5}
+                              toYear={new Date().getFullYear() + 5}
+                          />
+                      </PopoverContent>
+                  </Popover>
+                )}
+
 
                 <div className="flex items-center justify-between gap-4 p-3 rounded-lg border">
                     <div className="flex items-center gap-4">
@@ -880,7 +918,3 @@ export default function NewTransactionPage() {
         </Suspense>
     )
 }
-
-    
-    
-
