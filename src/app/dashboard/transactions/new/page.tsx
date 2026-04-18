@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -362,10 +362,10 @@ function TransactionForm() {
         return amountInReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
 
-    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAmountChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const rawValue = e.target.value.replace(/\D/g, '');
         setAmount(Number(rawValue));
-    };
+    }, []);
 
     const handleAddCategory = async (categoryData: Omit<Category, "id">) => {
       if (user?.uid) {

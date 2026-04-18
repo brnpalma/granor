@@ -24,28 +24,22 @@ export default function LoginPage() {
     try {
       await loginWithEmail(email, password);
       router.push("/dashboard");
-    } catch (error: any) {
-      toast({
-        title: "Erro de Login",
-        description: error.message || "Não foi possível fazer o login. Verifique suas credenciais.",
-        variant: "destructive",
-      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Não foi possível fazer o login. Verifique suas credenciais.";
+      toast({ title: "Erro de Login", description: message, variant: "destructive" });
     } finally {
         setIsLoading(false);
     }
   };
-  
+
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
         await loginWithGoogle();
         router.push("/dashboard");
-    } catch (error: any) {
-         toast({
-            title: "Erro de Login com Google",
-            description: error.message || "Não foi possível fazer o login com o Google.",
-            variant: "destructive",
-        });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Não foi possível fazer o login com o Google.";
+      toast({ title: "Erro de Login com Google", description: message, variant: "destructive" });
     } finally {
         setIsLoading(false);
     }

@@ -29,7 +29,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { addTransaction, deleteTransaction, getTransactions, getAccounts, getCreditCards, getCategories, updateTransaction, findPreviousMonthBalance, getUserPreferences, updateUserPreferences } from "@/lib/firestore";
+import { deleteTransaction, getTransactions, getAccounts, getCreditCards, getCategories, updateTransaction, findPreviousMonthBalance, getUserPreferences, updateUserPreferences, efetivateFixedProjection } from "@/lib/firestore";
 import type { Transaction, Account, CreditCard as CreditCardType, UserPreferences, RecurrenceEditScope, Category } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/icons";
@@ -39,7 +39,6 @@ import { useDate } from "@/hooks/use-date";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { isFuture, startOfMonth, isSameMonth } from "date-fns";
-import { Transaction } from "firebase/firestore";
 
 
 type GroupedTransactions = {
@@ -165,25 +164,7 @@ export default function TransactionsPage() {
       setIsTogglingEfetivado(prev => [...prev, transaction.id]);
       try {
         if (transaction.isFixed && transaction.id.includes('-projected-')) {
-            const { id, ...rest } = transaction;
-            const newTransaction: Omit<Transaction, "id"> = {
-                ...rest,
-                efetivado: true,
-                isFixed: false,
-                isRecurring: false,
-                description: transaction.description,
-            };
-            
-            const originalId = transaction.recurrenceId;
-            if(originalId) {
-                const addedTransactionId = await addTransaction(user.uid, newTransaction, true);
-                if (addedTransactionId) {
-                     const monthKey = `${transaction.date.getFullYear()}-${transaction.date.getMonth()}`;
-                     await updateTransaction(user.uid, originalId, { 
-                        overrides: { [monthKey]: addedTransactionId } 
-                     }, 'all', transaction);
-                }
-            }
+            await efetivateFixedProjection(user.uid, transaction);
         } else {
             if (transferId) {
                 await updateTransaction(user.uid, transaction.id, { efetivado: !transaction.efetivado }, 
@@ -332,14 +313,15 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Transações</h1>
-        <Button variant="ghost" size="icon" onClick={handleToggleSortOrder}>
-            {preferences.transactionSortOrder === 'asc' ? <ArrowUpNarrowWide className="h-5 w-5" /> : <ArrowDownNarrowWide className="h-5 w-5" />}
-        </Button>
+      <div className="sticky top-0 z-30 bg-background pb-2 space-y-2">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Transações</h1>
+          <Button variant="ghost" size="icon" onClick={handleToggleSortOrder}>
+              {preferences.transactionSortOrder === 'asc' ? <ArrowUpNarrowWide className="h-5 w-5" /> : <ArrowDownNarrowWide className="h-5 w-5" />}
+          </Button>
+        </div>
+        <BalanceInfo isTop />
       </div>
-
-      <BalanceInfo isTop />
 
        {(accounts.length === 0 && creditCards.length === 0) && (
           <Card className="text-center p-6">
@@ -414,7 +396,7 @@ export default function TransactionsPage() {
                                             onClick={() => handleToggleEfetivado(t, t.transferId)} 
                                             disabled={isToggling}
                                         >
-                                            {isToggling ? "Aguarde..." : "Efetivar"}
+                                            {isToggling ? <><span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent inline-block mr-1" />Aguarde...</> : "Efetivar"}
                                         </Button>
                                     )}
                                 </div>

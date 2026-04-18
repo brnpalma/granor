@@ -168,7 +168,7 @@ function Header() {
 
 
     return (
-        <header className="sticky top-0 z-40 flex h-14 items-center justify-center bg-blue-900 text-white px-4 sm:h-auto">
+        <header className="fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-center bg-blue-900 text-white px-4 sm:left-60">
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
                     <Button size="icon" variant="outline" className="sm:hidden bg-transparent border-0 hover:bg-white/10 absolute left-4">
@@ -285,12 +285,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             <aside className={cn("fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r border-border bg-background sm:flex", !showHeader && "sm:hidden")}>
                 <SidebarContent onLinkClick={() => { }} />
             </aside>
-            <div className={cn("flex flex-col", showHeader && "sm:pl-60")}>
+            <div className={cn("flex flex-col", showHeader && "sm:pl-60 pt-14")}>
                 {showHeader && <Header />}
                 <main id="main-principal" className={cn(paddingPainel, showHeader && "")}>
                     {isLoading ? (
                         <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
-                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                            <div role="status" aria-label="Carregando" className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                         </div>
                     ) : (
                         children

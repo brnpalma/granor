@@ -481,24 +481,37 @@ export const updateTransaction = async (
              await batch.commit();
 
         } else if (originalTransaction?.isFixed && scope === 'single' && dataToUpdate.date) {
-            // Create a one-off override for a fixed transaction
+            // Use batch to atomically create the override document and update the original,
+            // preventing race conditions between onSnapshot listeners
             const monthKey = `${dataToUpdate.date.getFullYear()}-${dataToUpdate.date.getMonth()}`;
-            const newTransactionData = { ...dataToUpdate, isFixed: false, isRecurring: false, recurrenceId: originalTransaction.id } as Omit<Transaction, 'id'>;
-            if('id' in newTransactionData) delete (newTransactionData as any).id;
-            
-            const overrideId = await addTransaction(userId, newTransactionData, true);
 
-            if (overrideId) {
-                const originalDocRef = doc(db, transactionsPath, originalTransaction.id);
-                await updateDoc(originalDocRef, { overrides: { ...(originalTransaction.overrides || {}), [monthKey]: overrideId } });
-            }
+            const batch = writeBatch(db);
+            const newDocRef = doc(collection(db, transactionsPath));
+
+            const newDocData: any = {
+                ...dataToUpdate,
+                id: newDocRef.id,
+                isFixed: false,
+                isRecurring: false,
+                recurrenceId: originalTransaction.id,
+                date: Timestamp.fromDate(dataToUpdate.date),
+            };
+
+            batch.set(newDocRef, newDocData);
+
+            const originalDocRef = doc(db, transactionsPath, originalTransaction.id);
+            batch.update(originalDocRef, {
+                overrides: { ...(originalTransaction.overrides || {}), [monthKey]: newDocRef.id }
+            });
+
+            await batch.commit();
         } else if (originalTransaction?.isFixed && scope === 'future' && dataToUpdate.date) {
              // End the current fixed transaction and create a new one starting from this month
              const oldDocRef = doc(db, transactionsPath, transactionId);
              await updateDoc(oldDocRef, { endDate: Timestamp.fromDate(subMonths(dataToUpdate.date, 1)) });
              
              const { id, ...newFixedTransaction } = { ...originalTransaction, ...dataToUpdate, id: '', date: dataToUpdate.date, endDate: null, overrides: {} };
-             await addTransaction(userId, newFixedTransaction as Omit<Transaction, 'id'>);
+             await addTransaction(userId, newFixedTransaction as unknown as Omit<Transaction, 'id'>);
         
         } else if (originalTransaction?.isFixed && scope === 'all') {
             const mainTransactionRef = doc(db, transactionsPath, transactionId);
@@ -530,6 +543,41 @@ export const updateTransaction = async (
     }
 };
 
+
+export const efetivateFixedProjection = async (
+    userId: string,
+    projectedTransaction: Transaction,
+): Promise<void> => {
+    const transactionsPath = getCollectionPath(userId, "transactions");
+    const originalId = projectedTransaction.recurrenceId;
+    if (!transactionsPath || !originalId) return;
+
+    const monthKey = `${projectedTransaction.date.getFullYear()}-${projectedTransaction.date.getMonth()}`;
+
+    const batch = writeBatch(db);
+    const newDocRef = doc(collection(db, transactionsPath));
+
+    const { id: _id, ...rest } = projectedTransaction;
+    const newDocData = {
+        ...rest,
+        id: newDocRef.id,
+        efetivado: true,
+        isFixed: false,
+        isRecurring: false,
+        recurrenceId: originalId,
+        date: Timestamp.fromDate(projectedTransaction.date),
+    };
+    batch.set(newDocRef, newDocData);
+
+    const originalDocRef = doc(db, transactionsPath, originalId);
+    const originalSnap = await getDoc(originalDocRef);
+    const existingOverrides = originalSnap.exists() ? (originalSnap.data()?.overrides || {}) : {};
+    batch.update(originalDocRef, {
+        overrides: { ...existingOverrides, [monthKey]: newDocRef.id }
+    });
+
+    await batch.commit();
+};
 
 export const deleteTransaction = async (
   userId: string | null,
@@ -657,17 +705,10 @@ export const getTransactions = (
         return () => {};
     }
 
-    // Query for transactions where isFixed is not true (includes false and non-existent)
-    // We split into two because Firestore doesn't support != queries with range filters
-    const nonRecurringQuery1 = query(
+    // Query for all non-fixed transactions (isFixed != true, includes missing field)
+    const nonRecurringQuery = query(
         collection(db, path),
-        where("isFixed", "==", false),
-        where("date", ">=", Timestamp.fromDate(dateRange.startDate)),
-        where("date", "<=", Timestamp.fromDate(dateRange.endDate))
-    );
-     const nonRecurringQuery2 = query(
-        collection(db, path),
-        where("isFixed", "==", null),
+        where("isFixed", "not-in", [true]),
         where("date", ">=", Timestamp.fromDate(dateRange.startDate)),
         where("date", "<=", Timestamp.fromDate(dateRange.endDate))
     );
@@ -680,9 +721,8 @@ export const getTransactions = (
 
     const handleSnapshots = async () => {
         try {
-            const [nonRecurringSnap1, nonRecurringSnap2, fixedSnapshot] = await Promise.all([
-                getDocs(nonRecurringQuery1),
-                getDocs(nonRecurringQuery2),
+            const [nonRecurringSnap, fixedSnapshot] = await Promise.all([
+                getDocs(nonRecurringQuery),
                 getDocs(fixedQuery),
             ]);
             
@@ -697,11 +737,25 @@ export const getTransactions = (
                  }
             };
             
-            nonRecurringSnap1.forEach(processDoc);
-            nonRecurringSnap2.forEach(processDoc);
+            nonRecurringSnap.forEach(processDoc);
 
             const selectedYear = dateRange.startDate.getFullYear();
             const selectedMonth = dateRange.startDate.getMonth();
+
+            // Build set of fixed-transaction IDs that already have an override doc in this month.
+            // This handles legacy data where the overrides field on the original doc was never saved.
+            const overriddenFixedIds = new Set<string>();
+            nonRecurringSnap.forEach(doc => {
+                const data = doc.data();
+                const docDate = (data.date as Timestamp).toDate();
+                if (
+                    data.recurrenceId &&
+                    docDate.getFullYear() === selectedYear &&
+                    docDate.getMonth() === selectedMonth
+                ) {
+                    overriddenFixedIds.add(data.recurrenceId);
+                }
+            });
 
             fixedSnapshot.forEach(doc => {
                 const t = { id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate(), endDate: doc.data().endDate ? (doc.data().endDate as Timestamp).toDate() : null } as Transaction;
@@ -711,17 +765,15 @@ export const getTransactions = (
 
                 const isAfterStartDate = selectedYear > originalYear || (selectedYear === originalYear && selectedMonth >= originalMonth);
                 if (!isAfterStartDate) return;
-                
+
                 const isBeforeEndDate = !t.endDate || selectedYear < t.endDate.getFullYear() || (selectedYear === t.endDate.getFullYear() && selectedMonth <= t.endDate.getMonth());
                 if (!isBeforeEndDate) return;
-                
+
                 const monthKey = `${selectedYear}-${selectedMonth}`;
-                if (t.overrides && t.overrides[monthKey]) {
-                    if (t.overrides[monthKey] !== 'deleted') {
-                         // An override exists, so we should not show the original projected transaction.
-                         // The override itself is a normal transaction and will be fetched by other queries.
-                    }
-                    return; // Either handled by override or deleted for this month
+
+                // Suppress projection if an override doc exists (via overrides field OR via legacy override docs)
+                if ((t.overrides && t.overrides[monthKey]) || overriddenFixedIds.has(t.id)) {
+                    return;
                 }
                 
                 const isOriginalMonth = selectedYear === originalYear && selectedMonth === originalMonth;
@@ -756,14 +808,12 @@ export const getTransactions = (
     };
     
     // Combine listeners
-    const unsub1 = onSnapshot(nonRecurringQuery1, handleSnapshots);
-    const unsub2 = onSnapshot(nonRecurringQuery2, handleSnapshots);
-    const unsub3 = onSnapshot(fixedQuery, handleSnapshots);
+    const unsub1 = onSnapshot(nonRecurringQuery, handleSnapshots);
+    const unsub2 = onSnapshot(fixedQuery, handleSnapshots);
 
     return () => {
         unsub1();
         unsub2();
-        unsub3();
     };
 };
 

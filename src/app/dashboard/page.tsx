@@ -130,13 +130,6 @@ export default function DashboardPage() {
         });
 
 
-        const timer = setTimeout(() => {
-            if (Object.values(dataLoaded).some(v => !v)) {
-                setIsLoading(false);
-            }
-        }, 3000);
-        unsubscribers.push(() => clearTimeout(timer));
-
         return () => unsubscribers.forEach(unsub => unsub());
 
     }, [user, selectedDate, getMonthDateRange]);

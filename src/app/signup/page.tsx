@@ -26,16 +26,17 @@ export default function SignupPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password.length < 8) {
+      toast({ title: "Senha fraca", description: "A senha deve ter pelo menos 8 caracteres.", variant: "destructive" });
+      return;
+    }
     setIsLoading(true);
     try {
       await signupWithEmail(email, password);
       router.push("/dashboard");
-    } catch (error: any) {
-      toast({
-        title: "Erro no Cadastro",
-        description: error.message || "Não foi possível criar a conta.",
-        variant: "destructive",
-      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Não foi possível criar a conta.";
+      toast({ title: "Erro no Cadastro", description: message, variant: "destructive" });
     } finally {
         setIsLoading(false);
     }
@@ -46,12 +47,9 @@ export default function SignupPage() {
     try {
         await loginWithGoogle();
         router.push("/dashboard");
-    } catch (error: any) {
-         toast({
-            title: "Erro de Login com Google",
-            description: error.message || "Não foi possível fazer o login com o Google.",
-            variant: "destructive",
-        });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Não foi possível fazer o login com o Google.";
+      toast({ title: "Erro de Login com Google", description: message, variant: "destructive" });
     } finally {
         setIsLoading(false);
     }

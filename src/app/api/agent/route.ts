@@ -229,38 +229,29 @@ export async function POST(request: Request) {
             reply: errorMessage
         }, { status: 200 }); // Respond 200 to Telegram to avoid retries
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("❌ Erro ao processar a mensagem do agente:", error);
-        
-        // Ensure request body is read only once
-        let bodyToLog;
-        try {
-          bodyToLog = await request.json();
-        } catch (e) {
-          bodyToLog = {};
-        }
 
         const { searchParams } = new URL(request.url);
         const userId = searchParams.get("userId");
-        
+
         if (userId) {
             const { token: telegramToken, chatId: userChatId } = await getUserTelegramPrefs(userId).catch(() => ({ token: '', chatId: '' }));
-            const chatId = bodyToLog.message?.chat?.id ?? userChatId;
 
-            if (telegramToken && chatId) {
+            if (telegramToken && userChatId) {
                 await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        chat_id: chatId,
-                        text: `Ocorreu um erro no servidor: ${error.message}`,
+                        chat_id: userChatId,
+                        text: "Ocorreu um erro ao processar sua mensagem. Tente novamente.",
                     }),
                 });
             }
         }
 
         return NextResponse.json(
-            { success: false, reply: error.message },
+            { success: false, reply: "Ocorreu um erro interno. Tente novamente." },
             { status: 500 }
         );
     }
